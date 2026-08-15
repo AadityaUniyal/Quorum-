@@ -240,7 +240,7 @@ class LocalLayoutParser:
             if shipping:
                 extracted["shipping"] = shipping.group(1).replace(",", "")
 
-            total = re.search(r"(?:total\s*amount|total\s*due|total)\s*[:\-]?\s*\$?([0-9,]+\.[0-9]{2})", text_lower)
+            total = re.search(r"(?<!sub)total(?:\s*amount)?(?:\s*due)?\s*[:\-]?\s*\$?([0-9,]+\.[0-9]{2})", text_lower)
             if total:
                 extracted["total_amount"] = total.group(1).replace(",", "")
 

@@ -10,12 +10,20 @@ from PIL import Image
 try:
     import pdfplumber
 except ImportError:
-    pdfplumber = None
+    class _DummyPdfplumber:
+        @staticmethod
+        def open(*args, **kwargs):
+            raise ImportError("pdfplumber is not installed")
+    pdfplumber = _DummyPdfplumber
 
 try:
     import pypdf
 except ImportError:
-    pypdf = None
+    class _DummyPypdf:
+        class PdfReader:
+            def __init__(self, *args, **kwargs):
+                raise ImportError("pypdf is not installed")
+    pypdf = _DummyPypdf
 
 logger = logging.getLogger(__name__)
 

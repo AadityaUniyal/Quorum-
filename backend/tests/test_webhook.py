@@ -14,9 +14,8 @@ def test_webhook_config_creation():
     assert config.is_active is True
 
 @patch("app.services.webhook.SessionLocal")
-@patch("app.services.webhook.asyncio.get_event_loop")
-def test_dispatch_webhook_no_subs(mock_get_loop, mock_session_local):
-    # Mock db query returning empty list
+@patch("pika.BlockingConnection")
+def test_dispatch_webhook_no_subs(mock_pika, mock_session_local):
     mock_db = MagicMock()
     mock_session_local.return_value = mock_db
     mock_db.query.return_value.filter.return_value.all.return_value = []
@@ -24,22 +23,22 @@ def test_dispatch_webhook_no_subs(mock_get_loop, mock_session_local):
     dispatch_webhook("document.processed", {"id": "123"})
     
     mock_db.query.assert_called_once()
-    mock_get_loop.assert_not_called()
+    mock_pika.assert_not_called()
 
 @patch("app.services.webhook.SessionLocal")
-@patch("app.services.webhook.asyncio.get_event_loop")
-def test_dispatch_webhook_with_subs(mock_get_loop, mock_session_local):
-    # Mock db query returning one active subscription
+@patch("pika.BlockingConnection")
+def test_dispatch_webhook_with_subs(mock_pika, mock_session_local):
     mock_db = MagicMock()
     mock_session_local.return_value = mock_db
     
     sub = WebhookConfig(url="https://example.com/hook", event_type="document.processed", is_active=True)
     mock_db.query.return_value.filter.return_value.all.return_value = [sub]
     
-    mock_loop = MagicMock()
-    mock_loop.is_running.return_value = True
-    mock_get_loop.return_value = mock_loop
+    mock_conn = MagicMock()
+    mock_channel = MagicMock()
+    mock_conn.channel.return_value = mock_channel
+    mock_pika.return_value = mock_conn
 
     dispatch_webhook("document.processed", {"id": "123"})
     
-    mock_loop.create_task.assert_called_once()
+    mock_channel.basic_publish.assert_called_once()
