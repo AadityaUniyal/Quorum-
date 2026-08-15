@@ -191,7 +191,7 @@ def extract_text_from_pdf(pdf_path: str) -> str:
                 page_text = page.extract_text()
                 if page_text:
                     text_content.append(page_text)
-                
+
                 tables = page.extract_tables()
                 if tables:
                     text_content.append(f"\n--- Page {page_num + 1} Tables ---\n")
@@ -258,7 +258,7 @@ async def perform_ocr_async(file_path: str, filename: str, file_type: str) -> st
     Uses a Redis-based distributed semaphore to limit global concurrent OCR jobs.
     """
     from app.services.cache import acquire_redis_semaphore, release_redis_semaphore
-    
+
     # Try to acquire semaphore with retries
     owner_id = None
     for _ in range(30):
@@ -266,7 +266,7 @@ async def perform_ocr_async(file_path: str, filename: str, file_type: str) -> st
         if owner_id:
             break
         await asyncio.sleep(1.0)
-        
+
     if not owner_id:
         owner_id = f"fallback_fastapi:{filename}"
 

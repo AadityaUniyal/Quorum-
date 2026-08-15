@@ -5,8 +5,8 @@ from app.agents.auditor import run_auditor_agent
 from app.agents.compliance import run_compliance_agent
 from app.agents.critic import run_critic_agent
 from app.agents.extractor import run_extractor_agent
-from app.agents.reconciler import run_reconciler_agent
 from app.agents.memory import run_memory_agent
+from app.agents.reconciler import run_reconciler_agent
 from app.agents.summary import run_summary_agent
 from app.models.document import DocumentCategory, FieldValidationStatus
 
@@ -26,13 +26,15 @@ WEIGHT_CONFIG: dict[DocumentCategory, tuple[float, float, float]] = {
 async def run_agent_safe(agent_func, *args, timeout_seconds: float = 15.0) -> dict:
     import asyncio
     import time
+
     from opentelemetry import trace
+
     from app.main import metrics
-    
+
     tracer = trace.get_tracer(__name__)
     func_name = getattr(agent_func, "__name__", getattr(type(agent_func), "__name__", "agent"))
     span_name = f"consensus.{func_name}"
-    
+
     start_time = time.time()
     with tracer.start_as_current_span(span_name) as span:
         span.set_attribute("agent.name", func_name)
@@ -43,7 +45,7 @@ async def run_agent_safe(agent_func, *args, timeout_seconds: float = 15.0) -> di
             span.set_attribute("agent.status", "success")
             span.set_attribute("agent.duration_seconds", duration)
             return result
-        except asyncio.TimeoutError:
+        except TimeoutError:
             duration = time.time() - start_time
             logger.error(f"Agent {func_name} timed out after {timeout_seconds}s. Task cancelled.")
             metrics.record_agent_latency(func_name, duration)
@@ -97,7 +99,7 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
             ),
             timeout=5.0
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning("Reconciler agent timed out. Skipping conflict resolution.")
         reconciler_results = {}
 
@@ -116,7 +118,7 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
             ),
             timeout=5.0
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning("Memory agent timed out. Skipping historical drift verification.")
         memory_result = {}
 
@@ -133,7 +135,7 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
             ),
             timeout=5.0
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning("Summary agent timed out. Skipping executive summary generation.")
         executive_summary = ""
 

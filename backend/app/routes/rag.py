@@ -13,7 +13,7 @@ import json
 import logging
 import time
 import uuid
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -311,21 +311,22 @@ async def ask_rag_stream(
         try:
             # Check for offline fallback
             if settings.LLM_OFFLINE_MOCK_FALLBACK or not settings.GEMINI_API_KEY:
-                from app.services.llm import local_extractive_rag
                 import asyncio
+
+                from app.services.llm import local_extractive_rag
                 yield f"data: {json.dumps({'type': 'session', 'session_id': session_id})}\n\n"
                 answer_text, citations = local_extractive_rag(req.question, docs)
-                
+
                 # Stream answer word by word (or chunk by chunk) for realistic UX
                 words = answer_text.split(" ")
                 for i, word in enumerate(words):
                     space = " " if i > 0 else ""
                     yield f"data: {json.dumps({'type': 'token', 'content': space + word})}\n\n"
                     await asyncio.sleep(0.01)
-                    
+
                 yield f"data: {json.dumps({'type': 'citations', 'citations': citations})}\n\n"
                 yield f"data: {json.dumps({'type': 'done', 'session_id': session_id})}\n\n"
-                
+
                 # Save history
                 history.append({"role": "user", "content": req.question})
                 history.append({"role": "assistant", "content": answer_text})
@@ -335,7 +336,7 @@ async def ask_rag_stream(
             import google.generativeai as genai
             genai.configure(api_key=settings.GEMINI_API_KEY)
             model = genai.GenerativeModel(settings.LLM_MODEL)
-            
+
             # Send session_id first
             yield f"data: {json.dumps({'type': 'session', 'session_id': session_id})}\n\n"
 

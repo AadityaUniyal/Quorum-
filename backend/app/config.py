@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str | None = None
     LLM_MODEL: str = "gemini-1.5-pro"  # Primary LLM model
     LLM_OFFLINE_MOCK_FALLBACK: bool = True  # Enable local regex/extractive fallback when APIs are offline
-    
+
     # LLM Fallback Configuration (Roadmap 1.3)
     # Primary → Secondary → Tertiary (local Ollama)
     LLM_FALLBACK_ENABLED: bool = True
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     LLM_SECONDARY_MODEL: str | None = None  # e.g., "gpt-4o-mini"
     LLM_TERTIARY_OLLAMA_URL: str = "http://localhost:11434"  # Local Ollama endpoint
     LLM_TERTIARY_MODEL: str = "llama3.1:8b"  # Local fallback model
-    
+
     # LLM Retry Configuration
     LLM_MAX_RETRIES: int = 3
     LLM_RETRY_DELAY_SECONDS: float = 2.0  # Initial delay, uses exponential backoff
@@ -61,7 +61,7 @@ class Settings(BaseSettings):
             password_part = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
             self.REDIS_URL = f"redis://{password_part}{self.REDIS_HOST}:{self.REDIS_PORT}/0"
         return self
-    
+
     @staticmethod
     def get_redis_url() -> str:
         """Return the Redis connection URL (used by aioredis)."""
@@ -94,6 +94,7 @@ os.makedirs(settings.CHROMA_PERSIST_DIR, exist_ok=True)
 
 # ─── Startup Validation ──────────────────────────────────────────────────────
 import logging as _logging
+
 _startup_logger = _logging.getLogger("app.config")
 
 if not settings.JWT_SECRET_KEY or settings.JWT_SECRET_KEY == "":

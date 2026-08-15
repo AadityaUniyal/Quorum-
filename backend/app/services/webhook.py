@@ -1,5 +1,5 @@
 import logging
-import asyncio
+
 from app.database import SessionLocal
 from app.models.webhook import WebhookConfig
 
@@ -11,16 +11,18 @@ def _send_webhook_request_sync(webhook_config_id: str, url: str, event_type: str
     Returns True if successfully delivered, False otherwise.
     """
     import uuid
+
     import httpx
+
     from app.models.webhook import WebhookLog
-    
+
     db = SessionLocal()
     try:
         log_entry = db.query(WebhookLog).filter(
             WebhookLog.idempotency_key == idempotency_key,
             WebhookLog.url == url
         ).first()
-        
+
         if not log_entry:
             log_entry = WebhookLog(
                 webhook_config_id=uuid.UUID(webhook_config_id) if webhook_config_id else None,
@@ -33,10 +35,10 @@ def _send_webhook_request_sync(webhook_config_id: str, url: str, event_type: str
             db.add(log_entry)
         else:
             log_entry.attempt_count = attempt
-            
+
         db.commit()
         db.refresh(log_entry)
-        
+
         try:
             resp = httpx.post(
                 url,
@@ -79,16 +81,18 @@ def dispatch_webhook(event_type: str, payload: dict):
     Query all active webhook subscriptions for this event_type
     and publish them to the webhook_queue in RabbitMQ.
     """
-    import uuid
-    import pika
     import json
+    import uuid
+
+    import pika
+
     from app.config import settings
-    
+
     db = SessionLocal()
     try:
         subscriptions = (
             db.query(WebhookConfig)
-            .filter(WebhookConfig.event_type == event_type, WebhookConfig.is_active == True)
+            .filter(WebhookConfig.event_type == event_type, WebhookConfig.is_active)
             .all()
         )
         if not subscriptions:
@@ -125,7 +129,7 @@ def dispatch_webhook(event_type: str, payload: dict):
                 )
             )
             logger.info(f"Published webhook event {event_type} to {sub.url} in RabbitMQ.")
-            
+
         connection.close()
     except Exception as e:
         logger.error(f"Error publishing webhooks to queue: {e}")

@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.auth import User, UserRole
 from app.models.comment import Comment
 from app.models.document import Document
-from app.models.auth import User, UserRole
-from app.routes.auth import get_current_user, RoleChecker
+from app.routes.auth import RoleChecker
 from app.schemas.comment import CommentCreate, CommentResponse
 
 router = APIRouter(prefix="/api/documents", tags=["comments"])

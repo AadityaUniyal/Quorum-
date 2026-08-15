@@ -1,7 +1,8 @@
 import logging
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db

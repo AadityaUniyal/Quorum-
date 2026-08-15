@@ -7,8 +7,6 @@ processed documents from the same vendor/entity to detect anomalous values.
 import logging
 from typing import Any
 
-from app.config import settings
-
 logger = logging.getLogger(__name__)
 
 # Fields to check for drift per category

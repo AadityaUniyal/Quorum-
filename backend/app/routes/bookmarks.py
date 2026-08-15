@@ -7,7 +7,7 @@ from app.database import get_db
 from app.models.auth import User
 from app.models.bookmark import Bookmark
 from app.routes.auth import get_current_user
-from app.schemas.bookmark import BookmarkCreate, BookmarkResponse, BookmarkUpdate
+from app.schemas.bookmark import BookmarkCreate, BookmarkResponse
 
 router = APIRouter(prefix="/api/bookmarks", tags=["bookmarks"])
 

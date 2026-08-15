@@ -1,11 +1,11 @@
 import logging
-from uuid import UUID
 import uuid
 from datetime import datetime
-from pydantic import BaseModel
+from uuid import UUID
 
 import redis
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -79,7 +79,7 @@ def get_redis_client():
         )
         r.ping()
         return r
-    except Exception as exc:
+    except Exception:
         return _mock_redis_client
 
 
@@ -92,7 +92,7 @@ def acquire_document_lock(document_id: str, username: str, token: str | None = N
     lock_key = f"lock:document:{document_id}"
     r = get_redis_client()
     current_val = r.get(lock_key)
-    
+
     if current_val:
         parts = current_val.split(":", 1)
         current_holder = parts[0]
@@ -390,10 +390,11 @@ def approve_document_stage(
 
     if next_stage == "APPROVED":
         doc.status = DocumentStatus.PROCESSED
-        
+
         # Dispatch webhook (Roadmap 2.4 / Webhook Studio)
-        from app.services.webhook import dispatch_webhook
         from datetime import datetime as dt
+
+        from app.services.webhook import dispatch_webhook
         dispatch_webhook(
             event_type="document.processed",
             payload={

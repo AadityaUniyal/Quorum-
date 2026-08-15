@@ -1,7 +1,7 @@
-import re
-import os
 import json
 import math
+import os
+import re
 from typing import Any
 
 # Local synonym storage path
@@ -20,7 +20,7 @@ def load_local_synonyms() -> dict[str, list[str]]:
             json.dump(default, f, indent=2)
         return default
     try:
-        with open(SYNONYM_FILE, "r") as f:
+        with open(SYNONYM_FILE) as f:
             return json.load(f)
     except Exception:
         return {}
@@ -37,7 +37,7 @@ class LocalNaiveBayesClassifier:
     Computes class probabilities based on term frequencies.
     """
     CLASSES = ["INVOICE", "RFQ", "CONTRACT", "COMPLIANCE"]
-    
+
     # Class term vocabulary seeds
     VOCAB = {
         "INVOICE": ["invoice", "bill", "subtotal", "tax", "due", "total", "vendor", "payment", "amount", "charge", "remit", "invoice number"],
@@ -54,13 +54,13 @@ class LocalNaiveBayesClassifier:
         text_lower = text.lower()
         tokens = re.findall(r"\b\w+\b", text_lower)
         token_set = set(tokens)
-        
+
         scores = {}
         for c in cls.CLASSES:
             # Simple prior probability (uniform across 4 classes = 0.25)
             score = math.log(0.25)
             keywords = cls.VOCAB[c]
-            
+
             # Compute term presence probability
             for keyword in keywords:
                 if keyword in token_set:
@@ -75,7 +75,7 @@ class LocalNaiveBayesClassifier:
         max_score = max(scores.values())
         exp_scores = {c: math.exp(score - max_score) for c, score in scores.items()}
         total_sum = sum(exp_scores.values())
-        
+
         probabilities = {}
         for c in cls.CLASSES:
             probabilities[c] = round(exp_scores[c] / total_sum, 4) if total_sum > 0 else 0.25
@@ -97,7 +97,7 @@ class LocalTableReconstructor:
         """
         rows = []
         lines = ocr_text.split("\n")
-        
+
         for line in lines:
             line_str = line.strip()
             # Look for lines containing numeric columns resembling table items
@@ -171,10 +171,10 @@ class LocalTableReconstructor:
             price = item.get("unit_price", 0.0)
             total = item.get("total", 0.0)
             expected = round(qty * price, 2)
-            
+
             is_valid = math.isclose(expected, total, abs_tol=0.01)
             notes = (
-                f"Math verified: {qty} x ${price:.2f} == ${total:.2f}" if is_valid 
+                f"Math verified: {qty} x ${price:.2f} == ${total:.2f}" if is_valid
                 else f"Math discrepancy: Expected {qty} x ${price:.2f} = ${expected:.2f}, but got ${total:.2f}"
             )
             audit_results.append({
@@ -224,7 +224,7 @@ class LocalLayoutParser:
             subtotal = re.search(r"subtotal\s*[:\-]?\s*\$?([0-9,]+\.[0-9]{2})", text_lower)
             if subtotal:
                 extracted["subtotal"] = subtotal.group(1).replace(",", "")
-            
+
             tax = re.search(r"tax\s*\([0-9\.]*%\)?\s*[:\-]?\s*\$?([0-9,]+\.[0-9]{2})", text_lower)
             if not tax:
                 tax = re.search(r"tax\s*[:\-]?\s*\$?([0-9,]+\.[0-9]{2})", text_lower)
@@ -254,7 +254,7 @@ class LocalLayoutParser:
             rfq_ref = re.search(r"(?:rfq\s*(?:reference|no\.?|#|ref))\s*[:\-]?\s*([a-z0-9\-]+)", text_lower)
             if rfq_ref:
                 extracted["rfq_reference"] = rfq_ref.group(1).upper()
-            
+
             part = re.search(r"(?:part\s*(?:number|no\.?|#))\s*[:\-]?\s*([a-z0-9\-]+)", text_lower)
             if part:
                 extracted["part_number"] = part.group(1).upper()
@@ -270,7 +270,7 @@ class LocalLayoutParser:
             tol = re.search(r"tolerance\s*[:\-]?\s*([a-z0-9%+\-\s]+)", text_lower)
             if tol:
                 extracted["tolerance"] = tol.group(1).strip()
-                
+
             extracted["line_items"] = LocalTableReconstructor.extract_table(ocr_text)
 
         elif category == "CONTRACT":
@@ -328,12 +328,12 @@ class LocalTfidfSearch:
         syns = load_local_synonyms()
         tokens = cls.tokenize(query)
         expanded = list(tokens)
-        
+
         for t in tokens:
             for base_word, word_list in syns.items():
                 if t == base_word or t in word_list:
                     expanded.extend([base_word] + [w for w in word_list if w != t])
-        
+
         return " ".join(set(expanded))
 
     @classmethod
@@ -358,7 +358,7 @@ class LocalTfidfSearch:
         query_tf = {}
         for token in query_tokens:
             query_tf[token] = query_tf.get(token, 0) + 1
-        
+
         query_vector = {}
         query_norm_sq = 0.0
         for term in vocab:
@@ -388,7 +388,7 @@ class LocalTfidfSearch:
                 doc_val = doc_tf.get(term, 0) * idf
                 dot_product += query_vector[term] * doc_val
                 doc_norm_sq += doc_val ** 2
-            
+
             doc_norm = math.sqrt(doc_norm_sq)
             if doc_norm > 0:
                 score = dot_product / (query_norm * doc_norm)

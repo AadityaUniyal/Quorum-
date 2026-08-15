@@ -169,7 +169,7 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
 
             # Save page to Database
             page = db.query(CrawledPage).filter(CrawledPage.url == current_url).first()
-            
+
             # Content Change Detection (Roadmap 1.5): skip DB update & vector store re-indexing if hash matches
             skip_indexing = False
             if page:

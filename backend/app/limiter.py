@@ -3,8 +3,10 @@ Rate limiter singleton — imported by main.py and route modules.
 Uses Redis backend storage when available, with graceful fallback to in-memory storage.
 """
 import logging
+
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
 from app.config import settings
 
 logger = logging.getLogger("app.limiter")

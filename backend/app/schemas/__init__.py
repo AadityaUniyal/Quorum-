@@ -1,5 +1,7 @@
 # Pydantic Schemas Package Init
+from app.schemas.api_key import ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse
 from app.schemas.auth import Token, TokenData, UserCreate, UserLogin, UserResponse
+from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.document import (
     DocumentResponse,
     DocumentReviewSubmit,
@@ -7,8 +9,6 @@ from app.schemas.document import (
     ExtractedFieldResponse,
     FieldUpdate,
 )
-from app.schemas.comment import CommentCreate, CommentResponse
-from app.schemas.api_key import ApiKeyCreate, ApiKeyResponse, ApiKeyCreateResponse
 
 __all__ = [
     "Token",

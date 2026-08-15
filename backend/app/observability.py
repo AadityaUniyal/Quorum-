@@ -6,10 +6,10 @@ Falls back gracefully when the collector is unreachable.
 import logging
 
 from opentelemetry import trace
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from app.config import settings
 

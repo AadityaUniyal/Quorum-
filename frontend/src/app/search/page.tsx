@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { api, SearchResultItem } from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
@@ -78,18 +78,18 @@ export default function SearchPage() {
   const [bookmarkName, setBookmarkName] = useState('');
   const [isExporting, setIsExporting] = useState(false);
 
-  useEffect(() => {
-    fetchBookmarks();
-  }, []);
-
-  const fetchBookmarks = async () => {
+  const fetchBookmarks = useCallback(async () => {
     try {
       const list = await api.listBookmarks();
       setBookmarks(list);
     } catch (e) {
       console.error('Failed to load bookmarks', e);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchBookmarks();
+  }, [fetchBookmarks]);
 
   const handleSaveBookmark = async () => {
     if (!query.trim()) {

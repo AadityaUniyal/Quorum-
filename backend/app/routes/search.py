@@ -1,6 +1,5 @@
 import json
 import logging
-from app.services.cache import cache
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -12,6 +11,7 @@ from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.routes.auth import RoleChecker
+from app.services.cache import cache
 from app.services.export import export_to_csv, export_to_pdf
 from app.services.vector_store import query_rag_knowledge, search_vector_store
 
@@ -554,7 +554,7 @@ def search_documents_metadata(
         if not q_tokens:
             return res_list
         from difflib import SequenceMatcher
-        
+
         # 1. Compute overlap scores for all items
         overlap_scores = {}
         for item in res_list:
@@ -577,25 +577,25 @@ def search_documents_metadata(
         # 2. Get min and max for normalization
         rrf_scores = [item["score"] for item in res_list]
         min_rrf, max_rrf = min(rrf_scores), max(rrf_scores)
-        
+
         overlaps = list(overlap_scores.values())
         min_overlap, max_overlap = min(overlaps), max(overlaps)
 
         # 3. Normalize and combine
         for item in res_list:
             item_id = item["id"]
-            
+
             # Normalize RRF score to [0.0, 1.0]
             rrf_range = max_rrf - min_rrf
             norm_rrf = (item["score"] - min_rrf) / rrf_range if rrf_range > 0 else 1.0
-            
+
             # Normalize overlap score to [0.0, 1.0]
             overlap_range = max_overlap - min_overlap
             norm_overlap = (overlap_scores[item_id] - min_overlap) / overlap_range if overlap_range > 0 else 1.0
-            
+
             # Weighted combination of normalized scores
             item["score"] = round(norm_rrf * 0.7 + norm_overlap * 0.3, 4)
-            
+
         return res_list
 
     combined_results = token_overlap_similarity_rerank(combined_results, clean_query)

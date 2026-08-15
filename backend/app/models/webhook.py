@@ -1,7 +1,10 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, String, Integer
+
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
+
 from app.database import GUID, Base
+
 
 class WebhookConfig(Base):
     __tablename__ = "webhook_configs"

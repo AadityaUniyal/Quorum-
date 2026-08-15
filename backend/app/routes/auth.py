@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 
 import bcrypt
@@ -9,25 +10,36 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.models.auth import User, UserRole
-from app.schemas.auth import RefreshTokenRequest, Token, UserCreate, UserLogin, UserResponse, UserUpdate, ChangePassword, UserRoleUpdate
-
-import logging
+from app.schemas.auth import (
+    ChangePassword,
+    RefreshTokenRequest,
+    Token,
+    UserCreate,
+    UserLogin,
+    UserResponse,
+    UserRoleUpdate,
+    UserUpdate,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # Rate limiter — imported from dedicated module to avoid circular import with main.py
+from fastapi import Request, Response
+
 from app.limiter import limiter
-from fastapi import Request
-from fastapi import Response
 
 security = HTTPBearer(auto_error=False)
 
 from app.core.security import (
     blacklist_token,
     is_token_blacklisted,
+)
+from app.core.security import (
     create_access_token as sec_create_access_token,
+)
+from app.core.security import (
     create_refresh_token as sec_create_refresh_token,
 )
 
@@ -255,7 +267,7 @@ def login_google_callback(code: str, response: Response, db: Session = Depends(g
     import secrets
     mock_email = "google_user@example.com"
     mock_name = "Google User"
-    
+
     user = db.query(User).filter(User.email == mock_email).first()
     if not user:
         user = User(
@@ -268,13 +280,13 @@ def login_google_callback(code: str, response: Response, db: Session = Depends(g
         db.add(user)
         db.commit()
         db.refresh(user)
-        
+
     access_token = create_access_token(user)
     refresh_token = create_refresh_token(user)
-    
+
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=settings.COOKIE_SECURE, samesite=settings.COOKIE_SAMESITE, domain=settings.COOKIE_DOMAIN, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
     response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=settings.COOKIE_SECURE, samesite=settings.COOKIE_SAMESITE, domain=settings.COOKIE_DOMAIN, max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
-    
+
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 @router.get("/login/microsoft")
@@ -289,7 +301,7 @@ def login_microsoft_callback(code: str, response: Response, db: Session = Depend
     import secrets
     mock_email = "ms_user@example.com"
     mock_name = "Microsoft User"
-    
+
     user = db.query(User).filter(User.email == mock_email).first()
     if not user:
         user = User(
@@ -302,13 +314,13 @@ def login_microsoft_callback(code: str, response: Response, db: Session = Depend
         db.add(user)
         db.commit()
         db.refresh(user)
-        
+
     access_token = create_access_token(user)
     refresh_token = create_refresh_token(user)
-    
+
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=settings.COOKIE_SECURE, samesite=settings.COOKIE_SAMESITE, domain=settings.COOKIE_DOMAIN, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
     response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=settings.COOKIE_SECURE, samesite=settings.COOKIE_SAMESITE, domain=settings.COOKIE_DOMAIN, max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
-    
+
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 # Refresh token endpoint — accepts a refresh token, returns new access + refresh tokens (rotation)
@@ -360,7 +372,7 @@ def refresh_tokens(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired refresh token",
     )
-    
+
     # Extract refresh token from body or cookie
     ref_token = None
     if body and body.refresh_token:
@@ -440,7 +452,9 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 # API Keys management
 from uuid import UUID
-from app.schemas.api_key import ApiKeyCreate, ApiKeyResponse, ApiKeyCreateResponse
+
+from app.schemas.api_key import ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse
+
 
 @router.post("/apikeys", response_model=ApiKeyCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_api_key(
@@ -448,18 +462,18 @@ def create_api_key(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    import secrets
     import hashlib
-    
+    import secrets
+
     # Generate random key: googi_live_xxxxxxxx
     raw_secret = secrets.token_hex(24) # 48 chars hex
     api_key_str = f"googi_live_{raw_secret}"
     hashed_key = hashlib.sha256(api_key_str.encode('utf-8')).hexdigest()
-    
+
     expires_at = None
     if key_data.expires_in_days:
         expires_at = datetime.utcnow() + timedelta(days=key_data.expires_in_days)
-        
+
     from app.models.api_key import ApiKey
     db_key = ApiKey(
         name=key_data.name,
@@ -472,7 +486,7 @@ def create_api_key(
     db.add(db_key)
     db.commit()
     db.refresh(db_key)
-    
+
     return ApiKeyCreateResponse(
         id=db_key.id,
         name=db_key.name,
@@ -502,11 +516,11 @@ def revoke_api_key(
     db_key = db.query(ApiKey).filter(ApiKey.id == key_id).first()
     if not db_key:
         raise HTTPException(status_code=404, detail="API Key not found")
-        
+
     # Check permissions (only owner or Admin can delete)
     if db_key.user_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Forbidden")
-        
+
     db.delete(db_key)
     db.commit()
     return None
@@ -630,7 +644,11 @@ def setup_totp(
     The user must verify with a valid TOTP code before 2FA is enabled.
     """
     try:
-        import pyotp, qrcode, io, base64
+        import base64
+        import io
+
+        import pyotp
+        import qrcode
     except ImportError:
         raise HTTPException(
             status_code=501,

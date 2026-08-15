@@ -1,10 +1,11 @@
 import logging
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.auth import User, UserRole
+from app.models.auth import User
 from app.models.notification import Notification
 from app.routes.auth import get_current_user
 

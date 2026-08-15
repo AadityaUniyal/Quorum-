@@ -1,14 +1,13 @@
-import logging
-import imaplib
 import email
-from email.header import decode_header
+import imaplib
+import logging
 import os
 import secrets
 from datetime import datetime
-from sqlalchemy.orm import Session
-from app.config import settings
+from email.header import decode_header
+
 from app.database import SessionLocal
-from app.models.document import Document, DocumentStatus, DocumentCategory
+from app.models.document import Document, DocumentCategory, DocumentStatus
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ def check_mailbox_and_ingest():
     If no credentials, logs warning and runs mock ingestion.
     """
     logger.info("Starting email ingestion check...")
-    
+
     # We can configuration-gate this
     imap_server = os.getenv("IMAP_SERVER")
     imap_user = os.getenv("IMAP_USER")
@@ -47,15 +46,15 @@ def check_mailbox_and_ingest():
                 status, data = mail.fetch(num, '(RFC822)')
                 if status != "OK":
                     continue
-                
+
                 raw_email = data[0][1]
                 msg = email.message_from_bytes(raw_email)
-                
+
                 # Check headers
                 subject, encoding = decode_header(msg["Subject"])[0]
                 if isinstance(subject, bytes):
                     subject = subject.decode(encoding or "utf-8")
-                
+
                 logger.info(f"Processing email: {subject}")
 
                 # Process attachments
@@ -64,24 +63,24 @@ def check_mailbox_and_ingest():
                         continue
                     if part.get('Content-Disposition') is None:
                         continue
-                    
+
                     filename = part.get_filename()
                     if filename:
                         filename, encoding = decode_header(filename)[0]
                         if isinstance(filename, bytes):
                             filename = filename.decode(encoding or "utf-8")
-                        
+
                         if filename.lower().endswith('.pdf'):
                             # Save attachment file
                             file_data = part.get_payload(decode=True)
                             dest_dir = os.path.join(os.getcwd(), "uploads")
                             os.makedirs(dest_dir, exist_ok=True)
-                            
+
                             safe_name = f"email_{secrets.token_hex(4)}_{filename}"
                             dest_path = os.path.join(dest_dir, safe_name)
                             with open(dest_path, "wb") as f:
                                 f.write(file_data)
-                            
+
                             # Register document in database
                             db_doc = Document(
                                 filename=filename,
@@ -116,7 +115,7 @@ def _run_mock_ingestion():
         dest_dir = os.path.join(os.getcwd(), "uploads")
         os.makedirs(dest_dir, exist_ok=True)
         dest_path = os.path.join(dest_dir, "mock_email_invoice.pdf")
-        
+
         # Create a simple mock empty file
         with open(dest_path, "w") as f:
             f.write("Mock invoice PDF content")

@@ -11,7 +11,7 @@ from app.database import SessionLocal
 from app.models.audit import AuditLog
 from app.models.document import Document, DocumentCategory, DocumentStatus, ExtractedField
 from app.services.ocr import perform_ocr
-from app.services.queue import register_local_worker_callback, register_local_crawl_worker_callback
+from app.services.queue import register_local_crawl_worker_callback, register_local_worker_callback
 from app.services.vector_store import add_document_to_vector_store
 
 # Setup logging
@@ -30,7 +30,7 @@ def classify_document(filename: str, ocr_text: str) -> DocumentCategory:
     Classifies a document based on filename patterns and our custom LocalNaiveBayesClassifier.
     """
     from app.services.local_engine import LocalNaiveBayesClassifier
-    
+
     fn = filename.lower()
     if "invoice" in fn:
         return DocumentCategory.INVOICE
@@ -73,7 +73,7 @@ def process_document(document_id: str):
             if owner_id:
                 break
             time.sleep(1.0)
-            
+
         if not owner_id:
             owner_id = f"fallback_worker:{doc.id}"
 
@@ -82,7 +82,7 @@ def process_document(document_id: str):
             ocr_result = perform_ocr(doc.file_path, doc.filename, doc.file_type)
         finally:
             release_redis_semaphore("ocr", owner_id)
-            
+
         doc.ocr_text = ocr_result
         db.commit()
 
@@ -266,7 +266,7 @@ def on_message_callback(ch, method, properties, body):
                     if doc:
                         doc.status = DocumentStatus.FAILED
                         db_session.commit()
-                        
+
                         # Audit failure
                         audit = AuditLog(
                             document_id=doc.id,
@@ -317,7 +317,7 @@ def on_webhook_callback(ch, method, properties, body):
     retry_count = 0
     if properties.headers and "x-retry-count" in properties.headers:
         retry_count = int(properties.headers["x-retry-count"])
-    
+
     try:
         payload_data = json.loads(body.decode())
         cfg_id = payload_data.get("webhook_config_id")
@@ -325,7 +325,7 @@ def on_webhook_callback(ch, method, properties, body):
         event_type = payload_data.get("event_type")
         payload = payload_data.get("payload")
         idempotency_key = payload_data.get("idempotency_key")
-        
+
         success = _send_webhook_request_sync(cfg_id, url, event_type, payload, idempotency_key, retry_count + 1)
         if success:
             ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -334,16 +334,16 @@ def on_webhook_callback(ch, method, properties, body):
     except Exception as e:
         logger.error(f"Error executing webhook dispatch (retry {retry_count}): {e}")
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        
+
         backoffs = [5.0, 30.0, 300.0]
         if retry_count < len(backoffs):
             delay = backoffs[retry_count]
             logger.info(f"Scheduling webhook retry in {delay} seconds...")
             time.sleep(delay)
-            
+
             new_headers = dict(properties.headers) if properties.headers else {}
             new_headers["x-retry-count"] = retry_count + 1
-            
+
             ch.basic_publish(
                 exchange="",
                 routing_key="webhook_queue",

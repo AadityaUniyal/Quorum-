@@ -16,22 +16,20 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import app.models.audit
 
 # Import all models to register with Base metadata
 import app.models.auth
-import app.models.document
-import app.models.search
-import app.models.notification
-import app.models.webhook
 import app.models.bookmark
+import app.models.document
+import app.models.notification
+import app.models.search
+import app.models.webhook
 from app.config import settings
 from app.database import Base, engine
 from app.limiter import limiter
@@ -99,7 +97,7 @@ metrics = MetricsCollector()
 async def lifespan(app: FastAPI):
     """Application startup and shutdown lifecycle."""
     setup_logging("DEBUG" if settings.DEBUG else "INFO")
-    
+
     # Optional: Sentry & OpenTelemetry (non-critical)
     try:
         from app.error_handling import init_sentry
@@ -111,7 +109,7 @@ async def lifespan(app: FastAPI):
         init_tracing(app)
     except Exception as e:
         logger.warning(f"OpenTelemetry initialization skipped: {e}")
-    
+
     logger.info("DocIntel AI starting up", extra={"trace_id": "startup"})
 
     # Create database tables
@@ -211,7 +209,20 @@ app.add_middleware(
 
 # ─── Include Routers ─────────────────────────────────────────────────────────
 
-from app.routes import analytics, auth, crawl, documents, review, search, streaming, comments, rag, notifications, webhooks, bookmarks  # noqa: E402
+from app.routes import (  # noqa: E402
+    analytics,
+    auth,
+    bookmarks,
+    comments,
+    crawl,
+    documents,
+    notifications,
+    rag,
+    review,
+    search,
+    streaming,
+    webhooks,
+)
 
 app.include_router(auth.router)
 app.include_router(documents.router)
@@ -312,9 +323,11 @@ def health_check():
 
 from fastapi.responses import PlainTextResponse
 
+
 def get_queue_depth() -> int:
     try:
         import pika
+
         from app.config import settings
         credentials = pika.PlainCredentials(settings.RABBITMQ_USER, settings.RABBITMQ_PASS)
         parameters = pika.ConnectionParameters(
@@ -340,49 +353,49 @@ def prometheus_metrics():
     """
     data = metrics.to_dict()
     q_depth = get_queue_depth()
-    
+
     agent_latencies = getattr(metrics, "agent_latencies", {})
     agent_lines = []
     for agent_name, latency_list in agent_latencies.items():
         if latency_list:
             avg_lat = sum(latency_list) / len(latency_list)
             agent_lines.append(f'googi_agent_latency_seconds{{agent="{agent_name}"}} {round(avg_lat, 4)}')
-            
+
     lines = [
-        f'# HELP googi_http_requests_total Total HTTP requests',
-        f'# TYPE googi_http_requests_total counter',
+        '# HELP googi_http_requests_total Total HTTP requests',
+        '# TYPE googi_http_requests_total counter',
         f'googi_http_requests_total {data["requests_total"]}',
-        
-        f'# HELP googi_http_request_latency_avg_ms Average HTTP request latency in ms',
-        f'# TYPE googi_http_request_latency_avg_ms gauge',
+
+        '# HELP googi_http_request_latency_avg_ms Average HTTP request latency in ms',
+        '# TYPE googi_http_request_latency_avg_ms gauge',
         f'googi_http_request_latency_avg_ms {data["request_latency_avg_ms"]}',
-        
-        f'# HELP googi_http_request_latency_p50_ms P50 HTTP request latency in ms',
-        f'# TYPE googi_http_request_latency_p50_ms gauge',
+
+        '# HELP googi_http_request_latency_p50_ms P50 HTTP request latency in ms',
+        '# TYPE googi_http_request_latency_p50_ms gauge',
         f'googi_http_request_latency_p50_ms {data["request_latency_p50_ms"]}',
-        
-        f'# HELP googi_http_request_latency_p95_ms P95 HTTP request latency in ms',
-        f'# TYPE googi_http_request_latency_p95_ms gauge',
+
+        '# HELP googi_http_request_latency_p95_ms P95 HTTP request latency in ms',
+        '# TYPE googi_http_request_latency_p95_ms gauge',
         f'googi_http_request_latency_p95_ms {data["request_latency_p95_ms"]}',
-        
-        f'# HELP googi_http_request_latency_p99_ms P99 HTTP request latency in ms',
-        f'# TYPE googi_http_request_latency_p99_ms gauge',
+
+        '# HELP googi_http_request_latency_p99_ms P99 HTTP request latency in ms',
+        '# TYPE googi_http_request_latency_p99_ms gauge',
         f'googi_http_request_latency_p99_ms {data["request_latency_p99_ms"]}',
-        
-        f'# HELP googi_rabbitmq_queue_depth RabbitMQ queue depth',
-        f'# TYPE googi_rabbitmq_queue_depth gauge',
+
+        '# HELP googi_rabbitmq_queue_depth RabbitMQ queue depth',
+        '# TYPE googi_rabbitmq_queue_depth gauge',
         f'googi_rabbitmq_queue_depth{{queue="documents"}} {q_depth}',
-        
-        f'# HELP googi_documents_processed_total Total documents successfully processed',
-        f'# TYPE googi_documents_processed_total counter',
+
+        '# HELP googi_documents_processed_total Total documents successfully processed',
+        '# TYPE googi_documents_processed_total counter',
         f'googi_documents_processed_total {data["documents_processed"]}',
-        
-        f'# HELP googi_documents_failed_total Total documents failed in processing',
-        f'# TYPE googi_documents_failed_total counter',
+
+        '# HELP googi_documents_failed_total Total documents failed in processing',
+        '# TYPE googi_documents_failed_total counter',
         f'googi_documents_failed_total {data["documents_failed"]}',
-        
-        f'# HELP googi_agent_latency_seconds Average agent processing latency in seconds',
-        f'# TYPE googi_agent_latency_seconds gauge',
+
+        '# HELP googi_agent_latency_seconds Average agent processing latency in seconds',
+        '# TYPE googi_agent_latency_seconds gauge',
     ] + agent_lines
-    
+
     return "\n".join(lines)

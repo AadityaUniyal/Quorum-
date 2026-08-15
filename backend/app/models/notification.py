@@ -1,8 +1,11 @@
 import uuid
 from datetime import datetime
+
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
+
 from app.database import GUID, Base
+
 
 class Notification(Base):
     __tablename__ = "notifications"

@@ -1,10 +1,11 @@
 import json
 import logging
-from typing import Callable
+from collections.abc import Callable
 from functools import wraps
 
 import redis
 from redis import asyncio as aioredis
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -124,8 +125,8 @@ def acquire_redis_semaphore(name: str, limit: int, timeout: int = 180) -> str | 
     """Acquire a Redis‑backed semaphore.
     Returns a unique ``owner_id`` if the semaphore could be acquired, otherwise ``None``.
     """
-    import uuid
     import time
+    import uuid
     try:
         client = get_redis_client()
         sem_key = f"semaphore:{name}"

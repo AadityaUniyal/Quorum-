@@ -1,4 +1,4 @@
-# Ruff configuration for DocIntel AI backend
+# Ruff configuration for DocIntel AI
 # https://docs.astral.sh/ruff/
 
 target-version = "py311"

@@ -11,9 +11,9 @@ from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.routes.auth import RoleChecker
 from app.schemas.document import DocumentResponse, DocumentSimpleResponse
-from app.services.queue import publish_document_event
 from app.services.cache import cache
-from app.services.storage import save_uploaded_file, delete_stored_file
+from app.services.queue import publish_document_event
+from app.services.storage import delete_stored_file, save_uploaded_file
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -218,8 +218,10 @@ def inspect_dlq(
     """
     Retrieves messages from DLQ for inspection without acknowledging them (re-queueing immediately).
     """
-    import pika
     import json
+
+    import pika
+
     from app.config import settings
     credentials = pika.PlainCredentials(settings.RABBITMQ_USER, settings.RABBITMQ_PASS)
     parameters = pika.ConnectionParameters(
@@ -247,15 +249,15 @@ def inspect_dlq(
                 "headers": dict(header_frame.headers) if header_frame.headers else {}
             })
             tags.append(method_frame.delivery_tag)
-        
+
         # Nack all of them so they stay in DLQ
         for tag in tags:
             channel.basic_nack(delivery_tag=tag, requeue=True)
-            
+
         connection.close()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to inspect DLQ: {e}")
-        
+
     return messages
 
 
@@ -269,8 +271,10 @@ def requeue_dlq(
     Consumes all messages from DLQ and republishes them to the main queue, resetting their retry count.
     Also updates document status to INGESTED so it is processed.
     """
-    import pika
     import json
+
+    import pika
+
     from app.config import settings
     credentials = pika.PlainCredentials(settings.RABBITMQ_USER, settings.RABBITMQ_PASS)
     parameters = pika.ConnectionParameters(
@@ -287,14 +291,14 @@ def requeue_dlq(
             method_frame, header_frame, body = channel.basic_get(queue="document_processing_dlq", auto_ack=False)
             if not method_frame:
                 break
-                
+
             # Acknowledge from DLQ
             channel.basic_ack(delivery_tag=method_frame.delivery_tag)
-            
+
             # Reset retry count in headers
             headers = dict(header_frame.headers) if header_frame.headers else {}
             headers["x-retry-count"] = 0
-            
+
             # Publish to main queue
             channel.basic_publish(
                 exchange="",
@@ -306,7 +310,7 @@ def requeue_dlq(
                 )
             )
             requeued_count += 1
-            
+
             # Update Document status back to INGESTED
             try:
                 payload = json.loads(body.decode())
@@ -318,11 +322,11 @@ def requeue_dlq(
                         db.commit()
             except Exception:
                 pass
-                
+
         connection.close()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to requeue DLQ: {e}")
-        
+
     return {"message": f"Successfully requeued {requeued_count} messages from DLQ."}
 
 
@@ -344,7 +348,7 @@ def get_document_probabilities(document_id: UUID, db: Session = Depends(get_db),
     doc = db.query(Document).filter(Document.id == str(document_id)).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found.")
-    
+
     from app.services.local_engine import LocalNaiveBayesClassifier
     text = doc.ocr_text or ""
     _, probabilities = LocalNaiveBayesClassifier.classify(text)
@@ -356,8 +360,8 @@ def get_document_audit_line_items(document_id: UUID, db: Session = Depends(get_d
     doc = db.query(Document).filter(Document.id == str(document_id)).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found.")
-    
-    from app.services.local_engine import LocalTableReconstructor, LocalLayoutParser
+
+    from app.services.local_engine import LocalLayoutParser, LocalTableReconstructor
     text = doc.ocr_text or ""
     fields = LocalLayoutParser.extract_fields(text, doc.category.value if doc.category else "INVOICE")
     line_items = fields.get("line_items", [])

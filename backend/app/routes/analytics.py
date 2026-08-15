@@ -127,10 +127,10 @@ def get_agent_stats(
     Returns per-agent performance stats derived from audit logs and extracted fields.
     Covers: average critic/auditor scores, documents flagged per agent, compliance pass rate.
     """
-    from app.models.document import ExtractedField, DocumentStatus
-
     # Average critic and auditor scores per document category
     from sqlalchemy import func
+
+    from app.models.document import DocumentStatus, ExtractedField
     avg_critic = db.query(func.avg(ExtractedField.critic_score)).scalar() or 0.0
     avg_auditor = db.query(func.avg(ExtractedField.auditor_score)).scalar() or 0.0
     avg_confidence = db.query(func.avg(ExtractedField.confidence_score)).scalar() or 0.0
@@ -179,6 +179,7 @@ def get_search_stats(
     Returns search analytics: top queries, zero-result queries, volume trend.
     """
     from sqlalchemy import func
+
     from app.models.search import SearchLog
 
     # Top 20 queries by frequency
@@ -227,7 +228,6 @@ def get_crawl_stats(
     """
     Returns crawler analytics: top PageRank pages, crawl volume, error estimate.
     """
-    from sqlalchemy import func
     from app.models.search import CrawledPage
 
     total_pages = db.query(CrawledPage).count()
@@ -240,11 +240,16 @@ def get_crawl_stats(
     ranks = [r[0] for r in pages if r[0] is not None]
     buckets = {"0.0-0.2": 0, "0.2-0.4": 0, "0.4-0.6": 0, "0.6-0.8": 0, "0.8-1.0": 0}
     for r in ranks:
-        if r < 0.2:   buckets["0.0-0.2"] += 1
-        elif r < 0.4: buckets["0.2-0.4"] += 1
-        elif r < 0.6: buckets["0.4-0.6"] += 1
-        elif r < 0.8: buckets["0.6-0.8"] += 1
-        else:         buckets["0.8-1.0"] += 1
+        if r < 0.2:
+            buckets["0.0-0.2"] += 1
+        elif r < 0.4:
+            buckets["0.2-0.4"] += 1
+        elif r < 0.6:
+            buckets["0.4-0.6"] += 1
+        elif r < 0.8:
+            buckets["0.6-0.8"] += 1
+        else:
+            buckets["0.8-1.0"] += 1
 
     avg_pagerank = sum(ranks) / len(ranks) if ranks else 0.0
 
