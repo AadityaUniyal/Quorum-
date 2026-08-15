@@ -1,0 +1,53 @@
+# ============================================================================
+# DocIntel AI Platform - Worker Dockerfile (Multi-Stage)
+# ============================================================================
+FROM python:3.11-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        libpq-dev \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir -r requirements.txt
+
+FROM python:3.11-slim AS runtime
+
+LABEL maintainer="Aaditya Uniyal" \
+      org.opencontainers.image.title="DocIntel Background Worker" \
+      org.opencontainers.image.description="RabbitMQ consumer worker for the DocIntel AI platform"
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 \
+        curl \
+        libmagic1 \
+        tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+COPY --chown=appuser:appuser . .
+
+RUN mkdir -p /app/uploads && chown appuser:appuser /app/uploads
+
+USER appuser
+
+CMD ["python", "-m", "app.worker"]
