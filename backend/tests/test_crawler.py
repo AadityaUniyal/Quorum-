@@ -17,6 +17,10 @@ def test_is_allowed_by_robots():
     assert is_allowed_by_robots("https://example-test-unknown.com/path") is True
 
 def test_pagerank_calculation(db_session: Session):
+    db_session.query(PageLink).delete()
+    db_session.query(CrawledPage).delete()
+    db_session.commit()
+
     # Setup test nodes (crawled pages)
     page_a = CrawledPage(url="https://site.com/a", title="Page A", pagerank=1.0)
     page_b = CrawledPage(url="https://site.com/b", title="Page B", pagerank=1.0)

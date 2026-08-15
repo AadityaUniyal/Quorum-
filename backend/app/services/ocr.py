@@ -7,6 +7,16 @@ from concurrent.futures import ThreadPoolExecutor
 import pytesseract
 from PIL import Image
 
+try:
+    import pdfplumber
+except ImportError:
+    pdfplumber = None
+
+try:
+    import pypdf
+except ImportError:
+    pypdf = None
+
 logger = logging.getLogger(__name__)
 
 # Thread pool for non-blocking OCR (bounded to avoid resource exhaustion)
@@ -185,7 +195,8 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     """Extract plain text and structured tables from a PDF using pdfplumber or pypdf."""
     text_content = []
     try:
-        import pdfplumber
+        if pdfplumber is None:
+            raise ImportError("pdfplumber is not installed")
         with pdfplumber.open(pdf_path) as pdf:
             for page_num, page in enumerate(pdf.pages):
                 page_text = page.extract_text()
@@ -203,7 +214,8 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     except Exception as e:
         logger.warning(f"pdfplumber extraction failed: {e}. Trying pypdf...")
         try:
-            import pypdf
+            if pypdf is None:
+                raise ImportError("pypdf is not installed")
             reader = pypdf.PdfReader(pdf_path)
             for page in reader.pages:
                 page_text = page.extract_text()

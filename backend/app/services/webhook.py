@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from app.database import SessionLocal

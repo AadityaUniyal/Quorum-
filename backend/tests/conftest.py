@@ -103,28 +103,42 @@ def mock_redis():
     return mock
 
 
+from app.core.security import create_access_token, get_password_hash
+from app.limiter import limiter
+from app.models.auth import User, UserRole
+
+# Disable rate limiting for test suite
+limiter.enabled = False
+
 @pytest.fixture
-def registered_user(client):
+def registered_user(db_session):
     """Register and return a test user with credentials."""
-    user_data = {
-        "email": "test@docintel.ai",
+    user = db_session.query(User).filter(User.email == "test@docintel.ai").first()
+    if not user:
+        user = User(
+            email="test@docintel.ai",
+            hashed_password=get_password_hash("TestPassword123!"),
+            full_name="Test Engineer",
+            role=UserRole.ADMIN,
+            is_verified=True,
+        )
+        db_session.add(user)
+        db_session.commit()
+        db_session.refresh(user)
+    return {
+        "id": str(user.id),
+        "user_obj": user,
+        "email": user.email,
         "password": "TestPassword123!",
-        "full_name": "Test Engineer",
+        "full_name": user.full_name,
         "role": "ADMIN"
     }
-    response = client.post("/api/auth/register", json=user_data)
-    return {**user_data, "response": response}
 
 
 @pytest.fixture
-def auth_token(client, registered_user):
+def auth_token(registered_user):
     """Get a valid auth token for the test user."""
-    response = client.post("/api/auth/login", json={
-        "email": registered_user["email"],
-        "password": registered_user["password"]
-    })
-    data = response.json()
-    return data.get("access_token", "")
+    return create_access_token(registered_user["user_obj"])
 
 
 @pytest.fixture

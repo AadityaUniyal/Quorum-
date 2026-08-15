@@ -71,6 +71,11 @@ class LocalNaiveBayesClassifier:
                     score += math.log(0.15)
             scores[c] = score
 
+        # Check if ANY class keyword was matched
+        matched_any = any(kw in token_set for kws in cls.VOCAB.values() for kw in kws)
+        if not matched_any:
+            return "UNKNOWN", {c: 0.25 for c in cls.CLASSES}
+
         # Convert log probabilities to relative probabilities (softmax equivalent)
         max_score = max(scores.values())
         exp_scores = {c: math.exp(score - max_score) for c, score in scores.items()}
@@ -213,7 +218,7 @@ class LocalLayoutParser:
             if inv_no:
                 extracted["invoice_number"] = inv_no.group(1).upper()
 
-            date_match = re.search(r"date\s*[:\-]?\s*([0-9a-z\s,/\-]+)", text_lower)
+            date_match = re.search(r"(?:invoice\s*)?date\s*[:\-]?\s*([0-9a-zA-Z,/\- ]+)", text_lower)
             if date_match:
                 extracted["invoice_date"] = date_match.group(1).strip().title()
 
@@ -259,15 +264,15 @@ class LocalLayoutParser:
             if part:
                 extracted["part_number"] = part.group(1).upper()
 
-            material = re.search(r"material\s*[:\-]?\s*([a-z0-9\s]+)", text_lower)
+            material = re.search(r"material\s*[:\-]?\s*([a-zA-Z0-9\- ]+)", text_lower)
             if material:
                 extracted["material"] = material.group(1).strip().title()
 
-            qty = re.search(r"qty|quantity\s*[:\-]?\s*([0-9]+)", text_lower)
+            qty = re.search(r"(?:qty|quantity)\s*[:\-]?\s*([0-9]+)", text_lower)
             if qty:
                 extracted["quantity"] = qty.group(1)
 
-            tol = re.search(r"tolerance\s*[:\-]?\s*([a-z0-9%+\-\s]+)", text_lower)
+            tol = re.search(r"tolerance\s*[:\-]?\s*([a-zA-Z0-9%+\-/\. ]+)", text_lower)
             if tol:
                 extracted["tolerance"] = tol.group(1).strip()
 
