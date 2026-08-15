@@ -193,3 +193,13 @@ class TestHealthCheck:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
+
+class TestHealthEndpoint:
+    """Test the /health endpoint returns detailed health status."""
+
+    def test_health_endpoint(self, client):
+        response = client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] in ("healthy", "degraded")
+        assert isinstance(data.get("checks"), dict)

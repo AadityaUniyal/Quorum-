@@ -34,8 +34,23 @@ class Token(BaseModel):
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
+
 class TokenData(BaseModel):
     email: str | None = None
     role: UserRole | None = None
     user_id: UUID | None = None
+
+
+class UserUpdate(BaseModel):
+    full_name: str | None = None
+    email: EmailStr | None = None
+
+
+class ChangePassword(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class UserRoleUpdate(BaseModel):
+    role: UserRole
 

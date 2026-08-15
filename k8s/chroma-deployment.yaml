@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: googi-chroma
+  namespace: googi-dev
+  labels:
+    app: googi-chroma
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: googi-chroma
+  template:
+    metadata:
+      labels:
+        app: googi-chroma
+    spec:
+      containers:
+        - name: chroma
+          image: chromadb/chroma:0.4.0
+          ports:
+            - containerPort: 8000
+          env:
+            - name: CHROMA_DB_IMPL
+              value: "sqlite"
+            # Adjust as needed for production (e.g., PostgreSQL)
+          # Persist data via emptyDir or PVC (omitted for brevity)
+      restartPolicy: Always

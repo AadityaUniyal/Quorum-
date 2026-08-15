@@ -1,5 +1,13 @@
 import pytest
-from googi_crawler import GoogiCrawler, compute_pagerank
+from googi_crawler import GoogiCrawler, CrawledPageData, SitemapParser, compute_pagerank
+
+def test_package_exports():
+    import googi_crawler
+    assert googi_crawler.__version__ == "0.1.0"
+    assert GoogiCrawler is not None
+    assert CrawledPageData is not None
+    assert SitemapParser is not None
+    assert compute_pagerank is not None
 
 def test_url_normalization():
     crawler = GoogiCrawler()

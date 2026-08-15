@@ -59,13 +59,29 @@ if settings.DATABASE_URL.startswith("sqlite"):
         connect_args={"check_same_thread": False},
     )
 else:
+    # Neon PostgreSQL: clean URL and configure SSL
+    db_url = settings.DATABASE_URL
+    connect_args = {}
+
+    # Strip channel_binding param (not supported by psycopg2)
+    if "channel_binding" in db_url:
+        import re
+        db_url = re.sub(r'[&?]channel_binding=[^&]*', '', db_url)
+        # Clean up leftover ? at end or double &&
+        db_url = db_url.replace('&&', '&').rstrip('&').rstrip('?')
+
+    # Pass sslmode via connect_args for reliable SSL
+    if "sslmode=require" in db_url:
+        connect_args["sslmode"] = "require"
+
     engine = create_engine(
-        settings.DATABASE_URL,
+        db_url,
         pool_pre_ping=True,
-        pool_size=5,
-        max_overflow=2,
+        pool_size=10,
+        max_overflow=5,
         pool_timeout=30,
         pool_recycle=1800,
+        connect_args=connect_args,
     )
 
 

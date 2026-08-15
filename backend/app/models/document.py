@@ -38,15 +38,19 @@ class Document(Base):
     category = Column(Enum(DocumentCategory), default=DocumentCategory.UNKNOWN, nullable=False)
     status = Column(Enum(DocumentStatus), default=DocumentStatus.INGESTED, nullable=False)
     ocr_text = Column(Text, nullable=True)
+    executive_summary = Column(Text, nullable=True)
     consensus_score = Column(Float, nullable=True)
     content_hash = Column(String(64), index=True, nullable=True)
 
     uploaded_by = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    assigned_to_id = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    due_date = Column(DateTime, nullable=True)
+    approval_stage = Column(String, default="OPERATOR_REVIEW", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    uploader = relationship("User", backref="uploaded_documents")
+    uploader = relationship("User", backref="uploaded_documents", foreign_keys=[uploaded_by])
     fields = relationship("ExtractedField", back_populates="document", cascade="all, delete-orphan")
 
 class ExtractedField(Base):

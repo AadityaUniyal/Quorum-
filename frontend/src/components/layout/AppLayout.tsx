@@ -6,8 +6,11 @@ import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '@/stores/auth';
 import { AuthPage } from '@/components/auth/AuthPage';
 import { Sidebar } from './Sidebar';
+import { Header } from './Header';
 import { CommandPalette } from './CommandPalette';
 import { Loader2 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,24 +22,30 @@ const queryClient = new QueryClient({
 });
 
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { token, user, loadUser, isLoading } = useAuthStore();
+  const pathname = usePathname();
+  const { user, loadUser, isLoading } = useAuthStore();
   const [authChecked, setAuthChecked] = useState(false);
+
+  // Restore user theme selection
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
-      if (token && !user) {
-        try {
-          await loadUser();
-        } catch {
-          // Handled in loadUser (calls logout)
-        }
+      try {
+        await loadUser();
+      } catch {
+        // Handled in loadUser
+      } finally {
+        setAuthChecked(true);
       }
-      setAuthChecked(true);
     };
     checkAuth();
-  }, [token, user, loadUser]);
+  }, [loadUser]);
 
-  if (!authChecked || (token && !user && isLoading)) {
+  if (!authChecked || isLoading) {
     return (
       <div className="flex flex-col gap-4 items-center justify-center h-screen w-screen bg-[#080808]">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
@@ -48,7 +57,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   }
 
   // Auth Gate
-  if (!token || !user) {
+  if (!user) {
     return (
       <QueryClientProvider client={queryClient}>
         <AuthPage />
@@ -74,9 +83,21 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
       <div className="flex h-screen w-screen bg-[#080808] overflow-hidden text-[#F5F5F5]">
         <Sidebar />
         
-        <main className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto relative bg-[#080808] p-8">
-          {children}
-        </main>
+        <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-[#080808]">
+          <Header />
+          <main className="flex-1 overflow-y-auto p-8 relative">
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="w-full h-full"
+            >
+              {children}
+            </motion.div>
+          </main>
+        </div>
 
         <CommandPalette />
         <Toaster

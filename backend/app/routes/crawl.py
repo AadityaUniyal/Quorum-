@@ -1,5 +1,4 @@
-
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -7,7 +6,8 @@ from app.database import get_db
 from app.models.auth import UserRole
 from app.models.search import CrawledPage
 from app.routes.auth import RoleChecker
-from app.services.crawler import compute_pagerank, crawl_url_task
+from app.services.crawler import compute_pagerank
+from app.services.queue import publish_crawl_task
 
 router = APIRouter(prefix="/api/crawl", tags=["crawl"])
 
@@ -28,23 +28,13 @@ class CrawledPageResponse(BaseModel):
     class Config:
         from_attributes = True
 
-def run_crawl_background(seed_url: str, max_depth: int):
-    """Worker background task wrapper for crawling"""
-    from app.database import SessionLocal
-    db = SessionLocal()
-    try:
-        crawl_url_task(db, seed_url, max_depth)
-    finally:
-        db.close()
-
 @router.post("")
 def start_crawl(
     request: CrawlRequest,
-    background_tasks: BackgroundTasks,
     current_user: str = Depends(operator_or_admin)
 ):
     """
-    Triggers a background task to crawl the website starting from seed url.
+    Triggers a distributed crawl task by publishing to RabbitMQ crawl_queue.
     """
     url_str = str(request.url).strip()
     if not url_str.startswith(("http://", "https://")):
@@ -52,8 +42,14 @@ def start_crawl(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="URL must start with http:// or https://"
         )
-    background_tasks.add_task(run_crawl_background, url_str, request.max_depth)
-    return {"message": f"Crawl task registered in background for: {url_str}"}
+    max_depth = request.max_depth if request.max_depth is not None else 2
+    publish_crawl_task(url=url_str, max_depth=max_depth)
+    return {
+        "message": f"Crawl task queued successfully for: {url_str}",
+        "status": "queued",
+        "url": url_str,
+        "max_depth": max_depth
+    }
 
 @router.get("/pages")
 def list_crawled_pages(

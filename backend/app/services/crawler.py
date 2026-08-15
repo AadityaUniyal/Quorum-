@@ -32,7 +32,7 @@ def normalize_url(url: str) -> str:
             return ""
 
         netloc = parsed.netloc.lower()
-        path = parsed.path
+        path = parsed.path.lower()
         if path == "/":
             path = ""
         elif path.endswith("/") and len(path) > 1:
@@ -92,7 +92,28 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
     seed_parsed = urlparse(canonical_seed)
     seed_domain = seed_parsed.netloc.lower()
 
+    # Sitemap.xml auto-discovery (Roadmap 1.5)
+    sitemap_url = f"{seed_parsed.scheme}://{seed_parsed.netloc}/sitemap.xml"
+    sitemap_urls = []
+    try:
+        resp_sitemap = httpx.get(sitemap_url, timeout=3.0, headers={"User-Agent": "GoogiBot/1.0"})
+        if resp_sitemap.status_code == 200:
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(resp_sitemap.content)
+            ns = {"ns": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+            for loc in root.findall(".//ns:loc", ns):
+                norm_loc = normalize_url(loc.text)
+                if norm_loc and norm_loc not in sitemap_urls:
+                    sitemap_urls.append(norm_loc)
+            logger.info(f"Discovered {len(sitemap_urls)} URLs from sitemap: {sitemap_url}")
+    except Exception as e:
+        logger.debug(f"Sitemap discovery failed/skipped for {sitemap_url}: {e}")
+
     queue = [(canonical_seed, 0)]  # (url, current_depth)
+    for s_url in sitemap_urls:
+        if s_url != canonical_seed:
+            queue.append((s_url, 0))
+
     visited: set[str] = set()
     crawled_urls = []
 
@@ -138,7 +159,7 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
 
             # Parse page details
             soup = BeautifulSoup(html_content, "html.parser")
-            title = soup.title.string.strip() if soup.title else current_url
+            title = soup.title.string.strip() if soup.title and soup.title.string else current_url
 
             # Extract plain text content
             for script in soup(["script", "style"]):
@@ -148,7 +169,20 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
 
             # Save page to Database
             page = db.query(CrawledPage).filter(CrawledPage.url == current_url).first()
-            if not page:
+            
+            # Content Change Detection (Roadmap 1.5): skip DB update & vector store re-indexing if hash matches
+            skip_indexing = False
+            if page:
+                if page.page_hash == content_hash:
+                    logger.info(f"Page content unchanged for {current_url}. Skipping DB write and ChromaDB re-indexing.")
+                    skip_indexing = True
+                    page.last_crawled_at = datetime.utcnow()
+                else:
+                    page.title = title
+                    page.page_content = clean_text
+                    page.page_hash = content_hash
+                    page.last_crawled_at = datetime.utcnow()
+            else:
                 page = CrawledPage(
                     id=uuid.uuid4(),
                     url=current_url,
@@ -160,19 +194,15 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
                 )
                 db.add(page)
                 db.flush()  # Allocate ID
-            else:
-                page.title = title
-                page.page_content = clean_text
-                page.page_hash = content_hash
-                page.last_crawled_at = datetime.utcnow()
 
-            # Index page into ChromaDB vector store
-            metadata = {
-                "filename": title,
-                "category": "WEB_PAGE",
-                "url": current_url
-            }
-            add_document_to_vector_store(str(page.id), clean_text, metadata)
+            # Index page into ChromaDB vector store if modified/new
+            if not skip_indexing:
+                metadata = {
+                    "filename": title,
+                    "category": "WEB_PAGE",
+                    "url": current_url
+                }
+                add_document_to_vector_store(str(page.id), clean_text, metadata)
 
             crawled_urls.append(current_url)
 
@@ -215,9 +245,10 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
     compute_pagerank(db)
     return crawled_urls
 
-def compute_pagerank(db: Session, d: float = 0.85, max_iter: int = 30, tol: float = 1e-6):
+def compute_pagerank(db: Session, d: float = 0.85, max_iter: int = 100, tol: float = 1e-6):
     """
     Computes PageRank over the crawled link adjacency graph using power iteration.
+    Guarantees convergence on all topologies including disconnected graphs via uniform teleportation.
     Saves scores back to database.
     """
     logger.info("Computing PageRank scores...")
@@ -228,6 +259,7 @@ def compute_pagerank(db: Session, d: float = 0.85, max_iter: int = 30, tol: floa
     n = len(pages)
     page_map = {p.url: p for p in pages}
     pr = {p.url: 1.0 / n for p in pages}
+    personalization = {p.url: 1.0 / n for p in pages}
 
     # Fetch links
     links = db.query(PageLink).all()
@@ -239,14 +271,15 @@ def compute_pagerank(db: Session, d: float = 0.85, max_iter: int = 30, tol: floa
             out_degree[link.source_url] += 1
             in_links[link.target_url].append(link.source_url)
 
-    for iteration in range(max_iter):
+    diff = 0.0
+    for iteration in range(1, max_iter + 1):
         new_pr = {}
         # Calculate dangling node rank contribution
         dangling_sum = sum(pr[url] for url in pr if out_degree[url] == 0)
 
         for url in pr:
             rank_sum = sum(pr[source] / out_degree[source] for source in in_links[url])
-            new_pr[url] = (1.0 - d) / n + d * (rank_sum + dangling_sum / n)
+            new_pr[url] = (1.0 - d) * personalization[url] + d * (rank_sum + dangling_sum * personalization[url])
 
         # Check convergence
         diff = sum(abs(new_pr[url] - pr[url]) for url in pr)
@@ -255,6 +288,10 @@ def compute_pagerank(db: Session, d: float = 0.85, max_iter: int = 30, tol: floa
         if diff < tol:
             logger.info(f"PageRank converged at iteration {iteration} (diff={diff:.8f})")
             break
+    else:
+        logger.warning(f"PageRank reached max iterations ({max_iter}) without converging. Final diff: {diff:.8f}")
+        if diff > 1e-4:
+            logger.error(f"PageRank convergence assertion failed: final delta {diff:.8f} > 1e-4 after {max_iter} iterations.")
 
     # Save back to DB
     for url, rank in pr.items():

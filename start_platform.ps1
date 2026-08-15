@@ -4,27 +4,44 @@ Write-Host "=================================================================" -
 Write-Host "  Starting Distributed AI Document Intelligence Platform" -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 
-# 1. Start Docker Services
+# 1. Start Docker Services (if Docker is available)
 Write-Host "[1/4] Starting auxiliary infrastructure (Redis & RabbitMQ)..." -ForegroundColor Yellow
-docker-compose up -d
+$dockerRunning = $false
+try {
+    $dockerCheck = docker ps 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        docker-compose up -d
+        $dockerRunning = $true
+    } else {
+        Write-Host "Docker daemon is not running. Operating in Standalone In-Process mode." -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "Docker is not available. Operating in Standalone In-Process mode." -ForegroundColor Yellow
+}
 
-function WaitFor-Port($Port, $Name) {
-    Write-Host "Waiting for $Name to be ready on port $Port..." -ForegroundColor Yellow
-    while ($true) {
+function WaitFor-Port($Port, $Name, $MaxRetries = 5) {
+    Write-Host "Checking $Name on port $Port..." -ForegroundColor Yellow
+    $retries = 0
+    while ($retries -lt $MaxRetries) {
         try {
             $tcp = New-Object System.Net.Sockets.TcpClient
             $tcp.Connect("localhost", $Port)
             $tcp.Close()
             Write-Host "$Name is ready!" -ForegroundColor Green
-            break
+            return $true
         } catch {
             Start-Sleep -Seconds 1
+            $retries++
         }
     }
+    Write-Host "$Name not responding on port $Port. Falling back to in-memory/in-process pipeline." -ForegroundColor Yellow
+    return $false
 }
 
-WaitFor-Port 6379 "Redis"
-WaitFor-Port 5672 "RabbitMQ"
+if ($dockerRunning) {
+    WaitFor-Port 6379 "Redis" 5
+    WaitFor-Port 5672 "RabbitMQ" 5
+}
 
 # 2. Start FastAPI Backend
 Write-Host "[2/4] Starting FastAPI Backend on http://localhost:8000..." -ForegroundColor Yellow

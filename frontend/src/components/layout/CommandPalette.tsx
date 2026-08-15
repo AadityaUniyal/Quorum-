@@ -14,7 +14,8 @@ import {
   LogOut, 
   Sparkles,
   SearchIcon,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -133,6 +134,54 @@ export const CommandPalette: React.FC = () => {
                         <span>Go to Analytics</span>
                       </div>
                       <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/45" />
+                    </Command.Item>
+
+                    <Command.Item
+                      onSelect={() => navigateTo('/settings')}
+                      className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm text-neutral-300 hover:text-foreground hover:bg-white/[0.03] cursor-pointer transition-all duration-150 aria-selected:bg-white/[0.03] aria-selected:text-foreground"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Settings className="h-4 w-4 text-muted-foreground" />
+                        <span>Go to Settings</span>
+                      </div>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/45" />
+                    </Command.Item>
+                  </Command.Group>
+
+                  <div className="h-px bg-white/[0.04] my-1 mx-2" />
+
+                  <Command.Group heading="Recent Documents" className="text-[10px] font-bold tracking-wider text-muted-foreground/80 font-sans uppercase px-3.5 py-2">
+                    <Command.Item
+                      onSelect={() => navigateTo('/documents')}
+                      className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm text-neutral-300 hover:text-foreground hover:bg-white/[0.03] cursor-pointer transition-all duration-150 aria-selected:bg-white/[0.03] aria-selected:text-foreground"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span>Stellar_Dynamics_Titanium_Rods_Invoice.pdf</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-muted-foreground/60 border border-white/[0.04] px-1.5 py-0.5 rounded">Invoice</span>
+                    </Command.Item>
+
+                    <Command.Item
+                      onSelect={() => navigateTo('/documents')}
+                      className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm text-neutral-300 hover:text-foreground hover:bg-white/[0.03] cursor-pointer transition-all duration-150 aria-selected:bg-white/[0.03] aria-selected:text-foreground"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span>Escalation_Rules_NDA_Acme_Inc.docx</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-muted-foreground/60 border border-white/[0.04] px-1.5 py-0.5 rounded">Contract</span>
+                    </Command.Item>
+
+                    <Command.Item
+                      onSelect={() => navigateTo('/documents')}
+                      className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm text-neutral-300 hover:text-foreground hover:bg-white/[0.03] cursor-pointer transition-all duration-150 aria-selected:bg-white/[0.03] aria-selected:text-foreground"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span>Security_Compliance_Report_2026.pdf</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-muted-foreground/60 border border-white/[0.04] px-1.5 py-0.5 rounded">Certificate</span>
                     </Command.Item>
                   </Command.Group>
 

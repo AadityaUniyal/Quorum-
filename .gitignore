@@ -2,18 +2,39 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
 .pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Backend runtime
+backend/.env
 backend/uploads/*
 !backend/uploads/.gitkeep
+uploads/*
+!uploads/.gitkeep
 backend/chroma_db/
-backend/.env
+*.db
 
 # Node / Next.js
 node_modules/
 .next/
 out/
-build/
 frontend/.env
+frontend/.env.local
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -23,8 +44,17 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
-.agents/
+*.swp
+*.swo
+*~
 
-# Python packaging & build artifacts
-dist/
-*.egg-info/
+# Agent artifacts
+.agents/
+AGENTS.md
+CLAUDE.md
+
+# Test outputs
+locust_output_*
+
+# Docker
+*.log

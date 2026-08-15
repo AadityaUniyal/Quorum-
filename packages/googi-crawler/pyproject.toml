@@ -5,30 +5,18 @@ build-backend = "hatchling.build"
 [project]
 name = "googi-crawler"
 version = "0.1.0"
-description = "An ethical, robust BeautifulSoup web crawler with built-in link-graph PageRank computation."
-readme = "README.md"
-requires-python = ">=3.8"
+description = "Standalone web crawler package for GOOGI platform"
+authors = [{name = "Aaditya Uniyal", email = "aaditya@example.com"}]
 license = {text = "MIT"}
-authors = [
-    {name = "Aaditya Uniyal", email = "aaditya.uniyal22@gmail.com"}
-]
+readme = "README.md"
+requires-python = ">=3.9"
 dependencies = [
-    "httpx>=0.20.0",
-    "beautifulsoup4>=4.9.0",
-]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+    "httpx>=0.27",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.2",
+    "tenacity>=9.0",
+    "redis>=5.0"
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.18.0",
-    "respx>=0.19.0",
-]
-
-[tool.hatch.build.targets.wheel]
-packages = ["googi_crawler"]
+[project.urls]
+Homepage = "https://github.com/AadityaUniyal/Googi"

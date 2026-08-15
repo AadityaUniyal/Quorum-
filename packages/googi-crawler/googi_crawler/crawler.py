@@ -7,6 +7,8 @@ from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 import httpx
 from bs4 import BeautifulSoup
 
+from .sitemap import SitemapParser
+
 logger = logging.getLogger("googi_crawler")
 
 @dataclass
@@ -22,7 +24,8 @@ class CrawledPageData:
 class GoogiCrawler:
     """
     An ethical web crawler supporting robots.txt compliance,
-    canonical URL normalization, BFS depth-limiting, and domain restriction.
+    canonical URL normalization, BFS depth-limiting, domain restriction,
+    and sitemap.xml auto-discovery.
     """
 
     def __init__(
@@ -31,11 +34,14 @@ class GoogiCrawler:
         timeout: float = 5.0,
         request_delay: float = 0.5,
         stay_on_domain: bool = True,
+        parse_sitemap: bool = True,
     ):
         self.user_agent = user_agent
         self.timeout = timeout
         self.request_delay = request_delay
         self.stay_on_domain = stay_on_domain
+        self.parse_sitemap = parse_sitemap
+        self.sitemap_parser = SitemapParser(user_agent=user_agent, timeout=timeout)
         self._robots_cache: dict[str, urllib.robotparser.RobotFileParser] = {}
 
     def normalize_url(self, url: str) -> str:
@@ -49,7 +55,7 @@ class GoogiCrawler:
                 return ""
 
             netloc = parsed.netloc.lower()
-            path = parsed.path
+            path = parsed.path.lower()
             if path == "/":
                 path = ""
             elif path.endswith("/") and len(path) > 1:
@@ -112,6 +118,22 @@ class GoogiCrawler:
         queue = [(canonical_seed, 0)]  # (url, current_depth)
         crawled_graph: dict[str, CrawledPageData] = {}
         visited: set[str] = set()
+
+        if self.parse_sitemap:
+            try:
+                sitemap_urls = self.sitemap_parser.discover_sitemap_urls(canonical_seed)
+                for sm_url in sitemap_urls:
+                    norm_url = self.normalize_url(sm_url)
+                    if not norm_url:
+                        continue
+                    if self.stay_on_domain:
+                        target_domain = urlparse(norm_url).netloc.lower()
+                        if target_domain != seed_domain:
+                            continue
+                    if norm_url not in visited and all(item[0] != norm_url for item in queue):
+                        queue.append((norm_url, 0))
+            except Exception as e:
+                logger.warning(f"Error during sitemap discovery for seed {canonical_seed}: {e}")
 
         logger.info(f"Starting crawl for seed {canonical_seed} up to depth {max_depth}")
 

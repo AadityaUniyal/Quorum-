@@ -1,22 +1,41 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #080808;
-  --color-foreground: #F5F5F5;
-  --color-surface: #111111;
-  --color-surface-hover: #1a1a1a;
-  --color-border: #222222;
-  --color-border-hover: #333333;
-  --color-primary: #4F6EF7;
-  --color-primary-hover: #6384FF;
+  --color-background: #050810;
+  --color-foreground: #f1f5f9;
+  --color-surface: #0d1117;
+  --color-surface-hover: #161b22;
+  --color-border: #21262d;
+  --color-border-hover: #30363d;
+  --color-primary: #4F8EF7;
+  --color-primary-hover: #6ea0fa;
   --color-success: #22C55E;
-  --color-warning: #F59E0B;
+  --color-warning: #f59e0b;
   --color-danger: #EF4444;
-  --color-accent: #7C3AED;
-  --color-muted: #6B7280;
-  --color-muted-foreground: #9CA3AF;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-accent: #4f8ef7;
+  --color-accent-2: #8b5cf6;
+  --color-muted: #6b7280;
+  --color-muted-foreground: #94a3b8;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+:root {
+  --radius-card: 16px;
+  --shadow-glow: 0 0 40px rgba(79, 142, 247, 0.15);
+  --shimmer-gradient: linear-gradient(90deg, #121214 0px, #1a1a1f 40px, #121214 80px);
+}
+
+[data-theme='light'] {
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-hover: #cbd5e1;
+  --color-muted: #64748b;
+  --color-muted-foreground: #94a3b8;
 }
 
 body {
@@ -117,3 +136,15 @@ body {
 .animate-slideIn {
   animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Mobile responsive layout optimizations (Roadmap 3.12) */
+@media (max-width: 768px) {
+  canvas {
+    display: none !important;
+  }
+  .table-responsive-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+

@@ -13,15 +13,10 @@ logger = logging.getLogger(__name__)
 def run_extractor_agent(ocr_text: str, category: DocumentCategory) -> dict[str, Any]:
     """
     Extractor Agent: Extracts structured fields from raw OCR text.
-    Uses Gemini API if key is available; otherwise, falls back to a smart heuristic parser.
+    Uses our custom self-controlled LocalLayoutParser.
     """
-    if settings.GEMINI_API_KEY:
-        try:
-            return call_gemini_extractor(ocr_text, category)
-        except Exception as e:
-            logger.error(f"Gemini Extractor Agent failed: {str(e)}. Falling back to heuristic extractor.")
-
-    return run_heuristic_extractor(ocr_text, category)
+    from app.services.local_engine import LocalLayoutParser
+    return LocalLayoutParser.extract_fields(ocr_text, category.value)
 
 def call_gemini_extractor(ocr_text: str, category: DocumentCategory) -> dict[str, Any]:
     """

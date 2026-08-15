@@ -1,0 +1,31 @@
+{
+  "invoice": [
+    "bill",
+    "receipt",
+    "charge",
+    "payment"
+  ],
+  "rfq": [
+    "request for quote",
+    "quote",
+    "part spec",
+    "specification"
+  ],
+  "contract": [
+    "agreement",
+    "msa",
+    "nda",
+    "covenant"
+  ],
+  "compliance": [
+    "certification",
+    "standards",
+    "iso",
+    "rohs"
+  ],
+  "steel": [
+    "metal",
+    "alloy",
+    "iron"
+  ]
+}

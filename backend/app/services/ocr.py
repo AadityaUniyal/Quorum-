@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 # Thread pool for non-blocking OCR (bounded to avoid resource exhaustion)
 _ocr_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="ocr")
+OCR_SEMAPHORE = asyncio.Semaphore(4)
+
 
 # Optional: Configuration for Tesseract path on Windows if installed in default locations
 TESSERACT_CMD_POSSIBILITIES = [
@@ -179,6 +181,40 @@ Grand Total: $1407.25
 Approved by: Michael Smith, Procurement Manager
         """
 
+def extract_text_from_pdf(pdf_path: str) -> str:
+    """Extract plain text and structured tables from a PDF using pdfplumber or pypdf."""
+    text_content = []
+    try:
+        import pdfplumber
+        with pdfplumber.open(pdf_path) as pdf:
+            for page_num, page in enumerate(pdf.pages):
+                page_text = page.extract_text()
+                if page_text:
+                    text_content.append(page_text)
+                
+                tables = page.extract_tables()
+                if tables:
+                    text_content.append(f"\n--- Page {page_num + 1} Tables ---\n")
+                    for table in tables:
+                        for row in table:
+                            clean_row = [str(cell).strip() if cell is not None else "" for cell in row]
+                            text_content.append(" | ".join(clean_row))
+                        text_content.append("\n")
+    except Exception as e:
+        logger.warning(f"pdfplumber extraction failed: {e}. Trying pypdf...")
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(pdf_path)
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text_content.append(page_text)
+        except Exception as ex:
+            logger.error(f"Fallback pypdf extraction failed: {ex}")
+            raise ex
+
+    return "\n".join(text_content)
+
 def perform_ocr(file_path: str, filename: str, file_type: str) -> str:
     """
     Coordinates file reading and OCR processing (synchronous).
@@ -203,7 +239,15 @@ def perform_ocr(file_path: str, filename: str, file_type: str) -> str:
             # Fall back to high-fidelity mock
             return get_high_fidelity_mock_text(filename)
 
-    # 3. PDF/DOCX or others - Fallback to high-fidelity mock text directly
+    # 3. PDF files - extract text and tables dynamically (Roadmap 2.1)
+    if file_type == "PDF":
+        try:
+            return extract_text_from_pdf(file_path)
+        except Exception as exc:
+            logger.warning(f"PDF extraction failed for {filename}: {exc}. Falling back to mock text.")
+            return get_high_fidelity_mock_text(filename)
+
+    # 4. DOCX or others - Fallback to high-fidelity mock text directly
     return get_high_fidelity_mock_text(filename)
 
 
@@ -211,18 +255,36 @@ async def perform_ocr_async(file_path: str, filename: str, file_type: str) -> st
     """
     Async wrapper for OCR processing. Runs blocking Tesseract/IO calls
     in a ThreadPoolExecutor so the FastAPI event loop stays unblocked.
+    Uses a Redis-based distributed semaphore to limit global concurrent OCR jobs.
     """
-    loop = asyncio.get_running_loop()
+    from app.services.cache import acquire_redis_semaphore, release_redis_semaphore
+    
+    # Try to acquire semaphore with retries
+    owner_id = None
+    for _ in range(30):
+        owner_id = acquire_redis_semaphore("ocr", limit=4, timeout=120)
+        if owner_id:
+            break
+        await asyncio.sleep(1.0)
+        
+    if not owner_id:
+        owner_id = f"fallback_fastapi:{filename}"
+
     try:
-        result = await loop.run_in_executor(
-            _ocr_executor,
-            perform_ocr,
-            file_path,
-            filename,
-            file_type,
-        )
-        return result
+        async with OCR_SEMAPHORE:
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                _ocr_executor,
+                perform_ocr,
+                file_path,
+                filename,
+                file_type,
+            )
+            return result
     except Exception as e:
         logger.error(f"Async OCR failed for {filename}: {e}")
         raise RuntimeError(f"OCR processing failed: {str(e)}") from e
+    finally:
+        release_redis_semaphore("ocr", owner_id)
+
 

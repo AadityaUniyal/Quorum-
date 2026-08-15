@@ -16,7 +16,7 @@ export const Badge: React.FC<BadgeProps> = ({
   size = 'md',
   className,
 }) => {
-  const normalizedValue = value.toUpperCase();
+  const normalizedValue = (value || '').toUpperCase();
 
   // Determine colors based on status/category value
   let colorClass = 'bg-neutral-800 text-neutral-400 border-neutral-700/50 shadow-neutral-900/10';

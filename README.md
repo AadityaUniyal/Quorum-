@@ -1,219 +1,575 @@
-# Distributed AI Document Intelligence Platform (DocIntel AI)
+# DocIntel AI
 
-A production-grade, event-driven Distributed AI Document Intelligence Platform that automates document ingestion, structural OCR extraction, classification, validation, human review, and semantic search. Designed with Google Cloud Platform architectures and software engineering best practices in mind, this platform serves as an enterprise-ready showcase for distributed systems and AI engineering.
+**Distributed AI Document Intelligence Platform**
 
----
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)](https://redis.io/)
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/)
 
-## 1. The Core Problem & Our Solution
-
-In modern enterprise operations, companies receive thousands of unstructured business documents every day, including:
-* **Manufacturing/Logistics**: RFQs (Request for Quotations), Bills of Materials (BOMs), Purchase Orders, Bills of Lading, Delivery Notes.
-* **Finance**: Invoices, Credit Notes, Loan Applications, KYC Identity Cards.
-* **Legal/Compliance**: MSA/NDAs, Risk Clauses, Conformity Certificates (e.g., ISO, ASTM, RoHS).
-
-Reviewing these documents manually results in human error, delayed decisions, compliance issues, and high labor costs. 
-
-**DocIntel AI** automates this lifecycle entirely:
-1. **Ingestion**: Uploads and validates files securely.
-2. **OCR**: Converts images/scanned PDFs into layout-aware raw text blocks.
-3. **Classification**: Automatically identifies the document type (e.g., Invoice, RFQ, Contract, Compliance).
-4. **Agentic Validation**: Validates data accuracy via a multi-agent consensus system.
-5. **Human-in-the-Loop (HITL)**: Flags low-confidence extractions or mathematical discrepancies for human verification.
-6. **Search & RAG**: Stores document content semantically to enable context-based question answering.
+An enterprise-grade, event-driven platform that automates the full document lifecycle — ingestion, OCR extraction, AI classification, multi-agent validation, human-in-the-loop review, and semantic search with RAG. Built for **manufacturing**, **finance**, and **legal/compliance** verticals where document accuracy is critical.
 
 ---
 
-## 2. High-Level Pipeline Workflow
+## Table of Contents
 
-The platform operates on an asynchronous event-driven model:
+- [The Problem](#the-problem)
+- [How It Works](#how-it-works)
+- [Architecture Overview](#architecture-overview)
+- [Multi-Agent Consensus System](#multi-agent-consensus-system)
+- [Key Features](#key-features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [API Reference](#api-reference)
+- [Deployment](#deployment)
+- [Documentation](#documentation)
+- [License](#license)
+
+---
+
+## The Problem
+
+Enterprises process thousands of unstructured documents daily:
+
+| Vertical | Document Types |
+|----------|---------------|
+| **Manufacturing & Logistics** | RFQs, Bills of Materials, Purchase Orders, Bills of Lading, Delivery Notes |
+| **Finance** | Invoices, Credit Notes, Loan Applications, KYC Identity Cards |
+| **Legal & Compliance** | MSA/NDAs, Risk Clauses, Conformity Certificates (ISO, ASTM, RoHS) |
+
+Manual processing results in human error, delayed decisions, compliance issues, and high labor costs. A single misread number on an invoice or a missed compliance clause in a contract can cascade into significant financial and legal risk.
+
+**DocIntel AI eliminates this.** It automates the entire lifecycle with AI-powered extraction and a multi-agent verification system that catches errors a single model would miss.
+
+---
+
+## How It Works
+
+### End-to-End Pipeline
 
 ```
-[Document Upload] 
-       │ (Status: INGESTED)
-       ▼
-[Publish Event: document.uploaded] ──► [RabbitMQ Broker]
-                                              │
-                                              ▼
-[Background Worker Consumer] ◄────────────────┘
-       │ (Status: PROCESSING)
-       ├─► [OCR Engine] ──► Extracted Layout Text
-       ├─► [Gemini Classifier] ──► Category (e.g., INVOICE)
-       │
-       ├─► [Multi-Agent Consensus Engine]
-       │     ├─ Extractor Agent (Structured JSON)
-       │     ├─ Critic Agent (OCR Context Verification)
-       │     ├─ Auditor Agent (Deterministic Math Balance)
-       │     └─ Compliance Agent (Regulatory Policy Checks)
-       │
-       ├─► [Consensus Score Calculator]
-       │     ├─ If Score >= 85%: Approve (Status: PROCESSED)
-       │     └─ If Score < 85% or Flagged: (Status: AWAITING_REVIEW)
-       │
-       ├─► [ChromaDB Indexing] ──► Text Chunks & Vector Embeddings
-       ▼
-[Audit Trails Ledger] ──► Immutably Logs Event Contexts
+┌──────────────┐    ┌─────────────┐    ┌────────────────┐    ┌───────────────────┐
+│   Document   │───▶│     OCR     │───▶│ Classification │───▶│   Multi-Agent     │
+│    Upload    │    │ (Tesseract) │    │  (Gemini AI)   │    │   Consensus (6)   │
+└──────────────┘    └─────────────┘    └────────────────┘    └────────┬──────────┘
+                                                                      │
+                                                          ┌───────────┴───────────┐
+                                                          │                       │
+                                                   Score ≥ 85%              Score < 85%
+                                                          │                       │
+                                                          ▼                       ▼
+                                                  ┌──────────────┐    ┌───────────────────┐
+                                                  │  PROCESSED   │    │  AWAITING_REVIEW   │
+                                                  │ (Auto-Approved)│   │ (Human Review)     │
+                                                  └──────┬───────┘    └─────────┬─────────┘
+                                                          │                       │
+                                                          └───────────┬───────────┘
+                                                                      │
+                                                          ┌───────────▼───────────┐
+                                                          │   ChromaDB Indexing   │
+                                                          │  (Vector Embeddings)  │
+                                                          └───────────┬───────────┘
+                                                                      │
+                                                          ┌───────────▼───────────┐
+                                                          │ Semantic Search & RAG │
+                                                          └───────────────────────┘
 ```
 
----
+### Step-by-Step Workflow
 
-## 3. Flagship Features
+1. **Ingestion** — A document (PDF, scanned image) is uploaded via the web UI or email ingestion. The file is stored on disk, metadata is persisted to PostgreSQL, and a `document.uploaded` event is published to RabbitMQ. Status: `INGESTED`.
 
-### 🤖 Multi-Agent Consensus System
-Traditional extraction systems trust a single AI model's output, leading to hallucinated numbers or format omissions. DocIntel AI solves this by introducing a **4-Agent Verification Circle**:
-1. **Extractor Agent**: Extracts structured key-value pairs depending on the document type (e.g., Vendor Name, Subtotal, Part Numbers, Quantity).
-2. **Critic Agent**: Audits the extraction. It cross-compares the structured JSON back to the raw OCR text, flagging missing data or digit transpositions.
-3. **Auditor Agent**: Runs deterministic mathematical audits. For Invoices, it validates if `Subtotal + Tax + Shipping == Total`. For RFQs, it ensures values are positive. It applies **Graduated Scoring**: minor rounding errors (<0.5%) trigger a warning and a high score (0.95), moderate errors (<5%) receive a lower score (0.50), and severe arithmetic mismatches are penalized to 0.0.
-4. **Compliance Agent**: Scrapes the document for regulatory checklist items (e.g., Delaware governing law in contracts, RoHS declarations in conformance certificates).
-* **Consensus Engine**: Assigns field-level and document-level scores using **Document-Type-Aware Consensus Weights** (e.g., math-heavy weights for Invoices, compliance-heavy weights for Contracts).
+2. **OCR Extraction** — A background worker consumes the event and runs Tesseract OCR to extract layout-aware text blocks, preserving the spatial structure of the document. Status: `PROCESSING`.
 
-### ✍️ Human-in-the-Loop Review Portal
-When the Consensus Engine flags a document (overall confidence < 85% or key arithmetic discrepancy), it routes it to the **Review Queue**. Reviewers interact with a split-screen layout:
-* **Left Panel**: Raw extracted OCR text layout.
-* **Right Panel**: Editable field form. Input fields are color-coded in real-time (Red = defect, Yellow = warning, Green = passed).
-* **Concurrency Locking**: Utilizes a strict Redis-based session locker with atomic `SET NX EX` lock operations and an active lock heartbeat renewal endpoint to prevent multiple reviewers from editing the same document.
+3. **AI Classification** — Google Gemini (or the local heuristic fallback engine) analyzes the OCR text and classifies the document type: Invoice, RFQ, Contract, Compliance Certificate, Purchase Order, etc.
 
-### 🔍 Cognitive Vector Search & RAG Chatbot
-DocIntel AI supports two modes of search:
-1. **Structured SQL Metadata Filters**: Filter by document category, processing status, and confidence scores.
-2. **Semantic Vector Search**: Connects to `ChromaDB` to fetch documents matching natural language queries (e.g., "Find stainless steel components").
-* **RAG Q&A Sidebar**: Constrain chatbot queries to specific documents. Ask questions like: *"What contracts expire next month?"* or *"Who signed the MSA?"*, and Gemini (or our local TF-IDF answer extraction fallback) returns precise, contextual summaries.
+4. **Multi-Agent Consensus** — Six specialized AI agents independently validate the extracted data (see [Multi-Agent Consensus System](#multi-agent-consensus-system) below). Each agent scores the extraction from a different perspective. A document-type-aware weighted consensus engine aggregates their scores.
 
-### 📊 KPI Analytics Control Center
-A control dashboard displaying platform health:
-* Overall processed volume, processing speeds, and human intervention rates.
-* Recharts Area graphs showing weekly ingestion trends.
-* Recharts Pie graphs showing category distribution.
-* **System Node Monitor**: Live ping metrics for Neon Database, RabbitMQ, and ChromaDB.
+5. **Routing Decision** — If the consensus score is ≥85%, the document is auto-approved (`PROCESSED`). If below 85% or if any agent flags a critical issue (e.g., math mismatch on an invoice), the document is routed to the human review queue (`AWAITING_REVIEW`).
+
+6. **Human-in-the-Loop Review** — Reviewers see a split-screen view: raw OCR text on the left, editable structured fields on the right. Fields are color-coded in real-time (red = failed, yellow = warning, green = passed). Redis-backed concurrency locking prevents two reviewers from editing the same document simultaneously.
+
+7. **Vector Indexing** — Once approved, the document's text is chunked and embedded into ChromaDB for semantic search and RAG-powered question answering.
+
+8. **Audit Trail** — Every event (upload, classification, agent scores, review decisions) is immutably logged to the audit trail.
 
 ---
 
-## 4. Technical Architecture Stack
-
-* **Frontend**: Next.js (App Router), TypeScript, Tailwind CSS, Lucide React (Icons), Recharts (Graphs).
-* **Backend**: FastAPI, SQLAlchemy (PostgreSQL ORM), PyJWT (Authentication), `pika` (RabbitMQ publisher).
-* **Database**: Remote Neon PostgreSQL database (with connection pooling).
-* **Cache & Locks**: Redis (storing task locking states).
-* **Message Queue**: RabbitMQ (event-driven messaging).
-* **Vector DB**: ChromaDB (embedding generation and semantic text searches).
-* **AI Models**: Gemini (API integrations) + Heuristic Fallback Engine (runs local regex and TF-IDF extraction if the Gemini API key is not supplied).
-* **OCR**: Tesseract OCR (via `pytesseract`) + Mock layout generators.
-
----
-
-## 5. Directory Layout
+## Architecture Overview
 
 ```
-document-intelligence-platform/
-├── .github/workflows/
-│   └── ci.yml                      # GitHub Actions lint, test, & Docker build pipeline
+┌─────────────────┐         ┌──────────────────────┐         ┌──────────────┐
+│   Next.js 15    │────────▶│   FastAPI Backend     │────────▶│  PostgreSQL  │
+│   Frontend UI   │◀────────│   (REST API)          │◀────────│  (Neon DB)   │
+│   Port 3000     │         │   Port 8000           │         └──────────────┘
+└─────────────────┘         └──────┬───┬────┬───────┘
+                                   │   │    │
+                    ┌──────────────┘   │    └──────────────┐
+                    ▼                  ▼                   ▼
+              ┌──────────┐      ┌──────────┐        ┌──────────┐
+              │ RabbitMQ │      │  Redis   │        │ ChromaDB │
+              │  Broker  │      │  Cache   │        │ Vectors  │
+              └────┬─────┘      └──────────┘        └──────────┘
+                   │
+                   ▼
+              ┌──────────────────────────────────────────┐
+              │           Background Worker              │
+              │                                          │
+              │  OCR ──▶ Classify ──▶ 6 Agents ──▶ Index │
+              └──────────────────────────────────────────┘
+```
+
+### Component Responsibilities
+
+| Component | Technology | Role |
+|-----------|-----------|------|
+| **Frontend** | Next.js 15 (App Router), TypeScript, Tailwind CSS | Web portal — document management, review, search, analytics |
+| **Backend API** | FastAPI, SQLAlchemy, Pydantic | REST API server — authentication, document CRUD, search, webhooks |
+| **Worker** | Python, RabbitMQ consumer | Async document processing — OCR, classification, agent consensus, indexing |
+| **Database** | PostgreSQL (Neon) | Primary data store — users, documents, audit logs, bookmarks |
+| **Cache** | Redis | Rate limiting, session/review locks, LLM response caching, token blacklists |
+| **Message Queue** | RabbitMQ | Event-driven decoupling between API and worker |
+| **Vector Store** | ChromaDB | Document embeddings for semantic search and RAG |
+| **AI Engine** | Google Gemini API | Classification, extraction, query expansion, RAG responses |
+| **Fallback Engine** | TF-IDF, regex, heuristics | Runs when no Gemini API key is configured — everything works offline |
+
+> **Offline-First**: If no Gemini API key is provided, the platform automatically switches to a high-fidelity local heuristic engine (TF-IDF + regex extractors). Every feature works out of the box.
+
+---
+
+## Multi-Agent Consensus System
+
+Traditional extraction systems trust a single AI model's output, leading to hallucinated numbers, format omissions, and undetected compliance gaps. DocIntel AI solves this with a **6-agent verification circle** where each agent independently evaluates the extraction from a different angle:
+
+### The Agents
+
+| Agent | File | What It Does |
+|-------|------|-------------|
+| **Extractor** | `agents/extractor.py` | Extracts structured key-value pairs from OCR text based on document type (e.g., vendor name, subtotal, part numbers, quantities) |
+| **Critic** | `agents/critic.py` | Cross-compares the structured JSON back to the raw OCR text, flagging missing data, digit transpositions, or hallucinated values |
+| **Auditor** | `agents/auditor.py` | Runs deterministic mathematical audits using **graduated scoring** — for invoices, verifies `Subtotal + Tax + Shipping == Total` with tolerance thresholds (<0.5% = warning at 0.95, <5% = penalty at 0.50, >5% = score 0.0) |
+| **Compliance** | `agents/compliance.py` | Checks for regulatory requirements — Delaware governing law in contracts, RoHS/ISO declarations in conformance certificates, required signature fields |
+| **Memory** | `agents/memory.py` | Queries ChromaDB for historical documents from the same vendor/entity and flags anomalies — abnormal price spikes, unusual quantities, deviation from historical patterns |
+| **Reconciler** | `agents/reconciler.py` | Activates when Critic and Auditor scores diverge by >0.3 and resolves the conflict by re-analyzing the disputed fields |
+
+A **Summary Agent** (`agents/summary.py`) then generates a 3-sentence executive summary of the document.
+
+### Consensus Scoring
+
+The consensus engine uses **document-type-aware weights** to aggregate agent scores:
+
+| Document Type | Critic Weight | Auditor Weight | Compliance Weight | Why |
+|--------------|:---:|:---:|:---:|-----|
+| **Invoice** | 0.3 | 0.5 | 0.2 | Math accuracy is critical |
+| **Contract** | 0.3 | 0.1 | 0.6 | Compliance clauses matter most |
+| **Compliance Cert** | 0.2 | 0.1 | 0.7 | Regulatory checks are paramount |
+| **RFQ** | 0.5 | 0.3 | 0.2 | Data accuracy matters most |
+| **Purchase Order** | 0.4 | 0.4 | 0.2 | Balanced — both math and accuracy |
+
+If the weighted score is ≥85%, the document is auto-approved. Below that threshold, or if any agent flags a critical defect, it routes to the human review queue.
+
+---
+
+## Key Features
+
+### Human-in-the-Loop Review Portal
+
+When the consensus engine flags a document, it enters the review queue. Reviewers interact with a split-screen layout:
+
+- **Left Panel** — Raw extracted OCR text with preserved layout
+- **Right Panel** — Editable field form with real-time color-coded validation (red = failed, yellow = warning, green = passed)
+- **Concurrency Locking** — Redis-based atomic `SET NX EX` locks with heartbeat renewal prevent two reviewers from editing the same document
+
+### Cognitive Vector Search & RAG
+
+Two search modes working together:
+
+- **Structured SQL Filters** — Filter by document category, processing status, confidence scores, date ranges
+- **Semantic Vector Search** — ChromaDB-powered natural language queries (e.g., "Find stainless steel components" or "Invoices over $10,000")
+- **RAG Chatbot** — Ask questions constrained to specific documents: "What contracts expire next month?" or "Who signed the MSA?" — Gemini returns precise, contextual answers with source attribution
+- **Query Expansion** — LLM generates paraphrases of search queries to improve recall across vocabulary mismatches
+
+### Authentication & Security
+
+- **httpOnly Secure Cookies** — JWT tokens stored in httpOnly cookies (not localStorage) to prevent XSS theft
+- **Refresh Token Rotation** — Short-lived access tokens (15 min) + long-lived refresh tokens (7 days) with automatic rotation
+- **Rate Limiting** — Redis-backed per-endpoint rate limits on authentication routes
+- **Password Strength** — Enforced during registration with configurable policies
+- **RBAC** — Role-based access control middleware on all protected routes
+- **API Key Auth** — SHA-256 hashed API keys for programmatic access (scripts, integrations)
+- **Token Blacklisting** — Redis-backed blacklist for invalidated tokens on logout
+
+### KPI Analytics Dashboard
+
+- Overall processed document volume, processing speeds, and human intervention rates
+- Recharts area graphs showing weekly ingestion trends
+- Recharts pie charts showing category distribution
+- Four tabs: Documents, AI Agents, Search, Crawl metrics
+- **System Node Monitor** — Live ping metrics for PostgreSQL, RabbitMQ, and ChromaDB
+
+### Webhook Studio & Integrations
+
+- **Outbound Webhooks** — Register endpoint URLs to receive JSON payloads on document lifecycle transitions (e.g., when a document moves to `PROCESSED`)
+- **Email Ingestion** — Scans IMAP mailboxes for unseen messages, downloads PDF attachments, and queues them automatically
+- **Dynamic Table Extraction** — Uses `pdfplumber` to extract tables as structured Markdown arrays with cell alignment preservation
+
+### Search Bookmarks & Export
+
+- Save frequently used searches as bookmarks for one-click re-execution
+- Export search results to **CSV** or **PDF** formats
+
+### Web Crawler (`googi-crawler`)
+
+A standalone, pip-installable Python package in `packages/googi-crawler/`:
+
+- **PageRank Scoring** — Computes authority scores across crawled pages
+- **Sitemap.xml Parsing** — Discovers and crawls pages from XML sitemaps
+- **Distributed Crawling** — Distributes crawl tasks via RabbitMQ for horizontal scaling
+- Installable separately: `pip install googi-crawler`
+
+### LLM Reliability
+
+- **Retry with Exponential Backoff** — Automatic retries on LLM timeouts (configurable, default 3 attempts)
+- **Fallback Chain** — Primary (Gemini) → Secondary (configurable) → Tertiary (local Ollama) → Local heuristic engine
+- **Response Caching** — Redis-cached LLM responses (1-hour TTL) keyed by OCR text hash to avoid redundant API calls
+
+---
+
+## Tech Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| **Frontend** | Next.js 15 (App Router), TypeScript, Tailwind CSS, Recharts, Framer Motion, Lucide React, Zustand |
+| **Backend** | FastAPI, SQLAlchemy, Pydantic, PyJWT, bcrypt, tenacity |
+| **Database** | PostgreSQL (Neon, with connection pooling) |
+| **Cache & Locks** | Redis (rate limiting, session locks, LLM response cache, token blacklists) |
+| **Message Queue** | RabbitMQ (event-driven async processing) |
+| **Vector DB** | ChromaDB (embedding generation, semantic search) |
+| **AI** | Google Gemini API + local heuristic fallback (TF-IDF, regex) |
+| **OCR** | Tesseract OCR (pytesseract) + mock layout generators |
+| **Crawler** | `googi-crawler` (PageRank, sitemap parsing, distributed crawling via RabbitMQ) |
+| **Observability** | OpenTelemetry tracing, Sentry error tracking (optional) |
+| **Infrastructure** | Docker, Docker Compose, Kubernetes (k8s/ manifests), Alembic migrations |
+| **CI/CD** | GitHub Actions (lint, test, Docker build, package publishing) |
+
+---
+
+## Project Structure
+
+```
+docintel-ai/
+├── .github/workflows/           # CI/CD pipelines (lint, test, build, publish)
 ├── backend/
 │   ├── app/
-│   │   ├── main.py                 # FastAPI Web Server entrypoint
-│   │   ├── config.py               # Settings (Neon URL, JWT keys, directories)
-│   │   ├── database.py             # SQLAlchemy session creator
-│   │   ├── models/                 # SQLAlchemy schemas (auth, documents, audit_logs)
-│   │   ├── schemas/                # Pydantic validation schemas
-│   │   ├── routes/                 # Endpoint logic (auth, docs, review, search, analytics)
-│   │   ├── services/               # System wrappers (ocr, storage, queue, vector_store)
-│   │   ├── agents/                 # Multi-Agent Consensus System (critic, auditor, compliance)
-│   │   └── worker.py               # RabbitMQ consumer background worker
-│   ├── tests/                      # 50+ automated tests (pytest)
-│   ├── Dockerfile                  # Multi-stage production build for backend
-│   └── requirements.txt            # Python dependencies
+│   │   ├── agents/              # Multi-agent consensus system
+│   │   │   ├── extractor.py     #   Structured data extraction
+│   │   │   ├── critic.py        #   Extraction accuracy verification
+│   │   │   ├── auditor.py       #   Mathematical consistency checks
+│   │   │   ├── compliance.py    #   Regulatory compliance validation
+│   │   │   ├── memory.py        #   Historical anomaly detection
+│   │   │   ├── reconciler.py    #   Inter-agent conflict resolution
+│   │   │   ├── summary.py       #   Executive summary generation
+│   │   │   └── consensus.py     #   Weighted score aggregation
+│   │   ├── core/                # Security utilities (token blacklisting)
+│   │   ├── models/              # SQLAlchemy ORM models (User, Document, AuditLog)
+│   │   ├── routes/              # API endpoints
+│   │   │   ├── auth.py          #   Authentication, RBAC, API keys
+│   │   │   ├── documents.py     #   Document CRUD, upload, reprocess
+│   │   │   ├── review.py        #   HITL review queue, lock/unlock
+│   │   │   ├── search.py        #   Hybrid search, query expansion
+│   │   │   ├── analytics.py     #   KPI metrics, system health
+│   │   │   ├── crawl.py         #   Crawler control, PageRank
+│   │   │   ├── rag.py           #   RAG chatbot, context Q&A
+│   │   │   ├── bookmarks.py     #   Saved search management
+│   │   │   ├── webhooks.py      #   Webhook registration
+│   │   │   └── streaming.py     #   Server-Sent Events
+│   │   ├── schemas/             # Pydantic request/response schemas
+│   │   ├── services/            # External integrations
+│   │   │   ├── llm.py           #   Gemini API + retry + fallback chain
+│   │   │   ├── ocr.py           #   Tesseract OCR wrapper
+│   │   │   ├── queue.py         #   RabbitMQ publisher/consumer
+│   │   │   ├── vector_store.py  #   ChromaDB operations
+│   │   │   ├── cache.py         #   Redis cache operations
+│   │   │   ├── crawler.py       #   Web crawling integration
+│   │   │   ├── export.py        #   CSV/PDF export generation
+│   │   │   ├── storage.py       #   File storage management
+│   │   │   ├── webhook.py       #   Outbound webhook dispatch
+│   │   │   ├── email_ingest.py  #   IMAP email ingestion
+│   │   │   └── local_engine.py  #   Heuristic fallback (TF-IDF, regex)
+│   │   ├── main.py              # FastAPI entry point, middleware, CORS
+│   │   ├── worker.py            # RabbitMQ consumer (OCR → classify → agents → index)
+│   │   ├── config.py            # Centralized settings (Pydantic BaseSettings)
+│   │   ├── database.py          # SQLAlchemy session management
+│   │   └── limiter.py           # Redis-backed rate limiting
+│   ├── tests/                   # pytest test suite
+│   ├── Dockerfile               # Multi-stage production build
+│   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── app/                    # Next.js workspace layouts & pages
-│   │   ├── lib/                    # API wrappers
-│   │   └── components/             # Reusable UI components (Zustand store integration)
-│   ├── Dockerfile                  # Production build Dockerfile
-│   └── package.json                # Frontend packages (Recharts, Lucide, Framer Motion)
-├── k8s/                            # Kubernetes deployment & config manifests
-├── docker-compose.yml              # Local infrastructure composer (Redis, RabbitMQ)
-├── Makefile                        # Multi-environment automation tasks (dev, test, build, migration)
-├── start_platform.sh               # Unix bash launcher script
-└── start_platform.ps1              # PowerShell launch script for Windows
+│   │   ├── app/                 # Next.js pages
+│   │   │   ├── dashboard/       #   KPI overview, system health
+│   │   │   ├── documents/       #   Upload, filter, grid/table views
+│   │   │   ├── review/          #   Split-screen HITL review
+│   │   │   ├── search/          #   Hybrid search, RAG chat, export
+│   │   │   ├── analytics/       #   Charts (Documents, AI, Search, Crawl)
+│   │   │   ├── crawl/           #   Crawler console, PageRank
+│   │   │   └── settings/        #   User profile, preferences
+│   │   ├── components/          # Reusable UI components (auth, layout, ui)
+│   │   ├── lib/                 # API client wrapper
+│   │   └── stores/              # Zustand state management
+│   ├── Dockerfile               # Production build
+│   └── package.json
+├── packages/
+│   └── googi-crawler/           # Standalone pip-installable crawler package
+│       ├── googi_crawler/
+│       │   ├── crawler.py       #   Core crawling + sitemap parsing
+│       │   └── pagerank.py      #   PageRank computation
+│       ├── tests/
+│       ├── pyproject.toml
+│       └── README.md
+├── k8s/                         # Kubernetes deployment manifests
+│   ├── backend-deployment.yaml
+│   ├── frontend-deployment.yaml
+│   ├── worker-deployment.yaml
+│   ├── redis-deployment.yaml
+│   ├── rabbitmq-deployment.yaml
+│   ├── chroma-deployment.yaml
+│   ├── services.yaml
+│   ├── ingress.yaml
+│   ├── hpa-backend.yaml         # Auto-scaling (CPU ≥60%, 1–8 replicas)
+│   ├── configmap.yaml
+│   ├── secret.yaml
+│   └── namespace.yaml
+├── alembic/                     # Database migration scripts
+├── tests/                       # Integration & stress tests
+├── docker-compose.yml           # Local dev infrastructure (Redis + RabbitMQ)
+├── Makefile                     # Dev automation (dev, test, lint, build, migrate)
+├── start_platform.sh            # Unix launcher (one-command startup)
+├── start_platform.ps1           # Windows launcher
+├── .env.example                 # Environment variable reference
+├── alembic.ini                  # Alembic configuration
+├── CONTRIBUTING.md              # Contributor guide
+├── SECURITY.md                  # Security policy
+├── SYSTEM_ARCHITECTURE.md       # Detailed architecture reference
+└── LICENSE                      # MIT License
 ```
 
 ---
 
-## 6. Installation & Launch Guide
+## Getting Started
 
 ### Prerequisites
-1. **Docker Desktop** (for Redis & RabbitMQ).
-2. **Node.js** (v20+ recommended).
-3. **Python 3.11+**.
 
-### Quick Start
-To launch the entire platform (database, cache, broker, backend API, worker, and frontend dev server) with a single command:
+| Tool | Version | Purpose |
+|------|---------|---------|
+| Python | 3.11+ | Backend API & workers |
+| Node.js | 20+ | Frontend application |
+| Docker Desktop | Latest | Infrastructure services (Redis, RabbitMQ) |
 
-**On macOS / Linux:**
+### Quick Start (One Command)
+
+**Unix (macOS / Linux):**
+
 ```bash
-chmod +x start_platform.sh
-./start_platform.sh
+chmod +x start_platform.sh && ./start_platform.sh
 ```
 
-**On Windows:**
+**Windows (PowerShell):**
+
 ```powershell
 ./start_platform.ps1
 ```
 
-**Using the Makefile:**
-```bash
-make dev
-```
+**Makefile:**
 
-### Running Tests
-To run the full unit and integration test suite:
 ```bash
-make test
-```
-
-### Docker Production Builds
-To build production-ready containers:
-```bash
-make build
+make dev       # Start all services (Docker + backend + worker + frontend)
+make test      # Run the full test suite with coverage
+make lint      # Run linters (ruff + ESLint)
+make build     # Build production Docker images
+make stop      # Stop all services
+make clean     # Stop services and remove generated artifacts
+make migrate   # Run database migrations (Alembic)
 ```
 
 ### Manual Setup
 
-#### Step 1: Start Infrastructure Containers
+<details>
+<summary><strong>Step-by-step instructions</strong></summary>
+
+<br>
+
+**1. Start infrastructure services:**
+
 ```bash
-docker-compose up -d
+docker-compose up -d    # Starts Redis + RabbitMQ
 ```
 
-#### Step 2: Set up Backend Environment
+**2. Set up the backend:**
+
 ```bash
 cd backend
-python -m pip install -r requirements.txt
+python -m venv venv
+source venv/bin/activate    # Linux/macOS
+# venv\Scripts\activate     # Windows
+pip install -r requirements.txt
 ```
-Create a `.env` file inside the `backend/` directory referencing `backend/.env.example`:
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/docintel
-JWT_SECRET_KEY=generate_a_secure_random_string
-GEMINI_API_KEY=your_gemini_api_key_here
-```
-*Note: If no Gemini API key is provided, the platform automatically switches to a high-fidelity mock heuristic engine so everything runs instantly out of the box!*
 
-#### Step 3: Run FastAPI Server
+**3. Configure environment variables:**
+
+```bash
+cp .env.example .env
+# Edit .env and fill in the required values
+```
+
+> **Note**: If no `GEMINI_API_KEY` is provided, the platform automatically uses the local heuristic engine. Everything works out of the box without any API key.
+
+**4. Run database migrations:**
+
+```bash
+python -m alembic upgrade head
+```
+
+**5. Start the API server:**
+
 ```bash
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-#### Step 4: Run Task Worker Daemon
-In a new terminal window:
+**6. Start the background worker** (new terminal):
+
 ```bash
 cd backend
 python -m app.worker
 ```
 
-#### Step 5: Start Next.js Frontend
-In a third terminal window:
+**7. Start the frontend** (new terminal):
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Visit:
-* **Web Portal UI**: [http://localhost:3000](http://localhost:3000)
-* **Backend Swagger API**: [http://localhost:8000/docs](http://localhost:8000/docs)
+**8. Open the application:**
+
+| Service | URL |
+|---------|-----|
+| Web Portal | [http://localhost:3000](http://localhost:3000) |
+| API Docs (Swagger) | [http://localhost:8000/docs](http://localhost:8000/docs) |
+| RabbitMQ Management | [http://localhost:15672](http://localhost:15672) |
+
+</details>
+
+### Environment Variables
+
+<details>
+<summary><strong>Full reference (<code>.env.example</code>)</strong></summary>
+
+<br>
+
+| Variable | Description | Required | Default |
+|----------|------------|:---:|---------|
+| `DATABASE_URL` | PostgreSQL connection string | Yes | — |
+| `JWT_SECRET_KEY` | Secret for JWT signing | Yes | — |
+| `GEMINI_API_KEY` | Google Gemini API key | No | Falls back to local engine |
+| `LLM_MODEL` | Gemini model name | No | `gemini-1.5-pro` |
+| `LLM_OFFLINE_MOCK_FALLBACK` | Enable local heuristic fallback | No | `true` |
+| `LLM_FALLBACK_ENABLED` | Enable multi-provider fallback chain | No | `true` |
+| `LLM_SECONDARY_PROVIDER` | Secondary LLM provider | No | — |
+| `LLM_TERTIARY_OLLAMA_URL` | Local Ollama endpoint | No | `http://localhost:11434` |
+| `RABBITMQ_HOST` | RabbitMQ hostname | No | `localhost` |
+| `RABBITMQ_PORT` | RabbitMQ port | No | `5672` |
+| `RABBITMQ_USER` | RabbitMQ username | No | `guest` |
+| `RABBITMQ_PASS` | RabbitMQ password | No | `guest` |
+| `REDIS_HOST` | Redis hostname | No | `localhost` |
+| `REDIS_PORT` | Redis port | No | `6379` |
+| `REDIS_PASSWORD` | Redis password | No | — |
+| `CORS_ORIGINS` | Allowed CORS origins | No | `http://localhost:3000` |
+| `COOKIE_SECURE` | Set Secure flag on cookies | No | `false` |
+| `COOKIE_SAMESITE` | SameSite cookie policy | No | `lax` |
+| `SENTRY_DSN` | Sentry error tracking DSN | No | — |
+| `OTLP_ENDPOINT` | OpenTelemetry collector | No | — |
+| `DEBUG` | Enable debug mode | No | `true` |
+
+</details>
+
+---
+
+## API Reference
+
+The backend exposes a comprehensive REST API documented via Swagger UI at `/docs`.
+
+| Route Group | Prefix | Endpoints |
+|------------|--------|-----------|
+| **Authentication** | `/api/auth` | Register, login, logout, refresh tokens, profile management, API key CRUD, team management |
+| **Documents** | `/api/documents` | Upload, list, detail, reprocess, batch operations, status filtering |
+| **Review** | `/api/review` | Review queue, document lock/unlock (Redis), approve/reject with field edits |
+| **Search** | `/api/search` | Hybrid search (SQL + vector), query expansion, faceted filtering |
+| **RAG** | `/api/rag` | Context-constrained Q&A, document-scoped chatbot |
+| **Bookmarks** | `/api/bookmarks` | Save/delete/list search bookmarks |
+| **Analytics** | `/api/analytics` | Processing KPIs, agent latency, system health, node monitoring |
+| **Crawl** | `/api/crawl` | Start/stop crawler, PageRank scores, sitemap management |
+| **Webhooks** | `/api/webhooks` | Register/manage outbound webhook endpoints |
+| **Streaming** | `/api/streaming` | Server-Sent Events for real-time processing updates |
+
+---
+
+## Deployment
+
+### Docker
+
+```bash
+# Build production images
+docker build -t docintel-backend:latest ./backend
+docker build -t docintel-frontend:latest ./frontend
+
+# Or use the Makefile
+make build
+```
+
+### Kubernetes
+
+Production-ready Kubernetes manifests are provided in `k8s/`:
+
+- Namespace isolation
+- ConfigMaps and Secrets for environment management
+- Deployments for backend, frontend, worker, Redis, RabbitMQ, ChromaDB
+- ClusterIP services and Ingress
+- Horizontal Pod Autoscaler for worker (CPU ≥60%, scales 1–8 replicas)
+
+```bash
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/
+```
+
+### CI/CD
+
+GitHub Actions workflows in `.github/workflows/`:
+
+- **ci.yml** — Runs pytest, ruff, and ESLint on every PR
+- **docker.yml** — Builds and pushes Docker images to GHCR on main branch merges
+- **publish.yml** — Publishes `googi-crawler` package on version tags
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|------------|
+| [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) | Detailed architecture reference — component diagram, data flows, service tables, security model |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, code style, branch naming, PR process |
+| [SECURITY.md](SECURITY.md) | Security policy, vulnerability reporting, security features |
+| [packages/googi-crawler/README.md](packages/googi-crawler/README.md) | Standalone crawler package documentation |
+
+---
+
+## License
+
+MIT License — Copyright (c) 2026 [Aaditya Uniyal](https://github.com/AadityaUniyal)
+
+See [LICENSE](LICENSE) for full text.

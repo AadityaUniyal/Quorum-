@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AppLayout } from "@/components/layout/AppLayout";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,8 +17,6 @@ export const metadata: Metadata = {
   title: "DocIntel AI - Distributed Document Intelligence Platform",
   description: "Automated multi-agent document auditing, structured text extraction, RAG search, and human-in-the-loop validation.",
 };
-
-import { AppLayout } from "@/components/layout/AppLayout";
 
 export default function RootLayout({
   children,

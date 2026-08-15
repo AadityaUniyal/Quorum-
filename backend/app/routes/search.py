@@ -1,14 +1,18 @@
+import json
 import logging
+from app.services.cache import cache
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Response
+from pydantic import BaseModel, model_validator
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.routes.auth import RoleChecker
+from app.services.export import export_to_csv, export_to_pdf
 from app.services.vector_store import query_rag_knowledge, search_vector_store
 
 logger = logging.getLogger(__name__)
@@ -73,6 +77,22 @@ class RagRequest(BaseModel):
     document_ids: list[UUID]
     question: str
 
+class ExpandQueryRequest(BaseModel):
+    query: str
+
+class ExpandQueryResponse(BaseModel):
+    original_query: str
+    expanded_queries: list[str] = []
+    expansions: list[str] = []
+
+    @model_validator(mode="after")
+    def sync_expansions(self) -> "ExpandQueryResponse":
+        if self.expanded_queries and not self.expansions:
+            self.expansions = list(self.expanded_queries)
+        elif self.expansions and not self.expanded_queries:
+            self.expanded_queries = list(self.expansions)
+        return self
+
 def parse_facets(query: str) -> tuple[str, dict]:
     """
     Parses search operators out of the query.
@@ -103,6 +123,73 @@ def parse_facets(query: str) -> tuple[str, dict]:
         clean_query = re.sub(r'\bvendor:\w+\b', '', clean_query)
 
     return clean_query.strip(), facets
+
+
+def expand_query(query: str) -> list[str]:
+    """
+    Roadmap 1.4: Query expansion using LLM to generate paraphrases.
+    Returns [original, paraphrase1, paraphrase2] (max 3 variants).
+    Results are cached in Redis for 1 hour.
+    Falls back gracefully if LLM/Redis unavailable.
+    """
+    import hashlib
+
+    # Only expand non-trivial queries (> 3 words is overkill; expand all)
+    if len(query.strip()) < 3:
+        return [query]
+
+    cache_key = f"qex:{hashlib.md5(query.encode()).hexdigest()[:12]}"
+
+    # Try cache first
+    try:
+        import redis
+        r = redis.Redis(
+            host=settings.REDIS_HOST, port=settings.REDIS_PORT,
+            password=settings.REDIS_PASSWORD, decode_responses=True,
+            socket_connect_timeout=1
+        )
+        cached = r.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception:
+        r = None
+
+    try:
+        import google.generativeai as genai
+        if not settings.GEMINI_API_KEY:
+            return [query]
+
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        model = genai.GenerativeModel("gemini-1.5-flash")  # fast model for expansion
+        prompt = (
+            f"Generate 2 alternative phrasings for this search query that mean the same thing.\n"
+            f"Original query: {query}\n"
+            f"Return ONLY a JSON array of strings, no explanation: [\"phrase1\", \"phrase2\"]"
+        )
+        resp = model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(temperature=0.3, max_output_tokens=128),
+        )
+        import re as _re
+        arr_match = _re.search(r'\[.*?\]', resp.text, _re.DOTALL)
+        if arr_match:
+            paraphrases = json.loads(arr_match.group())[:2]
+            result = [query] + [p for p in paraphrases if p and p != query]
+        else:
+            result = [query]
+
+        # Cache for 1 hour
+        try:
+            if r:
+                r.set(cache_key, json.dumps(result), ex=3600)
+        except Exception:
+            pass
+
+        return result
+
+    except Exception as e:
+        logger.debug(f"Query expansion failed (non-critical): {e}")
+        return [query]
 
 def generate_snippet(text: str, query: str) -> str:
     """
@@ -159,13 +246,86 @@ def generate_snippet(text: str, query: str) -> str:
         snippet = snippet[:250] + "..."
     return snippet
 
+@router.post("/expand", response_model=ExpandQueryResponse)
+def expand_search_query(
+    request: ExpandQueryRequest,
+    current_user: User = Depends(any_user)
+):
+    """
+    Generate expanded paraphrases for search query using LLM and Redis cache.
+    """
+    if not request.query or not request.query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+    q = request.query.strip()
+    expanded = expand_query(q)
+    return ExpandQueryResponse(
+        original_query=request.query,
+        expanded_queries=expanded,
+        expansions=expanded
+    )
+
+
+@router.get("/export")
+def export_search_results(
+    query: str | None = None,
+    format: str = "csv",
+    category: DocumentCategory | None = None,
+    status: DocumentStatus | None = None,
+    min_score: float | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(any_user)
+):
+    """
+    Export search results as downloadable CSV or PDF file.
+    """
+    fmt = format.lower().strip()
+    if fmt not in ("csv", "pdf"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported export format '{format}'. Supported formats are 'csv' and 'pdf'."
+        )
+
+    dummy_response = Response()
+    results = search_documents_metadata(
+        response=dummy_response,
+        query=query,
+        category=category,
+        status=status,
+        min_score=min_score,
+        expand=False,
+        db=db,
+        current_user=current_user
+    )
+
+    if fmt == "csv":
+        file_bytes = export_to_csv(results, query=query)
+        media_type = "text/csv; charset=utf-8"
+        filename = "search_results.csv"
+    else:
+        file_bytes = export_to_pdf(results, query=query)
+        media_type = "application/pdf"
+        filename = "search_results.pdf"
+
+    return Response(
+        content=file_bytes,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )
+
+
 # Structured metadata SQL search & Hybrid search
+@cache(ttl_seconds=60)
 @router.get("")
 def search_documents_metadata(
+    response: Response,
     query: str | None = None,
     category: DocumentCategory | None = None,
     status: DocumentStatus | None = None,
     min_score: float | None = None,
+    expand: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(any_user)
 ):
@@ -210,75 +370,113 @@ def search_documents_metadata(
     if not clean_query:
         clean_query = query
 
+    # Query Expansion (Roadmap 1.4): generate paraphrases if expand=True
+    if expand:
+        expanded_queries = expand_query(clean_query)
+    else:
+        expanded_queries = [clean_query]
+    logger.info(f"Query expansion: {expanded_queries}")
+
     bm25_results = {}
     crawled_results = {}
+    vector_scores: dict[str, float] = {}
 
     is_postgres = db.bind.dialect.name == "postgresql"
-    terms = [t.lower() for t in clean_query.split() if len(t) > 1]
 
-    # A. Search Files (Documents)
-    if is_postgres:
-        tsvector = func.to_tsvector('english', Document.ocr_text)
-        tsquery = func.plainto_tsquery('english', clean_query)
-        rank = func.ts_rank_cd(tsvector, tsquery)
-        doc_matches = db.query(Document, rank).filter(tsvector.op("@@")(tsquery)).all()
-        for doc, score in doc_matches:
-            bm25_results[str(doc.id)] = {"type": "file", "obj": doc, "score": score}
-    else:
-        # SQLite Substring matching
-        doc_matches = db.query(Document).filter(
-            or_(*[Document.ocr_text.ilike(f"%{t}%") for t in terms]) if terms else True
-        ).all()
-        for doc in doc_matches:
-            freq = sum(doc.ocr_text.lower().count(t) for t in terms) if doc.ocr_text else 1
-            bm25_results[str(doc.id)] = {"type": "file", "obj": doc, "score": float(freq)}
+    # Run search for each expanded query variant and merge scores
+    for q_variant in expanded_queries:
+        terms = [t.lower() for t in q_variant.split() if len(t) > 1]
 
-    # B. Search Crawled Web Pages
-    if is_postgres:
-        tsvector = func.to_tsvector('english', CrawledPage.page_content)
-        tsquery = func.plainto_tsquery('english', clean_query)
-        rank = func.ts_rank_cd(tsvector, tsquery)
-        page_matches = db.query(CrawledPage, rank).filter(tsvector.op("@@")(tsquery)).all()
-        for page, score in page_matches:
-            crawled_results[str(page.id)] = {"type": "web", "obj": page, "score": score}
-    else:
-        page_matches = db.query(CrawledPage).filter(
-            or_(*[CrawledPage.page_content.ilike(f"%{t}%") for t in terms]) if terms else True
-        ).all()
-        for page in page_matches:
-            freq = sum(page.page_content.lower().count(t) for t in terms) if page.page_content else 1
-            crawled_results[str(page.id)] = {"type": "web", "obj": page, "score": float(freq)}
+        # A. Search Files (Documents) — BM25
+        if is_postgres:
+            tsvector = func.to_tsvector('english', Document.ocr_text)
+            tsquery = func.plainto_tsquery('english', q_variant)
+            rank = func.ts_rank_cd(tsvector, tsquery)
+            doc_matches = db.query(Document, rank).filter(tsvector.op("@@")(tsquery)).all()
+            for doc, score in doc_matches:
+                key = str(doc.id)
+                # Keep highest score across expansions
+                if key not in bm25_results or score > bm25_results[key]["score"]:
+                    bm25_results[key] = {"type": "file", "obj": doc, "score": score}
+        else:
+            doc_matches = db.query(Document).filter(
+                or_(*[Document.ocr_text.ilike(f"%{t}%") for t in terms]) if terms else True
+            ).all()
+            for doc in doc_matches:
+                freq = sum(doc.ocr_text.lower().count(t) for t in terms) if doc.ocr_text else 1
+                key = str(doc.id)
+                if key not in bm25_results or freq > bm25_results[key]["score"]:
+                    bm25_results[key] = {"type": "file", "obj": doc, "score": float(freq)}
 
-    # C. Search ChromaDB (Semantic Vector Store)
-    vector_scores = {}
-    try:
-        vector_results = search_vector_store(query_text=clean_query, n_results=10)
-        for res in vector_results:
-            doc_id = res["document_id"]
-            similarity = 1.0 - (res["distance"] / 2.0)
-            vector_scores[doc_id] = max(vector_scores.get(doc_id, 0.0), similarity)
-    except Exception as e:
-        logger.error(f"Semantic search failed during hybrid run: {e}")
+        # B. Search Crawled Web Pages
+        if is_postgres:
+            tsvector = func.to_tsvector('english', CrawledPage.page_content)
+            tsquery = func.plainto_tsquery('english', q_variant)
+            rank = func.ts_rank_cd(tsvector, tsquery)
+            page_matches = db.query(CrawledPage, rank).filter(tsvector.op("@@")(tsquery)).all()
+            for page, score in page_matches:
+                key = str(page.id)
+                if key not in crawled_results or score > crawled_results[key]["score"]:
+                    crawled_results[key] = {"type": "web", "obj": page, "score": score}
+        else:
+            page_matches = db.query(CrawledPage).filter(
+                or_(*[CrawledPage.page_content.ilike(f"%{t}%") for t in terms]) if terms else True
+            ).all()
+            for page in page_matches:
+                freq = sum(page.page_content.lower().count(t) for t in terms) if page.page_content else 1
+                key = str(page.id)
+                if key not in crawled_results or freq > crawled_results[key]["score"]:
+                    crawled_results[key] = {"type": "web", "obj": page, "score": float(freq)}
 
-    # D. Merge and Score Linear Combinations
-    all_keys = set(bm25_results.keys()) | set(crawled_results.keys()) | set(vector_scores.keys())
+        # C. Semantic Vector Store
+        try:
+            vector_results = search_vector_store(query_text=q_variant, n_results=10)
+            for res in vector_results:
+                doc_id = res["document_id"]
+                similarity = 1.0 - (res["distance"] / 2.0)
+                vector_scores[doc_id] = max(vector_scores.get(doc_id, 0.0), similarity)
+        except Exception as e:
+            logger.error(f"Semantic search failed during hybrid run: {e}")
+            response.headers["X-Search-Mode"] = "degraded"
+
+    # D. Reciprocal Rank Fusion (RRF) — roadmap item 1.4
+    # Formula: RRF(d) = Σ 1/(k + rank_i(d)),  k=60
+    RRF_K = 60
+
+    def _rrf_ranks(score_dict: dict) -> dict:
+        """Convert a score dict → {id: rank} sorted by descending score."""
+        ranked = sorted(score_dict.items(), key=lambda x: x[1], reverse=True)
+        return {item_id: rank + 1 for rank, (item_id, _) in enumerate(ranked)}
+
+    bm25_ranks = _rrf_ranks({k: v["score"] for k, v in bm25_results.items()})
+    crawl_ranks = _rrf_ranks({k: v["score"] for k, v in crawled_results.items()})
+    vec_ranks   = _rrf_ranks(vector_scores)
+
+    all_keys = (
+        set(bm25_results.keys())
+        | set(crawled_results.keys())
+        | set(vector_scores.keys())
+    )
     combined_results = []
 
-    alpha = 0.5  # Keyword vs Semantic balance
-
     for key in all_keys:
-        kw_data = bm25_results.get(key) or crawled_results.get(key)
-        sem_score = vector_scores.get(key, 0.0)
-        kw_score = kw_data["score"] if kw_data else 0.0
+        # RRF score from up to 3 rankers
+        rrf_score = 0.0
+        if key in bm25_ranks:
+            rrf_score += 1.0 / (RRF_K + bm25_ranks[key])
+        if key in crawl_ranks:
+            rrf_score += 1.0 / (RRF_K + crawl_ranks[key])
+        if key in vec_ranks:
+            rrf_score += 1.0 / (RRF_K + vec_ranks[key])
 
-        # Linear score
-        final_score = (alpha * kw_score) + ((1.0 - alpha) * sem_score)
+        kw_data = bm25_results.get(key) or crawled_results.get(key)
+        final_score = rrf_score
 
         if kw_data:
             obj_type = kw_data["type"]
             obj = kw_data["obj"]
         else:
-            # Vector-only match
+            # Vector-only match — look up by id
             doc_obj = db.query(Document).filter(Document.id == key).first()
             if doc_obj:
                 obj_type = "file"
@@ -348,6 +546,59 @@ def search_documents_metadata(
             }
         combined_results.append(result_item)
 
+    # E. Token Overlap Re-ranking (Roadmap 1.4: 3rd pass re-ranking heuristic)
+    def token_overlap_similarity_rerank(res_list: list[dict], q: str) -> list[dict]:
+        if not q or not res_list:
+            return res_list
+        q_tokens = [t.lower() for t in q.split() if len(t) > 1]
+        if not q_tokens:
+            return res_list
+        from difflib import SequenceMatcher
+        
+        # 1. Compute overlap scores for all items
+        overlap_scores = {}
+        for item in res_list:
+            item_id = item["id"]
+            text = item.get("snippet") or item.get("filename") or ""
+            doc_tokens = [t.lower() for t in text.split() if len(t) > 1]
+            if not doc_tokens:
+                overlap_scores[item_id] = 0.0
+                continue
+            max_sim_sum = 0.0
+            for q_tok in q_tokens:
+                max_tok_sim = 0.0
+                for d_tok in doc_tokens:
+                    sim = SequenceMatcher(None, q_tok, d_tok).ratio()
+                    if sim > max_tok_sim:
+                        max_tok_sim = sim
+                max_sim_sum += max_tok_sim
+            overlap_scores[item_id] = max_sim_sum / len(q_tokens)
+
+        # 2. Get min and max for normalization
+        rrf_scores = [item["score"] for item in res_list]
+        min_rrf, max_rrf = min(rrf_scores), max(rrf_scores)
+        
+        overlaps = list(overlap_scores.values())
+        min_overlap, max_overlap = min(overlaps), max(overlaps)
+
+        # 3. Normalize and combine
+        for item in res_list:
+            item_id = item["id"]
+            
+            # Normalize RRF score to [0.0, 1.0]
+            rrf_range = max_rrf - min_rrf
+            norm_rrf = (item["score"] - min_rrf) / rrf_range if rrf_range > 0 else 1.0
+            
+            # Normalize overlap score to [0.0, 1.0]
+            overlap_range = max_overlap - min_overlap
+            norm_overlap = (overlap_scores[item_id] - min_overlap) / overlap_range if overlap_range > 0 else 1.0
+            
+            # Weighted combination of normalized scores
+            item["score"] = round(norm_rrf * 0.7 + norm_overlap * 0.3, 4)
+            
+        return res_list
+
+    combined_results = token_overlap_similarity_rerank(combined_results, clean_query)
     combined_results.sort(key=lambda x: x["score"], reverse=True)
 
     # Save search metrics log

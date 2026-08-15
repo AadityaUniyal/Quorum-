@@ -7,6 +7,8 @@ from app.schemas.document import (
     ExtractedFieldResponse,
     FieldUpdate,
 )
+from app.schemas.comment import CommentCreate, CommentResponse
+from app.schemas.api_key import ApiKeyCreate, ApiKeyResponse, ApiKeyCreateResponse
 
 __all__ = [
     "Token",
@@ -19,4 +21,9 @@ __all__ = [
     "DocumentSimpleResponse",
     "ExtractedFieldResponse",
     "FieldUpdate",
+    "CommentCreate",
+    "CommentResponse",
+    "ApiKeyCreate",
+    "ApiKeyResponse",
+    "ApiKeyCreateResponse",
 ]

@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DocIntel AI — Frontend
 
-## Getting Started
+Next.js 15 application (App Router) for the DocIntel AI platform.
 
-First, run the development server:
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+- **State**: Zustand
+
+## Pages
+
+| Route | Description |
+|-------|-------------|
+| `/dashboard` | KPI overview, system health monitoring |
+| `/documents` | Document management — upload, filter, grid/table views |
+| `/review` | Human-in-the-loop review with split-screen editor |
+| `/search` | Hybrid search, RAG chatbot, bookmarks, export |
+| `/analytics` | Charts and metrics across Documents, AI, Search, Crawl |
+| `/crawl` | Web crawler console and PageRank visualization |
+| `/settings` | User profile and preferences |
+
+## Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+```
 
-## Learn More
+## Environment
 
-To learn more about Next.js, take a look at the following resources:
+Create `.env.local`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Docker
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+docker build -t docintel-frontend:latest .
+```

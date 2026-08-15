@@ -13,7 +13,7 @@ from app.config import settings
 from app.database import Base
 
 # Import all models so Alembic can detect them
-from app.models import auth, document, audit  # noqa: F401
+from app.models import auth, document, audit, search, comment, api_key  # noqa: F401
 
 # Alembic Config object
 config = context.config
