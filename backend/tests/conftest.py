@@ -15,20 +15,21 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 # Override settings BEFORE importing app modules
-os.environ["DATABASE_URL"] = "sqlite://"
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-testing-only"
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["RABBITMQ_HOST"] = "localhost"
 os.environ["REDIS_HOST"] = "localhost"
 os.environ["DEBUG"] = "true"
 
+# Import using the shim package to ensure a single module namespace
 import app.database as app_db
 from app.database import Base, get_db
 from app.main import app
 
 # In-memory SQLite for tests
 TEST_ENGINE = create_engine(
-    "sqlite://",
+    "sqlite:///:memory:",
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
@@ -37,7 +38,9 @@ app_db.SessionLocal = TestSessionLocal
 
 
 def override_get_db():
-    """Dependency override for test database."""
+    """Dependency override for test database. Ensure tables exist on the test engine before yielding a session."""
+    from app.database import Base
+    Base.metadata.create_all(bind=TEST_ENGINE)
     db = TestSessionLocal()
     try:
         yield db
@@ -47,7 +50,13 @@ def override_get_db():
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
-    """Create all tables once for the test session."""
+    """Create all tables once for the test session and reset ChromaDB collection."""
+    # Reset ChromaDB collection for tests to prevent dimension mismatches (768 vs 384)
+    try:
+        from app.services.vector_store import chroma_client
+        chroma_client.delete_collection(name="document_intelligence")
+    except Exception:
+        pass
     Base.metadata.create_all(bind=TEST_ENGINE)
     yield
     Base.metadata.drop_all(bind=TEST_ENGINE)
@@ -56,6 +65,9 @@ def setup_test_db():
 @pytest.fixture(autouse=True)
 def override_dependencies():
     """Override FastAPI dependencies for testing."""
+    # Ensure tables are created on the test engine before handling any request
+    from app.database import Base
+    Base.metadata.create_all(bind=TEST_ENGINE)
     app.dependency_overrides[get_db] = override_get_db
     yield
     app.dependency_overrides.clear()

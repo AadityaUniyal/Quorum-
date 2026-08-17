@@ -5,50 +5,38 @@ Write-Host "  Starting Distributed AI Document Intelligence Platform" -Foregroun
 Write-Host "=================================================================" -ForegroundColor Cyan
 
 # 1. Start Docker Services (if Docker is available)
-Write-Host "[1/4] Starting auxiliary infrastructure (Redis & RabbitMQ)..." -ForegroundColor Yellow
+Write-Host "[1/4] Checking Docker availability..." -ForegroundColor Yellow
 $dockerRunning = $false
 try {
     $dockerCheck = docker ps 2>&1
     if ($LASTEXITCODE -eq 0) {
-        docker-compose up -d
         $dockerRunning = $true
-    } else {
-        Write-Host "Docker daemon is not running. Operating in Standalone In-Process mode." -ForegroundColor Yellow
     }
-} catch {
-    Write-Host "Docker is not available. Operating in Standalone In-Process mode." -ForegroundColor Yellow
-}
-
-function WaitFor-Port($Port, $Name, $MaxRetries = 5) {
-    Write-Host "Checking $Name on port $Port..." -ForegroundColor Yellow
-    $retries = 0
-    while ($retries -lt $MaxRetries) {
-        try {
-            $tcp = New-Object System.Net.Sockets.TcpClient
-            $tcp.Connect("localhost", $Port)
-            $tcp.Close()
-            Write-Host "$Name is ready!" -ForegroundColor Green
-            return $true
-        } catch {
-            Start-Sleep -Seconds 1
-            $retries++
-        }
-    }
-    Write-Host "$Name not responding on port $Port. Falling back to in-memory/in-process pipeline." -ForegroundColor Yellow
-    return $false
-}
+} catch {}
 
 if ($dockerRunning) {
-    WaitFor-Port 6379 "Redis" 5
-    WaitFor-Port 5672 "RabbitMQ" 5
+    Write-Host "Docker daemon is running. Launching ALL services via Docker Compose..." -ForegroundColor Green
+    docker-compose up --build
+    exit
+} else {
+    Write-Host "Docker daemon is not running. Operating in Standalone In-Process mode." -ForegroundColor Yellow
 }
 
-# 2. Start FastAPI Backend
-Write-Host "[2/4] Starting FastAPI Backend on http://localhost:8000..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Starting FastAPI Backend...' -ForegroundColor Cyan; cd backend; python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+# 2. Database Migrations (for SQLite local development)
+Write-Host "[2/4] Running database migrations..." -ForegroundColor Yellow
+try {
+    cd backend
+    python -m alembic upgrade head
+    cd ..
+    Write-Host "Database migrations completed successfully." -ForegroundColor Green
+} catch {
+    Write-Host "Failed to run database migrations. Please ensure Python dependencies are installed." -ForegroundColor Red
+    cd ..
+}
 
-# 3. Start Background Worker
-Write-Host "[3/4] Starting Event Processing Worker..." -ForegroundColor Yellow
+# 3. Start FastAPI Backend & Background Worker
+Write-Host "[3/4] Starting FastAPI Backend and background worker..." -ForegroundColor Yellow
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Starting FastAPI Backend...' -ForegroundColor Cyan; cd backend; python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'Starting Background Processing Worker...' -ForegroundColor Cyan; cd backend; python -m app.worker"
 
 # 4. Start Next.js Frontend
@@ -60,3 +48,4 @@ Write-Host "  Platform Launch Complete!" -ForegroundColor Green
 Write-Host "  - Next.js Web Portal: http://localhost:3000" -ForegroundColor Green
 Write-Host "  - FastAPI Interactive Documentation: http://localhost:8000/docs" -ForegroundColor Green
 Write-Host "=================================================================" -ForegroundColor Green
+

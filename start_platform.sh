@@ -112,45 +112,41 @@ cleanup() {
 trap cleanup INT TERM EXIT
 
 # ---------------------------------------------------------------------------
-# Step 1: Infrastructure
+# Step 1: Infrastructure / Docker Detection
 # ---------------------------------------------------------------------------
-echo -e "${GREEN}[1/4] Starting infrastructure (RabbitMQ + Redis)...${NC}"
-docker-compose up -d
+echo -e "${GREEN}[1/4] Checking Docker availability...${NC}"
+docker_running=false
+if docker ps &>/dev/null; then
+    docker_running=true
+fi
 
-# Wait for services to become healthy
-wait_for_port() {
-    local host=$1
-    local port=$2
-    local name=$3
-    info "Waiting for $name to be ready on $host:$port..."
-    while ! $PYTHON -c "import socket; s = socket.socket(); s.settimeout(1); s.connect(('$host', $port))" &>/dev/null; do
-        sleep 1
-    done
-    info "$name is ready!"
-}
-
-wait_for_port "localhost" 6379 "Redis"
-wait_for_port "localhost" 5672 "RabbitMQ"
+if [ "$docker_running" = true ]; then
+    info "Docker daemon is running. Launching ALL services via Docker Compose..."
+    docker-compose up --build
+    exit 0
+else
+    warn "Docker daemon is not running. Operating in Standalone In-Process mode."
+fi
 
 # ---------------------------------------------------------------------------
-# Step 2: FastAPI Backend
+# Step 2: Database Migrations
 # ---------------------------------------------------------------------------
-echo -e "${GREEN}[2/4] Starting FastAPI backend (port 8000)...${NC}"
+echo -e "${GREEN}[2/4] Running database migrations...${NC}"
+cd backend
+$PYTHON -m alembic upgrade head
+cd ..
+
+# ---------------------------------------------------------------------------
+# Step 3: FastAPI Backend & Worker
+# ---------------------------------------------------------------------------
+echo -e "${GREEN}[3/4] Starting FastAPI backend and background worker...${NC}"
 cd backend
 $PYTHON -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
 BACKEND_PID=$!
-cd ..
-sleep 2
-
-# ---------------------------------------------------------------------------
-# Step 3: Document Processing Worker
-# ---------------------------------------------------------------------------
-echo -e "${GREEN}[3/4] Starting document processing worker...${NC}"
-cd backend
 $PYTHON -m app.worker &
 WORKER_PID=$!
 cd ..
-sleep 1
+sleep 2
 
 # ---------------------------------------------------------------------------
 # Step 4: Next.js Frontend
@@ -160,6 +156,7 @@ cd frontend
 npm run dev &
 FRONTEND_PID=$!
 cd ..
+
 
 # ---------------------------------------------------------------------------
 # Summary

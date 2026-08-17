@@ -6,6 +6,7 @@ import { api, SearchResultItem } from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
+import DOMPurify from 'dompurify';
 import { 
   SearchIcon, 
   MessageSquare, 
@@ -397,7 +398,7 @@ export default function SearchPage() {
   }) || [];
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-8rem)] w-full max-w-7xl mx-auto select-none overflow-hidden relative">
+    <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-8rem)] w-full max-w-7xl mx-auto select-none overflow-hidden relative">
       
       {/* Search Layout Grid */}
       <div className="flex-1 flex flex-col gap-6 overflow-hidden">
@@ -596,7 +597,6 @@ export default function SearchPage() {
                   </button>
 
                   <button
-                    type="button"
                     onClick={() => {
                       setExpandActive(!expandActive);
                       if (!expandActive && query.trim()) handleTriggerExpandQuery();
@@ -606,6 +606,7 @@ export default function SearchPage() {
                       expandActive ? "bg-primary/20 border-primary/40 text-primary" : "bg-[#111] border-white/4 text-neutral-400 hover:text-white"
                     )}
                     title="Toggle Query Expansion (AI)"
+                    aria-label="Toggle Query Expansion"
                   >
                     <Sparkles className="h-3.5 w-3.5" />
                   </button>
@@ -615,6 +616,7 @@ export default function SearchPage() {
                     onClick={() => setIsSaveBookmarkModalOpen(true)}
                     className="p-1.5 rounded-lg border border-white/4 bg-[#111] text-neutral-300 hover:text-primary cursor-pointer transition-colors shrink-0"
                     title="Save Search Bookmark"
+                    aria-label="Save Search Bookmark"
                   >
                     <Bookmark className="h-3.5 w-3.5" />
                   </button>
@@ -624,6 +626,7 @@ export default function SearchPage() {
                     onClick={() => setIsBookmarksOpen(true)}
                     className="px-2.5 py-1.5 rounded-lg border border-white/4 bg-[#111] text-neutral-300 hover:text-white text-xs flex items-center gap-1 cursor-pointer shrink-0"
                     title="Saved Bookmarks"
+                    aria-label="Saved Bookmarks"
                   >
                     <BookmarkCheck className="h-3.5 w-3.5 text-primary" /> ({bookmarks.length})
                   </button>
@@ -635,6 +638,7 @@ export default function SearchPage() {
                     onClick={() => handleExportResults('csv')}
                     disabled={isExporting}
                     className="px-2.5 py-1.5 bg-[#111] border border-white/6 rounded-lg text-xs text-neutral-300 hover:text-white hover:border-white/10 cursor-pointer flex items-center gap-1 shrink-0"
+                    aria-label="Export results as CSV"
                   >
                     <Download className="h-3.5 w-3.5" /> CSV
                   </button>
@@ -644,6 +648,7 @@ export default function SearchPage() {
                     onClick={() => handleExportResults('pdf')}
                     disabled={isExporting}
                     className="px-2.5 py-1.5 bg-[#111] border border-white/6 rounded-lg text-xs text-neutral-300 hover:text-white hover:border-white/10 cursor-pointer flex items-center gap-1 shrink-0"
+                    aria-label="Export results as PDF"
                   >
                     <FileText className="h-3.5 w-3.5" /> PDF
                   </button>
@@ -655,6 +660,7 @@ export default function SearchPage() {
                     onClick={clearSearch}
                     className="p-1.5 rounded-lg border border-white/4 hover:bg-white/5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors shrink-0"
                     title="Clear search"
+                    aria-label="Clear search"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -703,7 +709,7 @@ export default function SearchPage() {
               </div>
 
               {/* Main double column layout */}
-              <div className="flex-1 flex gap-6 overflow-hidden">
+              <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden">
                 
                 {/* Left Side: Filter Sidebar Panel */}
                 <div className="w-56 border border-white/4 bg-[#0c0c0c]/80 rounded-2xl p-4 flex flex-col gap-6 shrink-0 select-none">
@@ -837,7 +843,11 @@ export default function SearchPage() {
                             {(item.snippet || item.excerpt) && (
                               <div 
                                 className="mt-1 bg-black/35 border border-white/2 p-3 rounded-lg text-xs font-mono text-neutral-400 select-text leading-relaxed whitespace-pre-wrap [&>mark]:bg-primary/20 [&>mark]:text-primary [&>mark]:px-1 [&>mark]:rounded"
-                                dangerouslySetInnerHTML={{ __html: item.snippet || item.excerpt || '' }}
+                                dangerouslySetInnerHTML={{ 
+                                  __html: typeof window !== 'undefined'
+                                    ? DOMPurify.sanitize(item.snippet || item.excerpt || '', { ALLOWED_TAGS: ['mark'] })
+                                    : (item.snippet || item.excerpt || '')
+                                }}
                               />
                             )}
                           </div>

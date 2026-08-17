@@ -153,3 +153,22 @@ def release_redis_semaphore(name: str, owner_id: str):
         client.delete(f"semaphore:{name}:{owner_id}:ttl")
     except Exception as exc:
         logger.warning(f"Error releasing Redis semaphore '{name}': {exc}")
+
+async def cache_get(key: str) -> str | None:
+    """Get a value from async Redis client."""
+    try:
+        client = get_redis_async_client()
+        return await client.get(key)
+    except Exception as exc:
+        logger.warning(f"Error reading key {key} from async Redis: {exc}")
+        return None
+
+async def cache_set(key: str, value: str, ttl: int = 3600) -> bool:
+    """Set a value in async Redis client with a TTL."""
+    try:
+        client = get_redis_async_client()
+        await client.setex(key, ttl, value)
+        return True
+    except Exception as exc:
+        logger.warning(f"Error setting key {key} in async Redis: {exc}")
+        return False

@@ -20,14 +20,26 @@ venv/
 env/
 .venv/
 
-# Backend runtime
+# Backend runtime & Local databases
 backend/.env
+backend/.env.*
+!backend/.env.example
+.env
+.env.*
+!.env.example
 backend/uploads/*
 !backend/uploads/.gitkeep
 uploads/*
 !uploads/.gitkeep
 backend/chroma_db/
 *.db
+*.db-journal
+*.sqlite
+*.sqlite3
+googi_dev.db
+test_e2e.db
+test.db
+local_test.db
 
 # Node / Next.js
 node_modules/

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { ConfidenceBar } from '@/components/ui/ConfidenceBar';
 import { useAuthStore } from '@/stores/auth';
 import clsx from 'clsx';
+import DOMPurify from 'dompurify';
 import { 
   Loader2, 
   AlertCircle, 
@@ -299,7 +300,7 @@ export default function ReviewPage() {
   };
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-8rem)] w-full max-w-7xl mx-auto select-none overflow-hidden animate-fade-in">
+    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-8rem)] w-full max-w-7xl mx-auto select-none overflow-hidden animate-fade-in">
       
       {/* Left panel: Queue List */}
       <div className="w-80 border border-white/[0.04] bg-[#0c0c0c]/80 rounded-2xl flex flex-col overflow-hidden shrink-0">
@@ -450,7 +451,7 @@ export default function ReviewPage() {
             </div>
 
             {/* Split panel: OCR vs Editor */}
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
               
               {/* Left half: tabbed display (OCR Text / Table Reconstructor / Mathematical Auditing) */}
               <div className="flex-1 border-r border-white/[0.04] overflow-y-auto p-6 scrollbar bg-[#080808]/40 flex flex-col gap-5">
@@ -499,6 +500,7 @@ export default function ReviewPage() {
                             toast.success('OCR text copied to clipboard!');
                           }}
                           className="px-2.5 py-1 border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.05] rounded-lg text-[9px] font-mono text-neutral-450 hover:text-white transition-all cursor-pointer"
+                          aria-label="Copy Raw OCR text to clipboard"
                         >
                           Copy
                         </button>
@@ -508,9 +510,14 @@ export default function ReviewPage() {
                     <div className="flex-1 overflow-y-auto scrollbar select-text pr-1 font-mono text-xs text-neutral-450 leading-relaxed whitespace-pre-wrap">
                       <pre 
                         dangerouslySetInnerHTML={{ 
-                          __html: ocrSearchQuery.trim() 
-                            ? (doc.ocr_text || '').replace(new RegExp(`(${ocrSearchQuery.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'), '<mark>$1</mark>')
-                            : (doc.ocr_text || 'No text extracted.') 
+                          __html: typeof window !== 'undefined'
+                            ? DOMPurify.sanitize(
+                                ocrSearchQuery.trim() 
+                                  ? (doc.ocr_text || '').replace(new RegExp(`(${ocrSearchQuery.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'), '<mark>$1</mark>')
+                                  : (doc.ocr_text || 'No text extracted.'),
+                                { ALLOWED_TAGS: ['mark'] }
+                              )
+                            : (doc.ocr_text || 'No text extracted.')
                         }}
                       />
                     </div>

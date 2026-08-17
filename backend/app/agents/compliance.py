@@ -14,15 +14,17 @@ def run_compliance_agent(ocr_text: str, category: DocumentCategory, extracted_fi
     Compliance Agent: Validates regulatory and organizational terms.
     Returns: { field_key: { "score": float, "notes": str } }
     """
-    if settings.GEMINI_API_KEY:
-        try:
-            return call_gemini_compliance(ocr_text, category, extracted_fields)
-        except Exception as e:
-            logger.error(f"Gemini Compliance Agent failed: {str(e)}. Falling back to local compliance.")
+    import asyncio
+    try:
+        # Route through call_llm_cached for retries, cache, and Ollama fallback support
+        return asyncio.run(call_gemini_compliance(ocr_text, category, extracted_fields))
+    except Exception as e:
+        logger.error(f"Centralized Compliance Agent failed: {str(e)}. Falling back to local compliance.")
 
     return run_local_compliance(ocr_text, category, extracted_fields)
 
-def call_gemini_compliance(ocr_text: str, category: DocumentCategory, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:
+async def call_gemini_compliance(ocr_text: str, category: DocumentCategory, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    from app.services.llm import call_llm_cached
     prompt = f"""
     You are a Compliance Agent. Your task is to verify if the document complies with standard requirements.
     Review the OCR text and extracted fields for category: {category.value}
@@ -52,18 +54,19 @@ def call_gemini_compliance(ocr_text: str, category: DocumentCategory, extracted_
     Do not include markdown code block formatting.
     """
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json"}
-    }
-
-    response = httpx.post(url, json=payload, timeout=30.0)
-    response.raise_for_status()
-    res_data = response.json()
-
-    content_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-    return json.loads(content_text)
+    response_text, provider, from_cache = await call_llm_cached(
+        prompt=prompt,
+        temperature=0.0,
+        use_cache=True
+    )
+    
+    # Strip any markdown wrappers if returned
+    clean_text = response_text.strip()
+    if clean_text.startswith("```json"):
+        clean_text = clean_text[7:]
+    if clean_text.endswith("```"):
+        clean_text = clean_text[:-3]
+    return json.loads(clean_text.strip())
 
 def run_local_compliance(ocr_text: str, category: DocumentCategory, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:
     compliance = {}

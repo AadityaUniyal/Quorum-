@@ -1,3 +1,4 @@
+import re
 import uuid
 
 from sqlalchemy import create_engine
@@ -27,11 +28,6 @@ class GUID(TypeDecorator):
         elif dialect.name == 'postgresql':
             return value
         else:
-            if not isinstance(value, uuid.UUID):
-                try:
-                    return str(uuid.UUID(value))
-                except ValueError:
-                    return str(value)
             return str(value)
 
     def process_result_value(self, value, dialect):
@@ -39,10 +35,7 @@ class GUID(TypeDecorator):
             return value
         else:
             if not isinstance(value, uuid.UUID):
-                try:
-                    return uuid.UUID(value)
-                except ValueError:
-                    return value
+                return uuid.UUID(value)
             return value
 
 
@@ -59,19 +52,24 @@ if settings.DATABASE_URL.startswith("sqlite"):
         connect_args={"check_same_thread": False},
     )
 else:
-    # Neon PostgreSQL: clean URL and configure SSL
+    # Cloud-agnostic PostgreSQL connection setup (handles standard SSL / connection tuning)
     db_url = settings.DATABASE_URL
-    connect_args = {}
+    connect_args = {"connect_timeout": 10}
 
     # Strip channel_binding param (not supported by psycopg2)
     if "channel_binding" in db_url:
-        import re
         db_url = re.sub(r'[&?]channel_binding=[^&]*', '', db_url)
         # Clean up leftover ? at end or double &&
         db_url = db_url.replace('&&', '&').rstrip('&').rstrip('?')
 
     # Pass sslmode via connect_args for reliable SSL
-    if "sslmode=require" in db_url:
+    if "sslmode" in db_url.lower():
+        # Extract sslmode parameter if present
+        m = re.search(r"sslmode=([^&]+)", db_url, re.I)
+        if m:
+            connect_args["sslmode"] = m.group(1)
+    else:
+        # Default fallback
         connect_args["sslmode"] = "require"
 
     engine = create_engine(

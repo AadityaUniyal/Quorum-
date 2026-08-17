@@ -1,4 +1,5 @@
 import os
+import secrets
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -10,10 +11,10 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # Database Config (set via DATABASE_URL env var or .env file)
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/docintel"
+    DATABASE_URL: str = os.getenv("DATABASE_URL") or "sqlite:///./test.db"
 
     # Security & Auth Config
-    JWT_SECRET_KEY: str = ""  # MUST be set via env var — generate with: python -c "import secrets; print(secrets.token_urlsafe(64))"
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY") or secrets.token_urlsafe(64)  # Auto‑generated if not set
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # 15 Minutes
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7     # 7 Days
@@ -26,6 +27,7 @@ class Settings(BaseSettings):
 
     # AI Config
     GEMINI_API_KEY: str | None = None
+    EMBEDDING_PROVIDER: str = "local"  # "local" (sentence-transformers) or "gemini"
     LLM_MODEL: str = "gemini-1.5-pro"  # Primary LLM model
     LLM_OFFLINE_MOCK_FALLBACK: bool = True  # Enable local regex/extractive fallback when APIs are offline
 
@@ -62,10 +64,9 @@ class Settings(BaseSettings):
             self.REDIS_URL = f"redis://{password_part}{self.REDIS_HOST}:{self.REDIS_PORT}/0"
         return self
 
-    @staticmethod
-    def get_redis_url() -> str:
+    def get_redis_url(self) -> str:
         """Return the Redis connection URL (used by aioredis)."""
-        return Settings().REDIS_URL
+        return self.REDIS_URL
 
     # Storage & RAG Directories
     UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
@@ -107,3 +108,10 @@ if not settings.GEMINI_API_KEY:
 
 if settings.DATABASE_URL == "postgresql://user:password@localhost:5432/docintel":
     _startup_logger.warning("⚠ DATABASE_URL is using the default placeholder. Set it in .env file.")
+
+if settings.DEBUG:
+    _startup_logger.warning("⚠ DEBUG mode is active. This enables interactive tracebacks and should be disabled in production.")
+
+if not settings.COOKIE_SECURE:
+    _startup_logger.warning("⚠ COOKIE_SECURE is False. Session and auth cookies will be sent over unencrypted HTTP. Set COOKIE_SECURE=True in production.")
+

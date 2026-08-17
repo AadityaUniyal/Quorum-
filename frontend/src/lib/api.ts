@@ -162,6 +162,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("doc_intel_token");
+    if (token && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
@@ -172,15 +179,31 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     // Prevent infinite loop if the refresh endpoint itself returns 401
     if (path !== "/api/auth/refresh" && path !== "/api/auth/login") {
       try {
+        const storedRefreshToken = typeof window !== "undefined" ? localStorage.getItem("doc_intel_refresh_token") : null;
         const refreshResponse = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
           method: "POST",
-          credentials: "include", // Cookie sent automatically
+          headers: {
+            "Content-Type": "application/json",
+            ...(storedRefreshToken ? { Authorization: `Bearer ${storedRefreshToken}` } : {}),
+          },
+          body: storedRefreshToken ? JSON.stringify({ refresh_token: storedRefreshToken }) : undefined,
+          credentials: "include",
         });
         if (refreshResponse.ok) {
-          clearLegacyTokens();
+          const refreshData = await refreshResponse.json();
+          if (typeof window !== "undefined" && refreshData?.access_token) {
+            localStorage.setItem("doc_intel_token", refreshData.access_token);
+            if (refreshData.refresh_token) {
+              localStorage.setItem("doc_intel_refresh_token", refreshData.refresh_token);
+            }
+          }
+          const retryHeaders = new Headers(options.headers || {});
+          if (refreshData?.access_token) {
+            retryHeaders.set("Authorization", `Bearer ${refreshData.access_token}`);
+          }
           const retryResponse = await fetch(`${API_BASE_URL}${path}`, {
             ...options,
-            headers,
+            headers: retryHeaders,
             credentials: "include",
           });
           if (retryResponse.ok) {
@@ -212,13 +235,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   // Authentication
   login: async (email: string, password: string): Promise<{ access_token: string; refresh_token: string; token_type: string }> => {
-    return request("/api/auth/login", {
+    const data = await request<{ access_token: string; refresh_token: string; token_type: string }>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
+    if (typeof window !== "undefined" && data?.access_token) {
+      localStorage.setItem("doc_intel_token", data.access_token);
+      if (data.refresh_token) {
+        localStorage.setItem("doc_intel_refresh_token", data.refresh_token);
+      }
+    }
+    return data;
   },
 
   logout: async (): Promise<void> => {
+    clearLegacyTokens();
     return request("/api/auth/logout", {
       method: "POST",
     });
@@ -667,10 +698,27 @@ export const api = {
     return request(`/api/documents/${documentId}/audit-line-items`);
   },
 
-  // ── Streaming (SSE document pipeline) ─────────────────────────────────────
+  // ── Generic HTTP Helpers ───────────────────────────────────────────────────
 
-  streamDocumentPipeline: (documentId: string): EventSource => {
-    const url = `${API_BASE_URL}/api/streaming/documents/${documentId}/stream`;
-    return new EventSource(url, { withCredentials: true });
+  get: async <T>(path: string): Promise<T> => {
+    return request<T>(path, { method: "GET" });
+  },
+
+  post: async <T>(path: string, body?: unknown): Promise<T> => {
+    return request<T>(path, {
+      method: "POST",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  },
+
+  put: async <T>(path: string, body?: unknown): Promise<T> => {
+    return request<T>(path, {
+      method: "PUT",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  },
+
+  delete: async <T = void>(path: string): Promise<T> => {
+    return request<T>(path, { method: "DELETE" });
   },
 };

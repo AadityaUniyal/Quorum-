@@ -25,7 +25,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true })
     try {
       await api.login(email, password)
-      clearLegacyTokens()
       await get().loadUser()
     } finally {
       set({ isLoading: false })

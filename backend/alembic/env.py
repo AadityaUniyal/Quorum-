@@ -18,8 +18,10 @@ from app.models import auth, document, audit, search, comment, api_key  # noqa: 
 # Alembic Config object
 config = context.config
 
-# Override sqlalchemy.url with the actual DATABASE_URL from environment
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+import os
+# Override sqlalchemy.url with DIRECT_DATABASE_URL if set (specifically for direct migration connections on Neon), otherwise use DATABASE_URL.
+db_url = os.environ.get("DIRECT_DATABASE_URL") or settings.DATABASE_URL
+config.set_main_option("sqlalchemy.url", db_url)
 
 # Set up logging from alembic.ini
 if config.config_file_name is not None:

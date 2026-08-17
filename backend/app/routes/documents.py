@@ -10,7 +10,7 @@ from app.models.audit import AuditLog
 from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.routes.auth import RoleChecker
-from app.schemas.document import DocumentResponse, DocumentSimpleResponse
+from app.schemas.document import DocumentResponse, DocumentSimpleResponse, DocumentCreateSchema
 from app.services.cache import cache
 from app.services.queue import publish_document_event
 from app.services.storage import delete_stored_file, save_uploaded_file
@@ -106,6 +106,31 @@ async def upload_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to record document upload: {str(e)}"
         ) from e
+
+# JSON document creation endpoint (no file upload)
+@router.post("/", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+def create_document_json(
+    doc: DocumentCreateSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(admin_or_operator),
+):
+    """Create a document from JSON payload without uploading a file.
+
+    Stores content in the `ocr_text` field and leaves file_path empty.
+    """
+    new_doc = Document(
+        filename=doc.title,
+        file_path="",
+        file_type="text",
+        status=DocumentStatus.INGESTED,
+        category=DocumentCategory.UNKNOWN,
+        uploaded_by=current_user.id,
+    )
+    new_doc.ocr_text = doc.content
+    db.add(new_doc)
+    db.commit()
+    db.refresh(new_doc)
+    return new_doc
 
 # List all documents
 @cache(ttl_seconds=300)

@@ -33,7 +33,8 @@ def get_rabbitmq_connection():
         port=settings.RABBITMQ_PORT,
         credentials=credentials,
         connection_attempts=1,
-        retry_delay=1
+        retry_delay=1,
+        socket_timeout=2
     )
     return pika.BlockingConnection(parameters)
 

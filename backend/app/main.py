@@ -21,15 +21,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
-import app.models.audit
-
-# Import all models to register with Base metadata
-import app.models.auth
-import app.models.bookmark
-import app.models.document
-import app.models.notification
-import app.models.search
-import app.models.webhook
+import app.models  # Registers all models via app/models/__init__.py
 from app.config import settings
 from app.database import Base, engine
 from app.limiter import limiter
@@ -205,11 +197,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 # ─── Include Routers ─────────────────────────────────────────────────────────
 
 from app.routes import (  # noqa: E402
+    admin,
     analytics,
     auth,
     bookmarks,
@@ -221,6 +212,7 @@ from app.routes import (  # noqa: E402
     review,
     search,
     streaming,
+    users,
     webhooks,
 )
 
@@ -236,7 +228,8 @@ app.include_router(rag.router)
 app.include_router(notifications.router)
 app.include_router(webhooks.router)
 app.include_router(bookmarks.router)
-
+app.include_router(admin.router)
+app.include_router(users.router)
 
 # ─── Health & System Endpoints ───────────────────────────────────────────────
 
@@ -399,3 +392,10 @@ def prometheus_metrics():
     ] + agent_lines
 
     return "\n".join(lines)
+
+
+from fastapi.staticfiles import StaticFiles
+import os
+# Serve the frontend UI
+app.mount("/", StaticFiles(directory=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "frontend"), html=True), name="static")
+

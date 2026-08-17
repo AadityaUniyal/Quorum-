@@ -80,6 +80,9 @@ def _call_gemini_reconciler(
     auditor_notes: str,
 ) -> dict[str, Any]:
     """Ask Gemini to adjudicate the disagreement on a specific field."""
+    import asyncio
+    from app.services.llm import call_llm_cached
+    import json
     prompt = f"""
 You are a Reconciler Agent arbitrating a disagreement between two AI validation agents
 about a specific extracted field from a business document.
@@ -99,19 +102,20 @@ by examining the OCR text and the agents' reasoning.
 Respond ONLY with valid JSON in this exact format:
 {{"reconciled_score": 0.87, "notes": "Brief explanation of your decision."}}
 """
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
-    )
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json"},
-    }
-    response = httpx.post(url, json=payload, timeout=20.0)
-    response.raise_for_status()
-    import json
-    content = response.json()["candidates"][0]["content"]["parts"][0]["text"]
-    data = json.loads(content)
+    async def _run():
+        response_text, provider, from_cache = await call_llm_cached(
+            prompt=prompt,
+            temperature=0.0,
+            use_cache=True
+        )
+        return response_text
+
+    content = asyncio.run(_run()).strip()
+    if content.startswith("```json"):
+        content = content[7:]
+    if content.endswith("```"):
+        content = content[:-3]
+    data = json.loads(content.strip())
     score = max(0.0, min(1.0, float(data.get("reconciled_score", 0.75))))
     return {
         "reconciled_score": round(score, 4),

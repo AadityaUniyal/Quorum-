@@ -18,10 +18,11 @@ def run_extractor_agent(ocr_text: str, category: DocumentCategory) -> dict[str, 
     from app.services.local_engine import LocalLayoutParser
     return LocalLayoutParser.extract_fields(ocr_text, category.value)
 
-def call_gemini_extractor(ocr_text: str, category: DocumentCategory) -> dict[str, Any]:
+async def call_gemini_extractor(ocr_text: str, category: DocumentCategory) -> dict[str, Any]:
     """
     Calls Gemini API using structured JSON schema format.
     """
+    from app.services.llm import call_llm_cached
     # Define system instructions based on category
     schema_instructions = ""
     if category == DocumentCategory.INVOICE:
@@ -45,18 +46,18 @@ def call_gemini_extractor(ocr_text: str, category: DocumentCategory) -> dict[str
     {ocr_text}
     """
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json"}
-    }
-
-    response = httpx.post(url, json=payload, timeout=30.0)
-    response.raise_for_status()
-    res_data = response.json()
-
-    content_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-    return json.loads(content_text)
+    response_text, provider, from_cache = await call_llm_cached(
+        prompt=prompt,
+        temperature=0.1,
+        use_cache=True
+    )
+    
+    clean_text = response_text.strip()
+    if clean_text.startswith("```json"):
+        clean_text = clean_text[7:]
+    if clean_text.endswith("```"):
+        clean_text = clean_text[:-3]
+    return json.loads(clean_text.strip())
 
 def run_heuristic_extractor(ocr_text: str, category: DocumentCategory) -> dict[str, Any]:
     """

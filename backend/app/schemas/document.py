@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.document import DocumentCategory, DocumentStatus, FieldValidationStatus
 
@@ -20,6 +20,17 @@ class ExtractedFieldResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class DocumentCreateSchema(BaseModel):
+    """Schema for creating a new document via JSON payload.
+
+    The endpoint stores a minimal Document record without an actual file. The
+    `file_path` and related storage fields are left empty because the content is
+    stored directly in the `content` column.
+    """
+
+    title: str = Field(..., description="Document title")
+    content: str = Field(..., description="Document textual content")
 
 class DocumentResponse(BaseModel):
     id: UUID

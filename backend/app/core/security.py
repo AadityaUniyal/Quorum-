@@ -65,7 +65,11 @@ def create_refresh_token(user, expires_delta: timedelta | None = None) -> str:
 def blacklist_token(jti: str, ttl: int) -> None:
     """
     Blacklist a JWT jti in Redis (with TTL in seconds).
-    Falls back gracefully to an in-memory set if Redis is unreachable.
+    
+    WARNING: Falls back gracefully to an in-memory set if Redis is unreachable.
+    In multi-replica/multi-instance deployments, this fallback is localized to
+    the current process/pod. A token blacklisted on instance A will remain valid 
+    on instance B until Redis connectivity is restored.
     """
     if not jti or ttl <= 0:
         return
@@ -74,7 +78,8 @@ def blacklist_token(jti: str, ttl: int) -> None:
         client.setex(f"bl:token:{jti}", max(1, int(ttl)), "revoked")
     except Exception as err:
         logger.warning(
-            f"Redis unavailable for blacklisting jti '{jti}' ({err}). Using in-memory fallback."
+            f"Redis unavailable for blacklisting jti '{jti}' ({err}). Using localized in-memory fallback. "
+            "Note: This token revocation will NOT propagate to other replicas."
         )
         _in_memory_blacklist.add(jti)
 

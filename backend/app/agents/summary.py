@@ -35,6 +35,8 @@ def run_summary_agent(ocr_text: str, category: str, extracted_fields: dict) -> s
 
 
 def _call_gemini_summary(ocr_text: str, category: str, extracted_fields: dict) -> str:
+    import asyncio
+    from app.services.llm import call_llm_cached
     fields_str = ", ".join(f"{k}: {v}" for k, v in list(extracted_fields.items())[:8])
     prompt = f"""
 You are a Summary Agent. Generate exactly 3 concise sentences summarising this
@@ -51,16 +53,15 @@ Rules:
 - End with any flags or compliance concerns if present.
 - Plain text only, no markdown.
 """
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
-    )
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    response = httpx.post(url, json=payload, timeout=20.0)
-    response.raise_for_status()
-    text = (
-        response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-    )
+    async def _run():
+        response_text, provider, from_cache = await call_llm_cached(
+            prompt=prompt,
+            temperature=0.2,
+            use_cache=True
+        )
+        return response_text
+
+    text = asyncio.run(_run()).strip()
     # Ensure no more than 3 sentences
     sentences = re.split(r"(?<=[.!?])\s+", text)
     return " ".join(sentences[:3])

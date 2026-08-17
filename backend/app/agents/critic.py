@@ -13,15 +13,17 @@ def run_critic_agent(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[st
     Critic Agent: Checks extracted values against the raw OCR text.
     Returns a dictionary of: { field_key: { "score": float, "notes": str } }
     """
-    if settings.GEMINI_API_KEY:
-        try:
-            return call_gemini_critic(ocr_text, extracted_fields)
-        except Exception as e:
-            logger.error(f"Gemini Critic Agent failed: {str(e)}. Falling back to local critic.")
+    import asyncio
+    try:
+        # Route through call_llm_cached for retries, cache, and Ollama fallback support
+        return asyncio.run(call_gemini_critic(ocr_text, extracted_fields))
+    except Exception as e:
+        logger.error(f"Centralized Critic Agent failed: {str(e)}. Falling back to local critic.")
 
     return run_local_critic(ocr_text, extracted_fields)
 
-def call_gemini_critic(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:
+async def call_gemini_critic(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    from app.services.llm import call_llm_cached
     prompt = f"""
     You are a Critic Agent. Your task is to verify if the extracted field values match the original OCR text.
     For each field in the extracted JSON, check if it is correct or contains hallucinations/errors.
@@ -45,18 +47,20 @@ def call_gemini_critic(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[
     Do not include markdown code block formatting.
     """
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json"}
-    }
+    response_text, provider, from_cache = await call_llm_cached(
+        prompt=prompt,
+        temperature=0.0,
+        use_cache=True
+    )
+    
+    # Strip any markdown wrappers if returned
+    clean_text = response_text.strip()
+    if clean_text.startswith("```json"):
+        clean_text = clean_text[7:]
+    if clean_text.endswith("```"):
+        clean_text = clean_text[:-3]
+    return json.loads(clean_text.strip())
 
-    response = httpx.post(url, json=payload, timeout=30.0)
-    response.raise_for_status()
-    res_data = response.json()
-
-    content_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-    return json.loads(content_text)
 
 def run_local_critic(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:
     evaluations = {}

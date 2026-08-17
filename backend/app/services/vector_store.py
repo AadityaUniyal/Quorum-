@@ -6,13 +6,26 @@ import chromadb
 import httpx
 import numpy as np
 
+import re
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 # Initialize persistent Chroma client
 chroma_client = chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIR)
-collection = chroma_client.get_or_create_collection(name="document_intelligence")
+
+def get_collection():
+    """Dynamically get or create collection to handle deletion/resets in tests."""
+    return chroma_client.get_or_create_collection(name="document_intelligence")
+
+# Maintain backward compatibility for modules importing vector_store.collection
+@property
+def collection():
+    return get_collection()
+
+# Use helper to access the active collection reference
+def _get_active_collection():
+    return chroma_client.get_or_create_collection(name="document_intelligence")
 
 def get_hash_embedding(text: str, dimension: int = 768) -> list[float]:
     """
@@ -33,6 +46,25 @@ def get_hash_embedding(text: str, dimension: int = 768) -> list[float]:
 
     return vec.tolist()
 
+_model_cache = None
+
+def get_local_embedding(text: str) -> list[float]:
+    """
+    Generate semantic text embeddings locally using sentence-transformers (all-MiniLM-L6-v2).
+    Runs entirely offline on CPU/GPU.
+    """
+    global _model_cache
+    try:
+        from sentence_transformers import SentenceTransformer
+        if _model_cache is None:
+            _model_cache = SentenceTransformer("all-MiniLM-L6-v2")
+        # Generate embedding
+        embedding = _model_cache.encode(text, convert_to_numpy=True)
+        return embedding.tolist()
+    except Exception as e:
+        logger.error(f"Local sentence-transformers embedding generation failed: {e}. Falling back to hash embedding.")
+        return get_hash_embedding(text, dimension=384)
+
 def get_gemini_embedding(text: str) -> list[float]:
     """
     Fetches embedding from Gemini Embeddings API.
@@ -49,30 +81,67 @@ def get_gemini_embedding(text: str) -> list[float]:
 
 def get_embedding(text: str) -> list[float]:
     """
-    Resolves embedding extraction based on key configuration.
+    Resolves embedding extraction based on provider configuration.
     """
-    if settings.GEMINI_API_KEY:
+    provider = settings.EMBEDDING_PROVIDER.lower()
+    if provider == "gemini" and settings.GEMINI_API_KEY:
         try:
             return get_gemini_embedding(text)
         except Exception as e:
-            logger.error(f"Gemini embedding failed: {str(e)}. Falling back to local deterministic generator.")
-    return get_hash_embedding(text)
+            logger.error(f"Gemini embedding failed: {str(e)}. Falling back to local model.")
+            return get_local_embedding(text)
+    elif provider == "gemini":
+        logger.warning("Gemini embedding selected but GEMINI_API_KEY is not set. Using local sentence-transformers.")
+        return get_local_embedding(text)
+    
+    return get_local_embedding(text)
+
 
 def chunk_text(text: str, chunk_size: int = 600, overlap: int = 150) -> list[str]:
     """
-    Splits text into overlapping window chunks.
+    Splits text into overlapping chunks, attempting to preserve sentence boundaries.
     """
-    words = text.split()
+    if not text:
+        return []
+    
+    # Split raw text into rough sentence units using sentence ending punctuation followed by space
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
     chunks = []
-
-    i = 0
-    while i < len(words):
-        chunk_words = words[i:i + chunk_size]
-        chunks.append(" ".join(chunk_words))
-        if i + chunk_size >= len(words):
-            break
-        i += chunk_size - overlap
-
+    
+    current_chunk = []
+    current_words_count = 0
+    
+    for sentence in sentences:
+        sentence_words = sentence.split()
+        if not sentence_words:
+            continue
+        sentence_len = len(sentence_words)
+        
+        # If adding sentence exceeds chunk size and we already have words, store current chunk
+        if current_words_count + sentence_len > chunk_size and current_chunk:
+            chunks.append(" ".join(current_chunk))
+            
+            # Recalculate overlap window from sentences
+            overlap_words = []
+            overlap_count = 0
+            # Backtrack to fulfill overlap word count
+            for prev_sentence in reversed(current_chunk):
+                prev_words = prev_sentence.split()
+                if overlap_count + len(prev_words) <= overlap:
+                    overlap_words.insert(0, prev_sentence)
+                    overlap_count += len(prev_words)
+                else:
+                    break
+            
+            current_chunk = overlap_words + [sentence]
+            current_words_count = overlap_count + sentence_len
+        else:
+            current_chunk.append(sentence)
+            current_words_count += sentence_len
+            
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+        
     return chunks if chunks else [text]
 
 def add_document_to_vector_store(document_id: str, ocr_text: str, metadata: dict[str, Any]):
@@ -105,7 +174,7 @@ def add_document_to_vector_store(document_id: str, ocr_text: str, metadata: dict
         metadatas.append(chunk_metadata)
 
     # Batch insert
-    collection.add(
+    get_collection().add(
         ids=ids,
         embeddings=embeddings,
         documents=documents,
@@ -126,7 +195,7 @@ def search_vector_store(query_text: str, filter_metadata: dict[str, Any] = None,
         if not where_clause:
             where_clause = None
 
-    results = collection.query(
+    results = get_collection().query(
         query_embeddings=[query_emb],
         n_results=n_results,
         where=where_clause
@@ -181,16 +250,22 @@ def query_rag_knowledge(document_ids: list[str], question: str) -> str:
     Answer:
     """
 
-    if settings.GEMINI_API_KEY:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
-            payload = {"contents": [{"parts": [{"text": prompt}]}]}
-            response = httpx.post(url, json=payload, timeout=30.0)
-            response.raise_for_status()
-            res_data = response.json()
-            return res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
-        except Exception as e:
-            logger.error(f"Gemini RAG call failed: {str(e)}. Running heuristic fallback.")
+    # Route through centralized call_llm_cached for fallback and caching
+    try:
+        import asyncio
+        from app.services.llm import call_llm_cached
+        
+        async def _run():
+            response_text, provider, from_cache = await call_llm_cached(
+                prompt=prompt,
+                temperature=0.2,
+                use_cache=True
+            )
+            return response_text
+            
+        return asyncio.run(_run())
+    except Exception as e:
+        logger.error(f"Centralized RAG call failed: {str(e)}. Running heuristic fallback.")
 
     # Heuristic fallback - scan text for keywords
     q_lower = question.lower()

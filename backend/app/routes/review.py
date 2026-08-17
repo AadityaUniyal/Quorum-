@@ -58,7 +58,21 @@ class MockRedis:
         return True
     def delete(self, key):
         return self._store.pop(key, None) is not None
-    def eval(self, script, keys_num, key, value):
+    def eval(self, script, keys_num, *args):
+        # script: Lua script string
+        # keys_num: number of keys (expected 1)
+        # args: [key, value, optional ttl]
+        if not args:
+            return 0
+        key = args[0]
+        value = args[1] if len(args) > 1 else None
+        ttl = args[2] if len(args) > 2 else None
+        if "expire" in script:
+            # Heartbeat: extend TTL if token matches
+            if self._store.get(key) == value:
+                return 1
+            return 0
+        # Release script (del)
         if self._store.get(key) == value:
             self._store.pop(key, None)
             return 1

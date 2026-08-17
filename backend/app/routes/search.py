@@ -377,7 +377,7 @@ def search_documents_metadata(
         expanded_queries = [clean_query]
     logger.info(f"Query expansion: {expanded_queries}")
 
-    bm25_results = {}
+    keyword_text_results = {}
     crawled_results = {}
     vector_scores: dict[str, float] = {}
 
@@ -387,7 +387,7 @@ def search_documents_metadata(
     for q_variant in expanded_queries:
         terms = [t.lower() for t in q_variant.split() if len(t) > 1]
 
-        # A. Search Files (Documents) — BM25
+        # A. Search Files (Documents) — Postgres full-text rank / term-frequency fallback
         if is_postgres:
             tsvector = func.to_tsvector('english', Document.ocr_text)
             tsquery = func.plainto_tsquery('english', q_variant)
@@ -396,8 +396,8 @@ def search_documents_metadata(
             for doc, score in doc_matches:
                 key = str(doc.id)
                 # Keep highest score across expansions
-                if key not in bm25_results or score > bm25_results[key]["score"]:
-                    bm25_results[key] = {"type": "file", "obj": doc, "score": score}
+                if key not in keyword_text_results or score > keyword_text_results[key]["score"]:
+                    keyword_text_results[key] = {"type": "file", "obj": doc, "score": score}
         else:
             doc_matches = db.query(Document).filter(
                 or_(*[Document.ocr_text.ilike(f"%{t}%") for t in terms]) if terms else True
@@ -405,8 +405,8 @@ def search_documents_metadata(
             for doc in doc_matches:
                 freq = sum(doc.ocr_text.lower().count(t) for t in terms) if doc.ocr_text else 1
                 key = str(doc.id)
-                if key not in bm25_results or freq > bm25_results[key]["score"]:
-                    bm25_results[key] = {"type": "file", "obj": doc, "score": float(freq)}
+                if key not in keyword_text_results or freq > keyword_text_results[key]["score"]:
+                    keyword_text_results[key] = {"type": "file", "obj": doc, "score": float(freq)}
 
         # B. Search Crawled Web Pages
         if is_postgres:
@@ -448,12 +448,12 @@ def search_documents_metadata(
         ranked = sorted(score_dict.items(), key=lambda x: x[1], reverse=True)
         return {item_id: rank + 1 for rank, (item_id, _) in enumerate(ranked)}
 
-    bm25_ranks = _rrf_ranks({k: v["score"] for k, v in bm25_results.items()})
+    keyword_text_ranks = _rrf_ranks({k: v["score"] for k, v in keyword_text_results.items()})
     crawl_ranks = _rrf_ranks({k: v["score"] for k, v in crawled_results.items()})
     vec_ranks   = _rrf_ranks(vector_scores)
 
     all_keys = (
-        set(bm25_results.keys())
+        set(keyword_text_results.keys())
         | set(crawled_results.keys())
         | set(vector_scores.keys())
     )
@@ -462,14 +462,14 @@ def search_documents_metadata(
     for key in all_keys:
         # RRF score from up to 3 rankers
         rrf_score = 0.0
-        if key in bm25_ranks:
-            rrf_score += 1.0 / (RRF_K + bm25_ranks[key])
+        if key in keyword_text_ranks:
+            rrf_score += 1.0 / (RRF_K + keyword_text_ranks[key])
         if key in crawl_ranks:
             rrf_score += 1.0 / (RRF_K + crawl_ranks[key])
         if key in vec_ranks:
             rrf_score += 1.0 / (RRF_K + vec_ranks[key])
 
-        kw_data = bm25_results.get(key) or crawled_results.get(key)
+        kw_data = keyword_text_results.get(key) or crawled_results.get(key)
         final_score = rrf_score
 
         if kw_data:
