@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
-import pytest
+
 from googi_crawler.sitemap import SitemapParser
-from googi_crawler.crawler import GoogiCrawler
+
 
 def test_sitemap_parser_xml_comments_and_pis_extensive():
     """

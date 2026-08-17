@@ -12,9 +12,9 @@ import io
 import sys
 import unittest
 import uuid
-import time
-import zxcvbn
 from pathlib import Path
+
+import zxcvbn
 
 # Set up paths
 project_root = Path(__file__).resolve().parents[1]
@@ -24,9 +24,8 @@ backend_path = project_root / "backend"
 if str(backend_path) not in sys.path:
     sys.path.insert(0, str(backend_path))
 
+from backend.app.services.export import export_to_csv, sanitize_csv_cell
 from tests.e2e.infra.client import E2EClient
-from backend.app.services.export import sanitize_csv_cell, export_to_csv, UNSAFE_CSV_FORMULA_PREFIXES
-from backend.app.core.security import blacklist_token, is_token_blacklisted
 
 
 class TestEmpiricalTokenRotation(unittest.TestCase):

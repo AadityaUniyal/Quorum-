@@ -3,6 +3,7 @@ Unit tests for analytics routes — Roadmap 1.9
 Tests: KPI calculations, chart data shapes, search stats structure
 """
 import os
+
 import pytest
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///./test.db")
@@ -58,11 +59,16 @@ class TestPageRankBuckets:
     """Test PageRank histogram bucketing logic."""
 
     def _bucket(self, rank: float) -> str:
-        if rank < 0.2:   return "0.0-0.2"
-        elif rank < 0.4: return "0.2-0.4"
-        elif rank < 0.6: return "0.4-0.6"
-        elif rank < 0.8: return "0.6-0.8"
-        else:            return "0.8-1.0"
+        if rank < 0.2:
+            return "0.0-0.2"
+        elif rank < 0.4:
+            return "0.2-0.4"
+        elif rank < 0.6:
+            return "0.4-0.6"
+        elif rank < 0.8:
+            return "0.6-0.8"
+        else:
+            return "0.8-1.0"
 
     def test_zero_in_first_bucket(self):
         assert self._bucket(0.0) == "0.0-0.2"

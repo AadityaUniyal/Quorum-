@@ -1,5 +1,5 @@
-import pytest
-from googi_crawler import GoogiCrawler, CrawledPageData, SitemapParser, compute_pagerank
+from googi_crawler import CrawledPageData, GoogiCrawler, SitemapParser, compute_pagerank
+
 
 def test_package_exports():
     import googi_crawler

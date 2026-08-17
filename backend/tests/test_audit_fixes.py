@@ -1,7 +1,7 @@
-import pytest
 import io
-from app.models.document import Document
+
 from app.services.crawler import compute_pagerank
+
 
 def test_lock_race_condition(client, auth_headers):
     # 1. Create a dummy document in DB

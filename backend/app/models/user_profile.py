@@ -1,8 +1,11 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, ForeignKey, DateTime
+
+from sqlalchemy import Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
+
 from app.database import GUID, Base
+
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"

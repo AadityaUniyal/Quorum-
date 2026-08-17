@@ -1,7 +1,5 @@
 import json
 from unittest.mock import MagicMock, patch
-import pika
-import pytest
 
 from app.worker import CRAWL_QUEUE, on_crawl_message_callback, process_crawl_task
 

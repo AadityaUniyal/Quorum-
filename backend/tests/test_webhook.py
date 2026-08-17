@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from app.models.webhook import WebhookConfig
 from app.services.webhook import dispatch_webhook
+
 
 def test_webhook_config_creation():
     config = WebhookConfig(

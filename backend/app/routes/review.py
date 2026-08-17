@@ -66,7 +66,6 @@ class MockRedis:
             return 0
         key = args[0]
         value = args[1] if len(args) > 1 else None
-        ttl = args[2] if len(args) > 2 else None
         if "expire" in script:
             # Heartbeat: extend TTL if token matches
             if self._store.get(key) == value:

@@ -1,13 +1,12 @@
-import sys
-import time
-import random
 import math
+import random
+import time
 import unittest
-from unittest.mock import patch, MagicMock
-import httpx
+from unittest.mock import MagicMock, patch
 
 from googi_crawler.pagerank import compute_pagerank
 from googi_crawler.sitemap import SitemapParser
+
 
 class TestPageRankEmpiricalConvergence(unittest.TestCase):
     def test_empty_graph(self):

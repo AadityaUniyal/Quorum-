@@ -16,7 +16,6 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from backend.app import models
 # target_metadata = models.Base.metadata
-import sys
 import os
 
 # Add backend directory to path for model imports

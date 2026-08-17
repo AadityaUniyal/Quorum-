@@ -12,7 +12,7 @@ root_dir = Path(__file__).resolve().parents[3]
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
-from tests.e2e.infra.client import E2EClient, CookieInfo
+from tests.e2e.infra.client import E2EClient
 from tests.e2e.infra.fixtures import E2ETestContext
 
 

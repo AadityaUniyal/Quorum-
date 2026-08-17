@@ -14,7 +14,6 @@ Tests multi-feature interactions across component boundaries:
 - Pair 10: Bookmarks (F9) + Search Export (F10)
 """
 
-import json
 import sys
 import time
 import unittest

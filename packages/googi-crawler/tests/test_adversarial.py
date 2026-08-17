@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock, patch
-import pytest
+
 import httpx
-from googi_crawler.sitemap import SitemapParser
 from googi_crawler.crawler import GoogiCrawler
+from googi_crawler.sitemap import SitemapParser
 
 # ============================================================================
 # 1. SitemapParser Adversarial & Stress Tests

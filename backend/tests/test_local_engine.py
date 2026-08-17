@@ -1,7 +1,8 @@
-import pytest
-from app.services.local_engine import LocalLayoutParser, LocalTfidfSearch
-from app.models.document import Document
 from unittest.mock import MagicMock
+
+from app.models.document import Document
+from app.services.local_engine import LocalLayoutParser, LocalTfidfSearch
+
 
 def test_local_layout_parser_invoice():
     ocr_text = """

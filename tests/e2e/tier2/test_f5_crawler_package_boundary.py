@@ -18,10 +18,10 @@ if str(pkg_dir) not in sys.path:
     sys.path.insert(0, str(pkg_dir))
 
 try:
-    from googi_crawler.crawler import GoogiCrawler, CrawledPageData
+    from googi_crawler.crawler import CrawledPageData, GoogiCrawler
 except ImportError:
     # Fallback if package structure varies
-    from packages.googi_crawler.googi_crawler.crawler import GoogiCrawler, CrawledPageData
+    from packages.googi_crawler.googi_crawler.crawler import GoogiCrawler
 
 from tests.e2e.infra.client import E2EClient
 from tests.e2e.infra.fixtures import E2ETestContext

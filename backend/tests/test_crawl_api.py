@@ -1,5 +1,5 @@
 from unittest.mock import patch
-import pytest
+
 from app.main import app
 from app.models.auth import User, UserRole
 from app.routes.auth import get_current_user

@@ -6,8 +6,6 @@ Uses Gemini if available; falls back to a deterministic keyword-extraction summa
 import logging
 import re
 
-import httpx
-
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -36,6 +34,7 @@ def run_summary_agent(ocr_text: str, category: str, extracted_fields: dict) -> s
 
 def _call_gemini_summary(ocr_text: str, category: str, extracted_fields: dict) -> str:
     import asyncio
+
     from app.services.llm import call_llm_cached
     fields_str = ", ".join(f"{k}: {v}" for k, v in list(extracted_fields.items())[:8])
     prompt = f"""

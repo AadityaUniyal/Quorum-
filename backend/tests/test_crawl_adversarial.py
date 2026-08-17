@@ -1,6 +1,6 @@
 import json
-import threading
 from unittest.mock import MagicMock, patch
+
 import pika
 import pytest
 from fastapi import status
@@ -15,7 +15,7 @@ from app.services.queue import (
     publish_crawl_task,
     register_local_crawl_worker_callback,
 )
-from app.worker import MAX_RETRIES, on_crawl_message_callback, process_crawl_task
+from app.worker import MAX_RETRIES, on_crawl_message_callback
 
 
 # Mock user factories

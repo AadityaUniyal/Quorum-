@@ -6,8 +6,8 @@ expiration thresholds, and consecutive token lifecycle rotation.
 """
 
 import sys
-import unittest
 import time
+import unittest
 from pathlib import Path
 
 # Ensure workspace root is on sys.path

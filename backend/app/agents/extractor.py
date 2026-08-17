@@ -3,9 +3,6 @@ import logging
 import re
 from typing import Any
 
-import httpx
-
-from app.config import settings
 from app.models.document import DocumentCategory
 
 logger = logging.getLogger(__name__)

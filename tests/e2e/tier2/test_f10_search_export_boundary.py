@@ -48,10 +48,10 @@ class TestFeature10SearchExportBoundary(unittest.TestCase):
     def test_f10_bva_02_special_characters_and_csv_formula_injection(self):
         """Verify CSV verification handles rows with quotes, commas, newlines, and formulas."""
         csv_data = (
-            'query,title,url,relevance_score\n'
-            '"Query with, commas","Title ""with quotes""","https://docintel.ai?a=1&b=2",0.95\n'
-            '"=SUM(1+1)","Formula Test","https://docintel.ai/form",0.88\n'
-        ).encode("utf-8")
+            b'query,title,url,relevance_score\n'
+            b'"Query with, commas","Title ""with quotes""","https://docintel.ai?a=1&b=2",0.95\n'
+            b'"=SUM(1+1)","Formula Test","https://docintel.ai/form",0.88\n'
+        )
 
         verif = self.client.verify_file_export(csv_data, "csv")
         self.assertTrue(verif["valid"])
@@ -80,7 +80,7 @@ class TestFeature10SearchExportBoundary(unittest.TestCase):
 
     def test_f10_bva_05_empty_search_results_export(self):
         """Verify exporting empty search results returns valid CSV structure with header only."""
-        empty_csv = "query,title,url,relevance_score,created_at\n".encode("utf-8")
+        empty_csv = b"query,title,url,relevance_score,created_at\n"
         verif = self.client.verify_file_export(empty_csv, "csv")
         self.assertTrue(verif["has_header"])
         self.assertEqual(verif["row_count"], 0)

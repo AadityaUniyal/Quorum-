@@ -1,6 +1,6 @@
 __version__ = "0.1.0"
 
-from .crawler import GoogiCrawler, CrawledPageData
+from .crawler import CrawledPageData, GoogiCrawler
 from .pagerank import compute_pagerank
 from .sitemap import SitemapParser
 

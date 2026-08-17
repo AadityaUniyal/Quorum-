@@ -1,12 +1,12 @@
 import hashlib
 import logging
+import re
 from typing import Any
 
 import chromadb
 import httpx
 import numpy as np
 
-import re
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -253,6 +253,7 @@ def query_rag_knowledge(document_ids: list[str], question: str) -> str:
     # Route through centralized call_llm_cached for fallback and caching
     try:
         import asyncio
+
         from app.services.llm import call_llm_cached
         
         async def _run():

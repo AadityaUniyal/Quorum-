@@ -1,6 +1,6 @@
-import sys
-import os
 import logging
+import os
+import sys
 
 # Ensure project root is in python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,7 +24,7 @@ def main():
         logger.info(f"No existing collection to delete: {e}")
         
     # Re-create collection
-    collection = chroma_client.get_or_create_collection(name="document_intelligence")
+    chroma_client.get_or_create_collection(name="document_intelligence")
     logger.info(f"Re-created collection 'document_intelligence' with provider={settings.EMBEDDING_PROVIDER}")
 
     db = SessionLocal()

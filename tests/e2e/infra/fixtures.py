@@ -11,7 +11,7 @@ Provides reusable Pytest fixtures and context state management for E2E testing:
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Generator, Optional
+from typing import Any
 
 try:
     import pytest
@@ -35,7 +35,7 @@ class E2ETestContext:
     test_username: str = "e2e_test_user"
     test_password: str = "StrongP@ssw0rd2026!#Secure"
     test_email: str = "e2e_user@docintel.ai"
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @pytest.fixture
@@ -96,7 +96,7 @@ def sample_search_query() -> str:
 
 
 @pytest.fixture
-def sample_bookmark_data() -> Dict[str, Any]:
+def sample_bookmark_data() -> dict[str, Any]:
     """Fixture providing search bookmark creation payload."""
     return {
         "query": "DocIntel AI authentication security architecture",

@@ -18,8 +18,7 @@ root_dir = Path(__file__).resolve().parents[3]
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
-from tests.e2e.infra.client import E2EClient, CookieInfo
-from tests.e2e.infra.fixtures import E2ETestContext
+from tests.e2e.infra.client import CookieInfo, E2EClient
 
 
 def test_infra_cookie_parsing():
@@ -113,9 +112,9 @@ def test_infra_export_verification():
     
     # CSV export check
     csv_bytes = (
-        "query,title,url,relevance_score\n"
-        "DocIntel,DocIntel System,https://docintel.ai,0.99\n"
-    ).encode("utf-8")
+        b"query,title,url,relevance_score\n"
+        b"DocIntel,DocIntel System,https://docintel.ai,0.99\n"
+    )
     csv_verif = client.verify_file_export(csv_bytes, "csv")
     assert csv_verif["valid"] is True
     assert csv_verif["has_header"] is True

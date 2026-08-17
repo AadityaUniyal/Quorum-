@@ -1,6 +1,5 @@
-import sys
 import pathlib
-import importlib
+import sys
 
 repo_root = pathlib.Path(__file__).resolve().parent
 if str(repo_root) not in sys.path:

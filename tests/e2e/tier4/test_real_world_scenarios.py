@@ -9,7 +9,6 @@ Tests complete end-to-end user workflows:
 - Scenario 5: High-Concurrency Platform Usage Workflow
 """
 
-import json
 import sys
 import time
 import unittest

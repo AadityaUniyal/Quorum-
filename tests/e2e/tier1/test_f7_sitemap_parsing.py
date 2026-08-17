@@ -14,7 +14,7 @@ if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
 from tests.e2e.infra.client import E2EClient
-from tests.e2e.infra.fixtures import E2ETestContext, SAMPLE_SITEMAP_XML
+from tests.e2e.infra.fixtures import SAMPLE_SITEMAP_XML, E2ETestContext
 
 
 class TestFeature7SitemapParsing(unittest.TestCase):

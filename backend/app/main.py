@@ -394,8 +394,10 @@ def prometheus_metrics():
     return "\n".join(lines)
 
 
-from fastapi.staticfiles import StaticFiles
 import os
+
+from fastapi.staticfiles import StaticFiles
+
 # Serve the frontend UI
 app.mount("/", StaticFiles(directory=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "frontend"), html=True), name="static")
 

@@ -8,8 +8,6 @@ reconciled confidence score between the two disagreeing agents.
 import logging
 from typing import Any
 
-import httpx
-
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -81,8 +79,9 @@ def _call_gemini_reconciler(
 ) -> dict[str, Any]:
     """Ask Gemini to adjudicate the disagreement on a specific field."""
     import asyncio
-    from app.services.llm import call_llm_cached
     import json
+
+    from app.services.llm import call_llm_cached
     prompt = f"""
 You are a Reconciler Agent arbitrating a disagreement between two AI validation agents
 about a specific extracted field from a business document.

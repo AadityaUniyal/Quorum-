@@ -13,12 +13,11 @@ Provides unified opaque-box interaction helpers for:
 """
 
 import json
-import re
 import time
 import urllib.parse
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 
 @dataclass
@@ -28,10 +27,10 @@ class CookieInfo:
     value: str
     httponly: bool = False
     secure: bool = False
-    samesite: Optional[str] = None
+    samesite: str | None = None
     path: str = "/"
-    domain: Optional[str] = None
-    expires: Optional[str] = None
+    domain: str | None = None
+    expires: str | None = None
     raw_header: str = ""
 
 
@@ -39,10 +38,10 @@ class CookieInfo:
 class E2EResponse:
     """Unified HTTP response object for opaque-box test assertions."""
     status_code: int
-    headers: Dict[str, str]
+    headers: dict[str, str]
     body: bytes
-    json_data: Optional[Any] = None
-    cookies: Dict[str, CookieInfo] = field(default_factory=dict)
+    json_data: Any | None = None
+    cookies: dict[str, CookieInfo] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.json_data is None and self.body:
@@ -66,12 +65,12 @@ class MockBackendEngine:
     Implements real contract behaviors for Auth, Rate Limiter, Crawler, Search, Bookmarks, and Export.
     """
     def __init__(self):
-        self.users: Dict[str, dict] = {}
-        self.rate_limits: Dict[str, List[float]] = {}
-        self.bookmarks: Dict[str, List[dict]] = {}
+        self.users: dict[str, dict] = {}
+        self.rate_limits: dict[str, list[float]] = {}
+        self.bookmarks: dict[str, list[dict]] = {}
         self.revoked_tokens: set = set()
         self.valid_refresh_tokens: set = set()
-        self.crawled_indexes: Dict[str, dict] = {}
+        self.crawled_indexes: dict[str, dict] = {}
 
     def reset(self):
         """Resets in-memory state and rate limits."""
@@ -113,7 +112,7 @@ class MockBackendEngine:
             
         return min(4, score)
 
-    def handle_request(self, method: str, path: str, headers: Dict[str, str], body: bytes) -> E2EResponse:
+    def handle_request(self, method: str, path: str, headers: dict[str, str], body: bytes) -> E2EResponse:
         client_ip = headers.get("X-Forwarded-For", "127.0.0.1")
         now = time.time()
         
@@ -460,9 +459,9 @@ class E2EClient:
         self.base_url = base_url.rstrip("/")
         self.force_mock = force_mock
         self.mock_engine = MockBackendEngine()
-        self.session_cookies: Dict[str, CookieInfo] = {}
+        self.session_cookies: dict[str, CookieInfo] = {}
 
-    def parse_cookies(self, headers_or_response: Union[Dict[str, str], E2EResponse, str]) -> Dict[str, CookieInfo]:
+    def parse_cookies(self, headers_or_response: dict[str, str] | E2EResponse | str) -> dict[str, CookieInfo]:
         """
         Parses Set-Cookie header strings into structured CookieInfo dict.
         """
@@ -515,7 +514,7 @@ class E2EClient:
         http_only: bool = True,
         secure: bool = True,
         samesite: str = "Lax"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Verifies that cookie has required security attributes (HttpOnly, Secure, SameSite).
         """
@@ -535,8 +534,8 @@ class E2EClient:
         self,
         method: str,
         path: str,
-        headers: Optional[Dict[str, str]] = None,
-        body: Optional[Union[dict, str, bytes]] = None
+        headers: dict[str, str] | None = None,
+        body: dict | str | bytes | None = None
     ) -> E2EResponse:
         """Internal request executor sending real HTTP or using mock engine fallback."""
         req_headers = headers or {}
@@ -557,8 +556,8 @@ class E2EClient:
 
         if not self.force_mock:
             try:
-                import urllib.request
                 import urllib.error
+                import urllib.request
                 req = urllib.request.Request(
                     f"{self.base_url}{path}",
                     data=encoded_body if encoded_body else None,
@@ -600,19 +599,19 @@ class E2EClient:
         """Resets rate limit tracking in the mock engine."""
         self.mock_engine.reset_rate_limits()
 
-    def login(self, username: str, password: str, headers: Optional[Dict[str, str]] = None) -> E2EResponse:
+    def login(self, username: str, password: str, headers: dict[str, str] | None = None) -> E2EResponse:
         return self._request("POST", "/api/auth/login", headers=headers, body={"username": username, "password": password})
 
-    def register(self, username: str, email: str, password: str, headers: Optional[Dict[str, str]] = None) -> E2EResponse:
+    def register(self, username: str, email: str, password: str, headers: dict[str, str] | None = None) -> E2EResponse:
         return self._request("POST", "/api/auth/register", headers=headers, body={"username": username, "email": email, "password": password})
 
-    def send_refresh_token_request(self, refresh_token: Optional[str] = None) -> E2EResponse:
+    def send_refresh_token_request(self, refresh_token: str | None = None) -> E2EResponse:
         headers = {}
         if refresh_token is not None:
             headers["Cookie"] = f"refresh_token={refresh_token}"
         return self._request("POST", "/api/auth/refresh", headers=headers)
 
-    def test_password_validation(self, password: str) -> Dict[str, Any]:
+    def test_password_validation(self, password: str) -> dict[str, Any]:
         """Tests password complexity and returns scoring & acceptance detail."""
         score = self.mock_engine.calculate_password_score(password)
         uid = uuid.uuid4().hex[:10]
@@ -630,7 +629,7 @@ class E2EClient:
             "response": resp
         }
 
-    def execute_crawler(self, start_url: str, max_depth: int = 1, parse_sitemap: bool = False) -> Dict[str, Any]:
+    def execute_crawler(self, start_url: str, max_depth: int = 1, parse_sitemap: bool = False) -> dict[str, Any]:
         """
         Executes crawler operation via standalone package or mock API handler.
         """
@@ -652,10 +651,10 @@ class E2EClient:
     def bookmarks_crud(
         self,
         action: str,
-        bookmark_id: Optional[str] = None,
-        query: Optional[str] = None,
-        title: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        bookmark_id: str | None = None,
+        query: str | None = None,
+        title: str | None = None,
+        tags: list[str] | None = None,
         user_id: str = "test_user"
     ) -> E2EResponse:
         headers = {"X-User-ID": user_id}
@@ -669,7 +668,7 @@ class E2EClient:
         else:
             raise ValueError(f"Unsupported bookmarks action: {action}")
 
-    def verify_file_export(self, response_data: bytes, format_type: str) -> Dict[str, Any]:
+    def verify_file_export(self, response_data: bytes, format_type: str) -> dict[str, Any]:
         """
         Verifies CSV (headers, rows) or PDF (magic bytes %PDF, layout, EOF) content.
         """

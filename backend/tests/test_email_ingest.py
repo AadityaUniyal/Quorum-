@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import patch, MagicMock
-from app.services.email_ingest import _run_mock_ingestion, check_mailbox_and_ingest
+from unittest.mock import MagicMock, patch
+
 from app.models.document import Document
+from app.services.email_ingest import _run_mock_ingestion, check_mailbox_and_ingest
+
 
 @patch("app.services.email_ingest.SessionLocal")
 @patch("app.services.email_ingest.open")

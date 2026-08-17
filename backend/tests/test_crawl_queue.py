@@ -1,7 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
+
 import pika
-import pytest
 
 from app.services.queue import CRAWL_QUEUE, publish_crawl_task, register_local_crawl_worker_callback
 
@@ -70,5 +70,6 @@ def test_publish_crawl_task_fallback(mock_get_conn):
         target_fn = mock_thread_cls.call_args[1]["target"]
         args = mock_thread_cls.call_args[1]["args"]
 
+        assert callable(target_fn)
         assert args == ("https://fallback-example.com", 2)
         mock_thread_instance.start.assert_called_once()

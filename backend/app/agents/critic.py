@@ -2,10 +2,6 @@ import json
 import logging
 from typing import Any
 
-import httpx
-
-from app.config import settings
-
 logger = logging.getLogger(__name__)
 
 def run_critic_agent(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:

@@ -1,5 +1,3 @@
-import pytest
-from uuid import uuid4
 
 def test_comments_workflow(client, auth_headers, sample_upload_file):
     # 1. First upload a document so we have a document_id

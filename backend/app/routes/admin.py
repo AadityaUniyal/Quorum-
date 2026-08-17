@@ -1,11 +1,12 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.limiter import limiter
 from app.models.auth import User
 from app.routes.auth import get_current_user
-from app.limiter import limiter
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ def delete_user(request: Request, user_id: str, db: Session = Depends(get_db), _
 @limiter.limit("10/minute")
 def get_logs(request: Request):
     try:
-        with open('backend/app/logs/app.log', 'r') as f:
+        with open('backend/app/logs/app.log') as f:
             lines = f.readlines()[-500:]
         return {"logs": lines}
     except Exception as e:

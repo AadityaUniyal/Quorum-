@@ -7,7 +7,6 @@ unicode & emoji passwords, username match/common words, empty/whitespace inputs,
 
 import sys
 import unittest
-import time
 from pathlib import Path
 
 # Ensure workspace root is on sys.path

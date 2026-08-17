@@ -1,7 +1,8 @@
-import pytest
-from app.services.llm import local_extractive_rag
-from app.models.document import Document
 from unittest.mock import MagicMock
+
+from app.models.document import Document
+from app.services.llm import local_extractive_rag
+
 
 def test_local_extractive_rag_match():
     # Setup mock documents

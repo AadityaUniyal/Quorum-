@@ -1,7 +1,4 @@
 import os
-import sys
-import time
-from pathlib import Path
 
 # Ensure environment variables are set before importing the app
 os.environ.setdefault('DATABASE_URL', 'sqlite:///./test_e2e.db')
@@ -12,17 +9,17 @@ os.environ.setdefault('REDIS_HOST', 'localhost')
 
 # Import FastAPI app after env vars are set
 from app.database import Base, engine
-from app.models.auth import User
-from app.models.document import Document
-from app.models.search import CrawledPage, SearchLog
+
 Base.metadata.create_all(bind=engine)
 
 from fastapi.testclient import TestClient
+
 from app.main import app
+
 client = TestClient(app)
 
 def log(msg: str):
-    print(f"[END2END] {msg}")
+    print(f"[END2END] {msg}")  # noqa: T201
 
 def register_user(email: str, password: str):
     # Include required full_name field for registration
@@ -84,13 +81,15 @@ def main():
             raise
     token = login_user(email, password)
     doc_id = create_document(token, 'End2End Doc', 'This is a test document for end‑to‑end verification.')
+    log(f"Created document id: {doc_id}")
     search_res = search_documents(token, 'test')
     log(f"Search results count: {len(search_res)}")
     pdf_content = export_pdf(token, 'test')
     log(f"PDF size: {len(pdf_content)} bytes")
     analytics = get_analytics(token)
-    log('Analytics fetched')
-    print('[SUCCESS] All steps passed')
+    log(f"Analytics fetched: {len(analytics)} records")
+    print('[SUCCESS] All steps passed')  # noqa: T201
+
 
 if __name__ == '__main__':
     main()

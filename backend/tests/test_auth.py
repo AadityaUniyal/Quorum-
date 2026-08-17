@@ -4,20 +4,20 @@ Tests: password hashing, JWT generation, RBAC, token expiry
 """
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pytest
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///./test.db")
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-unit-tests")
 
+from app.models.auth import User, UserRole
 from app.routes.auth import (
     create_access_token,
     create_refresh_token,
     get_password_hash,
     verify_password,
 )
-from app.models.auth import User, UserRole
 
 
 def _make_user(role: UserRole = UserRole.VIEWER) -> User:
@@ -62,6 +62,7 @@ class TestPasswordHashing:
 class TestJWTTokens:
     def test_access_token_contains_user_id(self):
         import jwt
+
         from app.config import settings
         user = _make_user(UserRole.ADMIN)
         token = create_access_token(user)
@@ -70,6 +71,7 @@ class TestJWTTokens:
 
     def test_access_token_contains_role(self):
         import jwt
+
         from app.config import settings
         user = _make_user(UserRole.REVIEWER)
         token = create_access_token(user)
@@ -78,6 +80,7 @@ class TestJWTTokens:
 
     def test_access_token_type_is_access(self):
         import jwt
+
         from app.config import settings
         user = _make_user()
         token = create_access_token(user)
@@ -86,6 +89,7 @@ class TestJWTTokens:
 
     def test_refresh_token_type_is_refresh(self):
         import jwt
+
         from app.config import settings
         user = _make_user()
         token = create_refresh_token(user)
@@ -108,6 +112,7 @@ class TestJWTTokens:
 
     def test_access_token_contains_jti(self):
         import jwt
+
         from app.config import settings
         user = _make_user()
         token = create_access_token(user)
@@ -117,6 +122,7 @@ class TestJWTTokens:
 
     def test_refresh_token_contains_jti(self):
         import jwt
+
         from app.config import settings
         user = _make_user()
         token = create_refresh_token(user)
@@ -150,7 +156,7 @@ class TestRBACRoleChecker:
         admin = _make_user(UserRole.ADMIN)
         # Should not raise
         result = checker.__call__.__wrapped__(admin) if hasattr(checker.__call__, "__wrapped__") else None
-        # Just instantiate — if no error it's fine
+        assert result is None or result.role == UserRole.ADMIN
 
     def test_role_enum_values(self):
         assert UserRole.ADMIN == "ADMIN"
@@ -185,6 +191,7 @@ class TestPasswordStrengthValidation:
 
     def test_register_rejects_weak_password(self):
         from fastapi.testclient import TestClient
+
         from app.main import app
         client = TestClient(app)
         response = client.post(
@@ -201,6 +208,7 @@ class TestPasswordStrengthValidation:
 
     def test_register_accepts_strong_password(self):
         from fastapi.testclient import TestClient
+
         from app.main import app
         client = TestClient(app)
         email = f"strong_{uuid.uuid4().hex[:6]}@example.com"

@@ -3,6 +3,7 @@ Unit tests for search utilities — Roadmap 1.9
 Tests: snippet generation, facet parsing, RRF formula, query expansion cache key
 """
 import os
+
 import pytest
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///./test.db")

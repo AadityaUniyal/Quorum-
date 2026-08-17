@@ -1,6 +1,7 @@
 import logging
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
+
 import httpx
 
 logger = logging.getLogger("googi_crawler.sitemap")

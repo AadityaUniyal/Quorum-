@@ -1,5 +1,5 @@
-import sys
 import pathlib
+import sys
 
 # Ensure repository root is on PYTHONPATH
 repo_root = pathlib.Path(__file__).resolve().parents[1]

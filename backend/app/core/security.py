@@ -68,7 +68,7 @@ def blacklist_token(jti: str, ttl: int) -> None:
     
     WARNING: Falls back gracefully to an in-memory set if Redis is unreachable.
     In multi-replica/multi-instance deployments, this fallback is localized to
-    the current process/pod. A token blacklisted on instance A will remain valid 
+    the current process/pod. A token blacklisted on instance A will remain valid
     on instance B until Redis connectivity is restored.
     """
     if not jti or ttl <= 0:

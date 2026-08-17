@@ -29,7 +29,7 @@ class TestFeature5CrawlerPackage(unittest.TestCase):
     def test_f5_01_crawler_package_import(self):
         """Verify that GoogiCrawler and compute_pagerank modules can be imported cleanly."""
         try:
-            from googi_crawler.crawler import GoogiCrawler, CrawledPageData
+            from googi_crawler.crawler import CrawledPageData, GoogiCrawler
             from googi_crawler.pagerank import compute_pagerank
             self.assertTrue(callable(GoogiCrawler))
             self.assertTrue(callable(compute_pagerank))

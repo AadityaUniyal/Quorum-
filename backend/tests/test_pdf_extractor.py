@@ -1,6 +1,7 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from app.services.ocr import extract_text_from_pdf
+
 
 @patch("app.services.ocr.pdfplumber.open")
 def test_extract_text_from_pdf_success(mock_pdfplumber_open):

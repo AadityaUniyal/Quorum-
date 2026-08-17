@@ -1,6 +1,6 @@
 # conftest to ensure the local tests package is importable before pytest collection
-import sys
 import pathlib
+import sys
 
 # Add repository root to sys.path early
 repo_root = pathlib.Path(__file__).resolve().parent

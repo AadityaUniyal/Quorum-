@@ -5,10 +5,10 @@ Tests RabbitMQ task queue contracts, backpressure simulation, malformed JSON tas
 worker timeout handling, task deduplication, and parameter boundaries.
 """
 
-import sys
-import unittest
 import json
+import sys
 import time
+import unittest
 from pathlib import Path
 
 # Ensure workspace root is on sys.path

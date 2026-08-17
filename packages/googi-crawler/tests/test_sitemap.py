@@ -1,7 +1,8 @@
 from unittest.mock import MagicMock, patch
-import pytest
-from googi_crawler.sitemap import SitemapParser
+
 from googi_crawler.crawler import GoogiCrawler
+from googi_crawler.sitemap import SitemapParser
+
 
 def test_sitemap_parser_urlset_with_namespace():
     xml_content = """<?xml version="1.0" encoding="UTF-8"?>
