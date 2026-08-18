@@ -5,8 +5,12 @@ Implements Roadmap 1.3: Agent retry with exponential backoff + LLM fallback chai
 import asyncio
 import logging
 
-from google import genai
-from google.genai import types
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:  # pragma: no cover
+    genai = None  # type: ignore
+    types = None  # type: ignore
 from tenacity import (
     before_sleep_log,
     retry,
@@ -37,6 +41,8 @@ class LLMProviderError(LLMError):
 
 def _create_gemini_client():
     """Create a Gemini client using the supported google-genai SDK."""
+    if genai is None or types is None:
+        raise LLMProviderError("google-genai SDK is not installed")
     if not settings.GEMINI_API_KEY:
         raise LLMProviderError("GEMINI_API_KEY not configured")
     return genai.Client(api_key=settings.GEMINI_API_KEY)
