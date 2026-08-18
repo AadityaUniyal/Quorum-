@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import redis
@@ -415,7 +415,7 @@ def approve_document_stage(
                 "filename": doc.filename,
                 "category": doc.category.value if doc.category else None,
                 "consensus_score": doc.consensus_score,
-                "timestamp": dt.now(timezone.utc).isoformat()
+                "timestamp": dt.now(UTC).isoformat()
             }
         )
 

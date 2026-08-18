@@ -234,7 +234,6 @@ def query_rag_knowledge(document_ids: list[str], question: str) -> str:
 
     # Deduplicate and sort by relevance distance (lower distance = closer match)
     contexts = sorted(contexts, key=lambda x: x["distance"])[:5]
-    merged_context = "\n\n".join([f"Source: {c['filename']} (Chunk)\n{c['text']}" for c in contexts])
 
     # Prefer deterministic local extractive QA instead of LLM generation.
     try:

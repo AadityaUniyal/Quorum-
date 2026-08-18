@@ -1,4 +1,3 @@
-import json
 import logging
 from uuid import UUID
 
@@ -6,7 +5,6 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, model_validator
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentCategory, DocumentStatus

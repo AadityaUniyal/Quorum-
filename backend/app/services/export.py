@@ -7,7 +7,7 @@ import csv
 import html
 import io
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from reportlab.lib import colors
@@ -135,7 +135,7 @@ class NumberedCanvas(canvas.Canvas):
         # Footer text
         footer_text = f"DocIntel AI Search Export  |  Page {self._pageNumber} of {page_count}"
         self.drawRightString(letter[0] - 36, 20, footer_text)
-        self.drawString(36, 20, f"Generated on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        self.drawString(36, 20, f"Generated on {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}")
 
         # Footer divider line
         self.setStrokeColor(colors.HexColor("#e2e8f0"))

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
@@ -70,11 +70,11 @@ def get_chart_data(
 
     # 3. Daily trends (Last 7 Days)
     daily_trends = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for i in range(6, -1, -1):
         target_date = now - timedelta(days=i)
-        start_day = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0, tzinfo=timezone.utc)
-        end_day = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59, tzinfo=timezone.utc)
+        start_day = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0, tzinfo=UTC)
+        end_day = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59, tzinfo=UTC)
 
         count = db.query(Document).filter(
             Document.created_at >= start_day,
@@ -198,7 +198,7 @@ def get_search_stats(
     # Volume over last 7 days
     from datetime import datetime, timedelta
     daily_volume = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for i in range(6, -1, -1):
         day = now - timedelta(days=i)
         start = datetime(day.year, day.month, day.day, 0, 0, 0)

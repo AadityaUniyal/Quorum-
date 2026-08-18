@@ -2,7 +2,7 @@ import hashlib
 import logging
 import urllib.robotparser
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 
 import httpx
@@ -176,12 +176,12 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
                 if page.page_hash == content_hash:
                     logger.info(f"Page content unchanged for {current_url}. Skipping DB write and ChromaDB re-indexing.")
                     skip_indexing = True
-                    page.last_crawled_at = datetime.now(timezone.utc)
+                    page.last_crawled_at = datetime.now(UTC)
                 else:
                     page.title = title
                     page.page_content = clean_text
                     page.page_hash = content_hash
-                    page.last_crawled_at = datetime.now(timezone.utc)
+                    page.last_crawled_at = datetime.now(UTC)
             else:
                 page = CrawledPage(
                     id=uuid.uuid4(),
@@ -190,7 +190,7 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
                     page_content=clean_text,
                     page_hash=content_hash,
                     pagerank=1.0,
-                    last_crawled_at=datetime.now(timezone.utc)
+                    last_crawled_at=datetime.now(UTC)
                 )
                 db.add(page)
                 db.flush()  # Allocate ID

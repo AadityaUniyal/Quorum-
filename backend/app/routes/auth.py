@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
@@ -86,7 +86,7 @@ def get_current_user(
         api_key_record = db.query(ApiKey).filter(ApiKey.hashed_key == hashed_key).first()
         if not api_key_record or not api_key_record.is_active:
             raise credentials_exception
-        if api_key_record.expires_at and api_key_record.expires_at < datetime.now(timezone.utc):
+        if api_key_record.expires_at and api_key_record.expires_at < datetime.now(UTC):
             raise credentials_exception
         user = db.query(User).filter(User.id == api_key_record.user_id).first()
         if not user:
@@ -171,7 +171,7 @@ def register_user(request: Request, user_data: UserCreate, db: Session = Depends
 
     # Verification token generation (Roadmap 1.2)
     v_token = secrets.token_urlsafe(32)
-    v_expires = datetime.now(timezone.utc) + timedelta(hours=24)
+    v_expires = datetime.now(UTC) + timedelta(hours=24)
 
     db_user = User(
         email=user_data.email,
@@ -198,7 +198,7 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.verification_token == token).first()
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired verification token.")
-    if user.verification_token_expires_at and user.verification_token_expires_at < datetime.now(timezone.utc):
+    if user.verification_token_expires_at and user.verification_token_expires_at < datetime.now(UTC):
         raise HTTPException(status_code=400, detail="Verification token has expired. Please sign up again.")
 
     user.is_verified = True
@@ -340,7 +340,7 @@ def logout(request: Request, response: Response, current_user: User = Depends(ge
             jti = payload.get("jti")
             exp = payload.get("exp")
             if jti and exp:
-                remaining_ttl = int(exp - datetime.now(timezone.utc).timestamp())
+                remaining_ttl = int(exp - datetime.now(UTC).timestamp())
                 blacklist_token(jti, remaining_ttl)
         except Exception:
             pass
@@ -415,7 +415,7 @@ def refresh_tokens(
 
     # Blacklist the old refresh token (rotation)
     if jti and exp:
-        remaining_ttl = int(exp - datetime.now(timezone.utc).timestamp())
+        remaining_ttl = int(exp - datetime.now(UTC).timestamp())
         blacklist_token(jti, remaining_ttl)
 
     # Set new HttpOnly cookies on the response (rotation)
@@ -473,7 +473,7 @@ def create_api_key(
 
     expires_at = None
     if key_data.expires_in_days:
-        expires_at = datetime.now(timezone.utc) + timedelta(days=key_data.expires_in_days)
+        expires_at = datetime.now(UTC) + timedelta(days=key_data.expires_in_days)
 
     from app.models.api_key import ApiKey
     db_key = ApiKey(

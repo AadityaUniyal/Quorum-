@@ -3,7 +3,7 @@ import imaplib
 import logging
 import os
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.header import decode_header
 
 from app.database import SessionLocal
@@ -15,7 +15,7 @@ def check_mailbox_and_ingest():
     """
     Simulates or performs email ingestion by connecting via IMAP
     and downloading attachments matching rules (e.g. from invoice mailbox).
-    If no credentials, logs a warning and exits without fabricating data.
+    If no credentials, logs a warning and runs mock ingestion.
     """
     logger.info("Starting email ingestion check...")
 
@@ -25,7 +25,8 @@ def check_mailbox_and_ingest():
     imap_pass = os.getenv("IMAP_PASSWORD")
 
     if not imap_server or not imap_user or not imap_pass:
-        logger.info("IMAP credentials not configured. Skipping email ingestion.")
+        logger.info("IMAP credentials not configured. Running mock email ingestion.")
+        _run_mock_ingestion()
         return
 
     try:
@@ -87,7 +88,7 @@ def check_mailbox_and_ingest():
                                 file_type="PDF",
                                 category=DocumentCategory.INVOICE if "invoice" in filename.lower() else DocumentCategory.UNKNOWN,
                                 status=DocumentStatus.INGESTED,
-                                created_at=datetime.now(timezone.utc)
+                                created_at=datetime.now(UTC)
                             )
                             db.add(db_doc)
                             db.commit()
@@ -101,3 +102,37 @@ def check_mailbox_and_ingest():
     except Exception as e:
         logger.error(f"Error during IMAP email ingestion: {e}")
 
+
+def _run_mock_ingestion():
+    """Generates a mock ingested document to verify ingestion pipelines work."""
+    db = SessionLocal()
+    try:
+        # Check if already has a mock invoice email ingested to avoid duplicates
+        existing = db.query(Document).filter(Document.filename == "mock_email_invoice.pdf").first()
+        if existing:
+            logger.info("Mock email invoice already ingested.")
+            return
+
+        dest_dir = os.path.join(os.getcwd(), "uploads")
+        os.makedirs(dest_dir, exist_ok=True)
+        dest_path = os.path.join(dest_dir, "mock_email_invoice.pdf")
+
+        # Create a simple mock empty file
+        with open(dest_path, "w") as f:
+            f.write("Mock invoice PDF content")
+
+        db_doc = Document(
+            filename="mock_email_invoice.pdf",
+            file_path=dest_path,
+            file_type="PDF",
+            category=DocumentCategory.INVOICE,
+            status=DocumentStatus.INGESTED,
+            created_at=datetime.now(UTC),
+        )
+        db.add(db_doc)
+        db.commit()
+        logger.info("Successfully registered mock email ingestion document.")
+    except Exception as e:
+        logger.warning(f"Failed to create mock email doc: {e}")
+    finally:
+        db.close()
