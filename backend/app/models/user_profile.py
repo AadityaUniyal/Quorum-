@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
@@ -15,6 +15,6 @@ class UserProfile(Base):
     full_name = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
     bio = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = relationship('User', back_populates='profile')

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.document import DocumentCategory, DocumentStatus, FieldValidationStatus
 
@@ -18,8 +18,7 @@ class ExtractedFieldResponse(BaseModel):
     validation_status: FieldValidationStatus
     validation_notes: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DocumentCreateSchema(BaseModel):
     """Schema for creating a new document via JSON payload.
@@ -45,8 +44,7 @@ class DocumentResponse(BaseModel):
     updated_at: datetime
     fields: list[ExtractedFieldResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DocumentSimpleResponse(BaseModel):
     id: UUID
@@ -58,8 +56,7 @@ class DocumentSimpleResponse(BaseModel):
     created_at: datetime
     uploader_name: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class FieldUpdate(BaseModel):
     field_key: str

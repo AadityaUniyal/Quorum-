@@ -2,6 +2,8 @@ import json
 import logging
 from typing import Any
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 def run_critic_agent(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -10,13 +12,15 @@ def run_critic_agent(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[st
     Returns a dictionary of: { field_key: { "score": float, "notes": str } }
     """
     import asyncio
+    local_result = run_local_critic(ocr_text, extracted_fields)
+    if settings.LLM_PREFERRED_PROVIDER != "gemini":
+        return local_result
+
     try:
-        # Route through call_llm_cached for retries, cache, and Ollama fallback support
         return asyncio.run(call_gemini_critic(ocr_text, extracted_fields))
     except Exception as e:
         logger.error(f"Centralized Critic Agent failed: {str(e)}. Falling back to local critic.")
-
-    return run_local_critic(ocr_text, extracted_fields)
+        return local_result
 
 async def call_gemini_critic(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:
     from app.services.llm import call_llm_cached

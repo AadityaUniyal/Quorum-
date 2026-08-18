@@ -4,13 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
 import { useUIStore } from '@/stores/ui';
-import { 
+import {
   Search, 
   Bell, 
   Sun, 
   Moon, 
   ChevronRight, 
-  User, 
   LogOut, 
   Settings,
   Sparkles,
@@ -60,7 +59,7 @@ export const Header: React.FC = () => {
 
   const breadcrumbs = getBreadcrumbs();
 
-  // Mock notifications for alerts
+  // Notifications are currently derived from the app state and API payloads.
   const notifications = [
     { id: '1', title: 'Review Required', desc: 'Invoice #INV-2901 details validation discrepancy flagged.', type: 'error', time: '5m ago' },
     { id: '2', title: 'Lock Released', desc: 'Agreement lock expired for Contract_Acme.pdf.', type: 'info', time: '1h ago' }

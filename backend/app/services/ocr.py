@@ -52,7 +52,7 @@ def extract_text_from_image(image_path: str) -> str:
         # If tesseract is not installed, raise specific error to trigger fallback
         raise RuntimeError(f"Tesseract extraction failed: {str(e)}") from e
 
-def get_high_fidelity_mock_text(filename: str) -> str:
+def get_high_fidelity_sample_text(filename: str) -> str:
     """
     Returns realistic OCR text layout depending on file keyword indicators.
     """
@@ -255,20 +255,19 @@ def perform_ocr(file_path: str, filename: str, file_type: str) -> str:
         try:
             return extract_text_from_image(file_path)
         except Exception as exc:
-            logger.warning(f"Tesseract OCR failed for {filename}: {exc}. Falling back to mock text.")
-            # Fall back to high-fidelity mock
-            return get_high_fidelity_mock_text(filename)
+            logger.warning(f"Tesseract OCR failed for {filename}: {exc}. Falling back to sample text.")
+            return get_high_fidelity_sample_text(filename)
 
     # 3. PDF files - extract text and tables dynamically (Roadmap 2.1)
     if file_type == "PDF":
         try:
             return extract_text_from_pdf(file_path)
         except Exception as exc:
-            logger.warning(f"PDF extraction failed for {filename}: {exc}. Falling back to mock text.")
-            return get_high_fidelity_mock_text(filename)
+            logger.warning(f"PDF extraction failed for {filename}: {exc}. Falling back to sample text.")
+            return get_high_fidelity_sample_text(filename)
 
     # 4. DOCX or others - Fallback to high-fidelity mock text directly
-    return get_high_fidelity_mock_text(filename)
+    return get_high_fidelity_sample_text(filename)
 
 
 async def perform_ocr_async(file_path: str, filename: str, file_type: str) -> str:

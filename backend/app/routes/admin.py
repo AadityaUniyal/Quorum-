@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 # Admin role check dependency
 def admin_user(current_user: User = Depends(get_current_user)):
-    if getattr(current_user, 'role', None) != 'ADMIN':
+    role = getattr(current_user, "role", None)
+    role_value = getattr(role, "value", role)
+    if role_value != "ADMIN":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
     return current_user
 

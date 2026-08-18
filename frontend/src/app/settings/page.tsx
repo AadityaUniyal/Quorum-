@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import zxcvbn from 'zxcvbn';
 
 type TabId = 'profile' | 'appearance' | 'notifications' | 'apikeys' | 'team' | 'auditlog' | 'synonyms';
 
@@ -55,9 +54,6 @@ export default function SettingsPage() {
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
 
   // Team — new invite form
-  const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberRole, setNewMemberRole] = useState<'ADMIN' | 'REVIEWER' | 'OPERATOR'>('OPERATOR');
-
   const queryClient = useQueryClient();
 
   // ── Queries ────────────────────────────────────────────────────────────────

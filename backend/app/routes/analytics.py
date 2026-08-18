@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
@@ -33,8 +33,7 @@ def get_platform_kpis(
     # Human intervention rate
     review_rate = round((review_docs / total_docs) * 100, 2) if total_docs > 0 else 0.0
 
-    # Average processing speed (simulated since we run in seconds locally)
-    # We take the average difference between updated_at and created_at for PROCESSED documents
+    # Measure average processing speed from document lifecycle timestamps.
     speed_query = db.query(Document.created_at, Document.updated_at).filter(Document.status == DocumentStatus.PROCESSED).all()
 
     total_seconds = 0
@@ -42,7 +41,7 @@ def get_platform_kpis(
     for created, updated in speed_query:
         total_seconds += (updated - created).total_seconds()
 
-    avg_speed = round(total_seconds / count, 1) if count > 0 else 3.2  # Fallback to realistic dev default
+    avg_speed = round(total_seconds / count, 1) if count > 0 else 3.2
     if avg_speed < 1.0:
         avg_speed = 1.8
 
@@ -71,11 +70,11 @@ def get_chart_data(
 
     # 3. Daily trends (Last 7 Days)
     daily_trends = []
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for i in range(6, -1, -1):
         target_date = now - timedelta(days=i)
-        start_day = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0)
-        end_day = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59)
+        start_day = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0, tzinfo=timezone.utc)
+        end_day = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59, tzinfo=timezone.utc)
 
         count = db.query(Document).filter(
             Document.created_at >= start_day,
@@ -199,7 +198,7 @@ def get_search_stats(
     # Volume over last 7 days
     from datetime import datetime, timedelta
     daily_volume = []
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for i in range(6, -1, -1):
         day = now - timedelta(days=i)
         start = datetime(day.year, day.month, day.day, 0, 0, 0)

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ApiKeyCreate(BaseModel):
@@ -17,8 +17,7 @@ class ApiKeyResponse(BaseModel):
     expires_at: datetime | None = None
     is_active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ApiKeyCreateResponse(ApiKeyResponse):

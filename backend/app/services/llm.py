@@ -5,7 +5,8 @@ Implements Roadmap 1.3: Agent retry with exponential backoff + LLM fallback chai
 import asyncio
 import logging
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from tenacity import (
     before_sleep_log,
     retry,
@@ -34,11 +35,11 @@ class LLMProviderError(LLMError):
     pass
 
 
-def _configure_gemini():
-    """Configure Google Gemini API"""
+def _create_gemini_client():
+    """Create a Gemini client using the supported google-genai SDK."""
     if not settings.GEMINI_API_KEY:
         raise LLMProviderError("GEMINI_API_KEY not configured")
-    genai.configure(api_key=settings.GEMINI_API_KEY)
+    return genai.Client(api_key=settings.GEMINI_API_KEY)
 
 
 @retry(
@@ -79,18 +80,14 @@ async def call_llm_with_retry(
     timeout = timeout or settings.LLM_TIMEOUT_SECONDS
 
     try:
-        # Configure Gemini
-        _configure_gemini()
+        client = _create_gemini_client()
 
-        # Create model
-        model = genai.GenerativeModel(model_name)
-
-        # Generate response with timeout
         response = await asyncio.wait_for(
             asyncio.to_thread(
-                model.generate_content,
-                prompt,
-                generation_config=genai.GenerationConfig(
+                client.models.generate_content,
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
                     temperature=temperature,
                     max_output_tokens=max_tokens,
                 )
@@ -135,7 +132,22 @@ async def call_llm_with_fallback(
     """
     errors = []
 
-    # Try Primary (Gemini)
+    # Prefer local / deterministic providers first so Gemini stays optional.
+    if settings.LLM_PREFERRED_PROVIDER != "gemini" and settings.LLM_FALLBACK_ENABLED:
+        try:
+            logger.info(f"Attempting local LLM fallback first: {settings.LLM_TERTIARY_MODEL}")
+            response = await call_ollama(
+                prompt=prompt,
+                model=settings.LLM_TERTIARY_MODEL,
+                temperature=temperature,
+            )
+            logger.info(f"✓ Local LLM succeeded: {settings.LLM_TERTIARY_MODEL}")
+            return response, f"local:{settings.LLM_TERTIARY_MODEL}"
+        except Exception as e:
+            logger.warning(f"✗ Local LLM failed: {e}")
+            errors.append(f"Local ({settings.LLM_TERTIARY_MODEL}): {e}")
+
+    # Try Primary (Gemini) only after local fallback fails or if explicitly preferred.
     try:
         logger.info(f"Attempting primary LLM: {settings.LLM_MODEL}")
         response = await call_llm_with_retry(
@@ -161,7 +173,7 @@ async def call_llm_with_fallback(
             logger.warning(f"✗ Secondary LLM failed: {e}")
             errors.append(f"Secondary ({settings.LLM_SECONDARY_MODEL}): {e}")
 
-    # Try Tertiary (Local Ollama)
+    # Try Tertiary (Local Ollama) if Gemini and any secondary providers fail.
     if settings.LLM_FALLBACK_ENABLED:
         try:
             logger.info(f"Attempting tertiary LLM (Ollama): {settings.LLM_TERTIARY_MODEL}")

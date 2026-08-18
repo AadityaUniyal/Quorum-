@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
@@ -15,7 +15,7 @@ class Comment(Base):
     field_key = Column(String, nullable=True)  # Nullable for document-level comments
     user_id = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     document = relationship("Document", backref="comments")

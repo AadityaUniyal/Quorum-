@@ -206,24 +206,23 @@ def ask_rag(
     context = _build_context(docs)
     prompt = _citation_prompt(req.question, context, history_str)
 
-    # Call LLM or use offline fallback
-    if settings.LLM_OFFLINE_MOCK_FALLBACK or not settings.GEMINI_API_KEY:
-        from app.services.llm import local_extractive_rag
+    from app.services.llm import local_extractive_rag
+    if settings.LLM_PREFERRED_PROVIDER != "gemini":
         answer_text, raw_citations = local_extractive_rag(req.question, docs)
     else:
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            model = genai.GenerativeModel(settings.LLM_MODEL)
-            response = model.generate_content(
-                prompt,
-                generation_config=genai.GenerationConfig(temperature=0.1, max_output_tokens=1024),
+            from google import genai
+            from google.genai import types
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            response = client.models.generate_content(
+                model=settings.LLM_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=1024),
             )
             raw_answer = response.text.strip()
             answer_text, raw_citations = _parse_llm_json(raw_answer)
         except Exception as e:
             logger.error(f"LLM error in RAG: {e}. Falling back to local extractive RAG.")
-            from app.services.llm import local_extractive_rag
             answer_text, raw_citations = local_extractive_rag(req.question, docs)
 
     # Map citations back to real document filenames
@@ -309,15 +308,13 @@ async def ask_rag_stream(
         """Stream LLM tokens via SSE data frames."""
         full_response = ""
         try:
-            # Check for offline fallback
-            if settings.LLM_OFFLINE_MOCK_FALLBACK or not settings.GEMINI_API_KEY:
+            from app.services.llm import local_extractive_rag
+            if settings.LLM_PREFERRED_PROVIDER != "gemini":
                 import asyncio
 
-                from app.services.llm import local_extractive_rag
                 yield f"data: {json.dumps({'type': 'session', 'session_id': session_id})}\n\n"
                 answer_text, citations = local_extractive_rag(req.question, docs)
 
-                # Stream answer word by word (or chunk by chunk) for realistic UX
                 words = answer_text.split(" ")
                 for i, word in enumerate(words):
                     space = " " if i > 0 else ""
@@ -327,24 +324,23 @@ async def ask_rag_stream(
                 yield f"data: {json.dumps({'type': 'citations', 'citations': citations})}\n\n"
                 yield f"data: {json.dumps({'type': 'done', 'session_id': session_id})}\n\n"
 
-                # Save history
                 history.append({"role": "user", "content": req.question})
                 history.append({"role": "assistant", "content": answer_text})
                 _save_session_history(session_id, history)
                 return
 
-            import google.generativeai as genai
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            model = genai.GenerativeModel(settings.LLM_MODEL)
+            from google import genai
+            from google.genai import types
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
             # Send session_id first
             yield f"data: {json.dumps({'type': 'session', 'session_id': session_id})}\n\n"
 
             # Stream tokens
-            for chunk in model.generate_content(
-                prompt,
-                generation_config=genai.GenerationConfig(temperature=0.1, max_output_tokens=1024),
-                stream=True,
+            for chunk in client.models.generate_content_stream(
+                model=settings.LLM_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=1024),
             ):
                 token = chunk.text if chunk.text else ""
                 if token:

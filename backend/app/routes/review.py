@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 import redis
@@ -43,7 +43,7 @@ end
 """
 
 
-class MockRedis:
+class InMemoryRedisFallback:
     _store = {}
     def ping(self):
         return True
@@ -77,11 +77,11 @@ class MockRedis:
             return 1
         return 0
 
-_mock_redis_client = MockRedis()
+_in_memory_redis_fallback = InMemoryRedisFallback()
 
 
 def get_redis_client():
-    """Return a Redis client or fallback to MockRedis if unavailable."""
+    """Return a Redis client or a local in-memory fallback if Redis is unavailable."""
     try:
         r = redis.Redis(
             host=settings.REDIS_HOST,
@@ -93,7 +93,7 @@ def get_redis_client():
         r.ping()
         return r
     except Exception:
-        return _mock_redis_client
+        return _in_memory_redis_fallback
 
 
 
@@ -415,7 +415,7 @@ def approve_document_stage(
                 "filename": doc.filename,
                 "category": doc.category.value if doc.category else None,
                 "consensus_score": doc.consensus_score,
-                "timestamp": dt.utcnow().isoformat()
+                "timestamp": dt.now(timezone.utc).isoformat()
             }
         )
 

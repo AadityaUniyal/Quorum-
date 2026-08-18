@@ -23,7 +23,7 @@ def run_summary_agent(ocr_text: str, category: str, extracted_fields: dict) -> s
     Returns:
         A 3-sentence plain-text summary string.
     """
-    if settings.GEMINI_API_KEY:
+    if settings.LLM_PREFERRED_PROVIDER == "gemini" and settings.GEMINI_API_KEY:
         try:
             return _call_gemini_summary(ocr_text, category, extracted_fields)
         except Exception as exc:

@@ -60,8 +60,7 @@ export default function ReviewPage() {
 
   const cleanupLock = useCallback(() => {
     if (selectedDocId && isLockedByMe) {
-      const tokenQuery = lockToken ? `?lock_token=${lockToken}` : "";
-      api.unlockDocument(`${selectedDocId}${tokenQuery}`).catch(() => {});
+      api.unlockDocument(selectedDocId, lockToken || undefined).catch(() => {});
     }
     setIsLockedByMe(false);
     setLockOwner(null);
@@ -88,7 +87,7 @@ export default function ReviewPage() {
           if (prev <= 1) {
             clearInterval(countdownIntervalRef.current!);
             toast.error('Your editing lock has expired!');
-            setIsLockedByMe(false);
+            cleanupLock();
             return 0;
           }
           return prev - 1;
@@ -98,17 +97,10 @@ export default function ReviewPage() {
       // Start Heartbeat Renewal Timer (every 10 minutes)
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = setInterval(() => {
-        // Direct call to heartbeat endpoint with lock token
-        const tokenQuery = res.lock_token ? `?lock_token=${res.lock_token}` : "";
-        fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/review/${selectedDocId}/heartbeat${tokenQuery}`, {
-          method: 'POST',
-          credentials: 'include',
-        }).then(res => {
-          if (res.ok) {
-            setLockTimeLeft(15 * 60);
-            logger.info('Lock lease renewed');
-          }
-        });
+        api.heartbeatDocumentLock(selectedDocId, res.lock_token).then(() => {
+          setLockTimeLeft(15 * 60);
+          logger.info('Lock lease renewed');
+        }).catch(() => {});
       }, 10 * 60 * 1000);
     },
     onError: () => {
@@ -172,7 +164,7 @@ export default function ReviewPage() {
   const [expandedCommentsField, setExpandedCommentsField] = useState<string | null>(null);
   const [newCommentText, setNewCommentText] = useState<string>('');
 
-  const { data: comments = [], isLoading: commentsLoading } = useQuery({
+  const { data: comments = [] } = useQuery({
     queryKey: ['comments', selectedDocId],
     queryFn: () => api.getComments(selectedDocId),
     enabled: !!selectedDocId,
@@ -204,15 +196,17 @@ export default function ReviewPage() {
   });
 
   // Initialize form state when document details load
-  const [lastInitializedDoc, setLastInitializedDoc] = useState<string>('');
-  if (doc && doc.id !== lastInitializedDoc) {
-    setLastInitializedDoc(doc.id);
+  useEffect(() => {
+    if (!doc) return;
     const initialUpdates: Record<string, string> = {};
     doc.fields.forEach((f) => {
       initialUpdates[f.field_key] = f.consensus_value || f.extracted_value || '';
     });
     setFieldUpdates(initialUpdates);
-  }
+    setEditingField(null);
+    setExpandedCommentsField(null);
+    setNewCommentText('');
+  }, [doc]);
 
   // Attempt to acquire lock on the document
   useEffect(() => {
@@ -320,36 +314,39 @@ export default function ReviewPage() {
               <span>No documents awaiting review.</span>
             </div>
           ) : (
-            queue?.map((item, index) => {
-              // Simulate lock for visual effect (e.g. index === 1 is locked by another user)
-              const isMockLocked = index === 1 && item.id !== selectedDocId;
-              const mockUser = isMockLocked ? { name: 'Sarah Jenkins', initials: 'SJ', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' } : null;
+            queue?.map((item) => {
+              const lockMatch = item.uploader_name.match(/\(Locked by (.+)\)$/);
+              const isLocked = Boolean(lockMatch) && item.id !== selectedDocId;
+              const lockHolder = lockMatch?.[1] ?? null;
+              const lockInitials = lockHolder
+                ? lockHolder.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase()
+                : null;
 
               return (
                 <button
                   key={item.id}
                   onClick={() => {
-                    if (isMockLocked) {
-                      toast.error(`This document is currently being reviewed by ${mockUser?.name}`);
+                    if (isLocked) {
+                      toast.error(`This document is currently being reviewed by ${lockHolder}`);
                       return;
                     }
                     selectDocument(item.id);
                   }}
-                  disabled={isMockLocked}
+                  disabled={isLocked}
                   className={clsx(
                     'w-full flex flex-col text-left p-3.5 rounded-xl border transition-all duration-300 transform',
-                    isMockLocked ? 'opacity-60 cursor-not-allowed bg-neutral-900/20 border-white/[0.02]' : 'cursor-pointer hover:scale-[1.01]',
+                    isLocked ? 'opacity-60 cursor-not-allowed bg-neutral-900/20 border-white/[0.02]' : 'cursor-pointer hover:scale-[1.01]',
                     selectedDocId === item.id
                       ? 'bg-primary/10 border-primary/20 text-primary'
-                      : !isMockLocked ? 'bg-[#0f0f0f]/40 border-white/[0.04] hover:bg-white/[0.01] hover:border-white/[0.06] text-neutral-300' : ''
+                      : !isLocked ? 'bg-[#0f0f0f]/40 border-white/[0.04] hover:bg-white/[0.01] hover:border-white/[0.06] text-neutral-300' : ''
                   )}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="font-semibold text-xs truncate max-w-[140px]">{item.filename}</span>
-                    {isMockLocked ? (
+                    {isLocked ? (
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className={clsx("w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border", mockUser?.color)}>
-                          {mockUser?.initials}
+                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border bg-indigo-500/20 text-indigo-400 border-indigo-500/30">
+                          {lockInitials}
                         </span>
                         <Badge variant="status" value="LOCKED" size="sm">
                           LOCKED
@@ -433,8 +430,14 @@ export default function ReviewPage() {
                     </span>
                     <button
                       onClick={() => {
-                        setLockTimeLeft(15 * 60);
-                        toast.success("Lock lease successfully extended!");
+                        api.heartbeatDocumentLock(selectedDocId, lockToken || undefined)
+                          .then((res) => {
+                            setLockTimeLeft(15 * 60);
+                            toast.success(res.message || "Lock lease successfully extended!");
+                          })
+                          .catch((err: any) => {
+                            toast.error(err.message || "Failed to extend lock");
+                          });
                       }}
                       className="px-2 py-0.5 border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/[0.12] rounded text-[9px] font-mono text-neutral-300 hover:text-white cursor-pointer transition-all duration-200"
                     >

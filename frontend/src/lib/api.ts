@@ -225,7 +225,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
   }
 
-  if (response.status === 244 || response.status === 204) {
+  if (response.status === 204) {
     return null as unknown as T;
   }
 
@@ -351,8 +351,16 @@ export const api = {
     });
   },
 
-  unlockDocument: async (id: string): Promise<{ message: string }> => {
-    return request(`/api/review/${id}/unlock`, {
+  unlockDocument: async (id: string, lockToken?: string): Promise<{ message: string }> => {
+    const queryStr = lockToken ? `?lock_token=${lockToken}` : "";
+    return request(`/api/review/${id}/unlock${queryStr}`, {
+      method: "POST",
+    });
+  },
+
+  heartbeatDocumentLock: async (id: string, lockToken?: string): Promise<{ message: string; ttl_seconds: number }> => {
+    const queryStr = lockToken ? `?lock_token=${lockToken}` : "";
+    return request(`/api/review/${id}/heartbeat${queryStr}`, {
       method: "POST",
     });
   },
@@ -533,6 +541,25 @@ export const api = {
     });
   },
 
+  streamDocumentPipeline: (documentId: string): EventSource => {
+    const url = `${API_BASE_URL}/api/streaming/documents/${encodeURIComponent(documentId)}/stream`;
+    const token = typeof window !== "undefined" ? localStorage.getItem("doc_intel_token") : null;
+    const cookieMatch = typeof document !== "undefined" && document.cookie
+      ? document.cookie.match(/(?:^|; )access_token=([^;]*)/)
+      : null;
+    const cookieToken = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+    const authToken = token || cookieToken;
+
+    if (!authToken) {
+      return new EventSource(url, { withCredentials: true });
+    }
+
+    const separator = url.includes("?") ? "&" : "?";
+    return new EventSource(`${url}${separator}token=${encodeURIComponent(authToken)}`, {
+      withCredentials: true,
+    });
+  },
+
   // API Keys (Settings)
   generateApiKey: async (name: string, expiresInDays?: number): Promise<ApiKeyCreateResponse> => {
     return request("/api/auth/apikeys", {
@@ -594,11 +621,15 @@ export const api = {
   },
 
   askRagStream: (
-    documentIds: string[],
-    question: string,
-    sessionId?: string,
-    history?: { role: string; content: string }[]
+    _documentIds: string[],
+    _question: string,
+    _sessionId?: string,
+    _history?: { role: string; content: string }[]
   ): EventSource => {
+    void _documentIds;
+    void _question;
+    void _sessionId;
+    void _history;
     // Note: EventSource doesn't support POST with body natively.
     // We use a workaround with fetch + ReadableStream on the caller side.
     // This function returns the fetch promise instead.

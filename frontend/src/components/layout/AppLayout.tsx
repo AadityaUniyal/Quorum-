@@ -15,8 +15,12 @@ import { motion } from 'framer-motion';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      staleTime: 0,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchOnMount: 'always',
       retry: 1,
+      refetchIntervalInBackground: true,
     },
   },
 });

@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     # LLM Fallback Configuration (Roadmap 1.3)
     # Primary → Secondary → Tertiary (local Ollama)
     LLM_FALLBACK_ENABLED: bool = True
+    # Prefer deterministic/local providers first. Set to "gemini" only if you want AI-first behavior.
+    LLM_PREFERRED_PROVIDER: str = "local"
     LLM_SECONDARY_PROVIDER: str | None = None  # e.g., "openai", "anthropic"
     LLM_SECONDARY_API_KEY: str | None = None
     LLM_SECONDARY_MODEL: str | None = None  # e.g., "gpt-4o-mini"

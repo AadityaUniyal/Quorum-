@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
@@ -86,7 +86,7 @@ def get_current_user(
         api_key_record = db.query(ApiKey).filter(ApiKey.hashed_key == hashed_key).first()
         if not api_key_record or not api_key_record.is_active:
             raise credentials_exception
-        if api_key_record.expires_at and api_key_record.expires_at < datetime.utcnow():
+        if api_key_record.expires_at and api_key_record.expires_at < datetime.now(timezone.utc):
             raise credentials_exception
         user = db.query(User).filter(User.id == api_key_record.user_id).first()
         if not user:
@@ -171,7 +171,7 @@ def register_user(request: Request, user_data: UserCreate, db: Session = Depends
 
     # Verification token generation (Roadmap 1.2)
     v_token = secrets.token_urlsafe(32)
-    v_expires = datetime.utcnow() + timedelta(hours=24)
+    v_expires = datetime.now(timezone.utc) + timedelta(hours=24)
 
     db_user = User(
         email=user_data.email,
@@ -198,7 +198,7 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.verification_token == token).first()
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired verification token.")
-    if user.verification_token_expires_at and user.verification_token_expires_at < datetime.utcnow():
+    if user.verification_token_expires_at and user.verification_token_expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Verification token has expired. Please sign up again.")
 
     user.is_verified = True
@@ -257,71 +257,72 @@ def login(request: Request, login_data: UserLogin, response: Response, db: Sessi
 
 @router.get("/login/google")
 def login_google():
-    """Redirect to Google OAuth consent screen (simulated)."""
-    redirect_url = "/api/auth/login/google/callback?code=mock_google_code_123"
+    """Start Google OAuth if configured, otherwise return a clear unsupported response."""
+    google_client_id = getattr(settings, "GOOGLE_CLIENT_ID", None)
+    google_redirect_uri = getattr(settings, "GOOGLE_REDIRECT_URI", None)
+    if not google_client_id or not google_redirect_uri:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Google SSO is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_REDIRECT_URI to enable it.",
+        )
+
+    scope = "openid email profile"
+    redirect_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth"
+        f"?client_id={google_client_id}"
+        f"&redirect_uri={google_redirect_uri}"
+        "&response_type=code"
+        f"&scope={scope.replace(' ', '+')}"
+        "&prompt=consent"
+    )
     return {"redirect_url": redirect_url, "message": "Redirecting to Google SSO..."}
 
 @router.get("/login/google/callback")
 def login_google_callback(code: str, response: Response, db: Session = Depends(get_db)):
-    """Handle callback from Google, auto-creating/logging in the user."""
-    import secrets
-    mock_email = "google_user@example.com"
-    mock_name = "Google User"
+    """Handle callback from Google OAuth.
 
-    user = db.query(User).filter(User.email == mock_email).first()
-    if not user:
-        user = User(
-            email=mock_email,
-            hashed_password=get_password_hash(secrets.token_urlsafe(16)),
-            full_name=mock_name,
-            role=UserRole.VIEWER,
-            is_verified=True # SSO logins are auto-verified
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-    access_token = create_access_token(user)
-    refresh_token = create_refresh_token(user)
-
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=settings.COOKIE_SECURE, samesite=settings.COOKIE_SAMESITE, domain=settings.COOKIE_DOMAIN, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=settings.COOKIE_SECURE, samesite=settings.COOKIE_SAMESITE, domain=settings.COOKIE_DOMAIN, max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
-
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+    The app does not currently exchange the authorization code for identity
+    claims. Until that flow is wired to Google's token endpoint, we fail
+    explicitly instead of fabricating a user.
+    """
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Google OAuth callback handling is not implemented yet.",
+    )
 
 @router.get("/login/microsoft")
 def login_microsoft():
-    """Redirect to Microsoft OAuth consent screen (simulated)."""
-    redirect_url = "/api/auth/login/microsoft/callback?code=mock_ms_code_123"
+    """Start Microsoft OAuth if configured, otherwise return a clear unsupported response."""
+    microsoft_client_id = getattr(settings, "MICROSOFT_CLIENT_ID", None)
+    microsoft_redirect_uri = getattr(settings, "MICROSOFT_REDIRECT_URI", None)
+    if not microsoft_client_id or not microsoft_redirect_uri:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Microsoft SSO is not configured. Set MICROSOFT_CLIENT_ID and MICROSOFT_REDIRECT_URI to enable it.",
+        )
+
+    redirect_url = (
+        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
+        f"?client_id={microsoft_client_id}"
+        f"&redirect_uri={microsoft_redirect_uri}"
+        "&response_type=code"
+        "&scope=openid+email+profile"
+        "&prompt=select_account"
+    )
     return {"redirect_url": redirect_url, "message": "Redirecting to Microsoft SSO..."}
 
 @router.get("/login/microsoft/callback")
 def login_microsoft_callback(code: str, response: Response, db: Session = Depends(get_db)):
-    """Handle callback from Microsoft, auto-creating/logging in the user."""
-    import secrets
-    mock_email = "ms_user@example.com"
-    mock_name = "Microsoft User"
+    """Handle callback from Microsoft OAuth.
 
-    user = db.query(User).filter(User.email == mock_email).first()
-    if not user:
-        user = User(
-            email=mock_email,
-            hashed_password=get_password_hash(secrets.token_urlsafe(16)),
-            full_name=mock_name,
-            role=UserRole.VIEWER,
-            is_verified=True # SSO logins are auto-verified
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-    access_token = create_access_token(user)
-    refresh_token = create_refresh_token(user)
-
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=settings.COOKIE_SECURE, samesite=settings.COOKIE_SAMESITE, domain=settings.COOKIE_DOMAIN, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=settings.COOKIE_SECURE, samesite=settings.COOKIE_SAMESITE, domain=settings.COOKIE_DOMAIN, max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
-
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+    The app does not currently exchange the authorization code for identity
+    claims. Until that flow is wired to Microsoft's token endpoint, we fail
+    explicitly instead of fabricating a user.
+    """
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Microsoft OAuth callback handling is not implemented yet.",
+    )
 
 # Refresh token endpoint — accepts a refresh token, returns new access + refresh tokens (rotation)
 # Logout endpoint – clears auth cookies and revokes refresh token
@@ -339,7 +340,7 @@ def logout(request: Request, response: Response, current_user: User = Depends(ge
             jti = payload.get("jti")
             exp = payload.get("exp")
             if jti and exp:
-                remaining_ttl = int(exp - datetime.utcnow().timestamp())
+                remaining_ttl = int(exp - datetime.now(timezone.utc).timestamp())
                 blacklist_token(jti, remaining_ttl)
         except Exception:
             pass
@@ -414,7 +415,7 @@ def refresh_tokens(
 
     # Blacklist the old refresh token (rotation)
     if jti and exp:
-        remaining_ttl = int(exp - datetime.utcnow().timestamp())
+        remaining_ttl = int(exp - datetime.now(timezone.utc).timestamp())
         blacklist_token(jti, remaining_ttl)
 
     # Set new HttpOnly cookies on the response (rotation)
@@ -472,7 +473,7 @@ def create_api_key(
 
     expires_at = None
     if key_data.expires_in_days:
-        expires_at = datetime.utcnow() + timedelta(days=key_data.expires_in_days)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=key_data.expires_in_days)
 
     from app.models.api_key import ApiKey
     db_key = ApiKey(

@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Any
 
+from app.config import settings
 from app.models.document import DocumentCategory
 
 logger = logging.getLogger(__name__)
@@ -12,13 +13,15 @@ def run_compliance_agent(ocr_text: str, category: DocumentCategory, extracted_fi
     Returns: { field_key: { "score": float, "notes": str } }
     """
     import asyncio
+    local_result = run_local_compliance(ocr_text, category, extracted_fields)
+    if settings.LLM_PREFERRED_PROVIDER != "gemini":
+        return local_result
+
     try:
-        # Route through call_llm_cached for retries, cache, and Ollama fallback support
         return asyncio.run(call_gemini_compliance(ocr_text, category, extracted_fields))
     except Exception as e:
         logger.error(f"Centralized Compliance Agent failed: {str(e)}. Falling back to local compliance.")
-
-    return run_local_compliance(ocr_text, category, extracted_fields)
+        return local_result
 
 async def call_gemini_compliance(ocr_text: str, category: DocumentCategory, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:
     from app.services.llm import call_llm_cached

@@ -236,48 +236,28 @@ def query_rag_knowledge(document_ids: list[str], question: str) -> str:
     contexts = sorted(contexts, key=lambda x: x["distance"])[:5]
     merged_context = "\n\n".join([f"Source: {c['filename']} (Chunk)\n{c['text']}" for c in contexts])
 
-    prompt = f"""
-    You are an AI assistant answering questions about a corpus of business documents.
-    Answer the user's question using ONLY the provided document contexts.
-    If you cannot find the answer in the contexts, state clearly that the information is not present.
-
-    Document Contexts:
-    {merged_context}
-
-    User Question:
-    {question}
-
-    Answer:
-    """
-
-    # Route through centralized call_llm_cached for fallback and caching
+    # Prefer deterministic local extractive QA instead of LLM generation.
     try:
-        import asyncio
-
-        from app.services.llm import call_llm_cached
-        
-        async def _run():
-            response_text, provider, from_cache = await call_llm_cached(
-                prompt=prompt,
-                temperature=0.2,
-                use_cache=True
-            )
-            return response_text
-            
-        return asyncio.run(_run())
+        from app.services.llm import local_extractive_rag
+        answer_text, citations = local_extractive_rag(question, [
+            type("Doc", (), {
+                "id": c["document_id"],
+                "filename": c["filename"],
+                "ocr_text": c["text"],
+            })()
+            for c in contexts
+        ])
+        if answer_text:
+            return answer_text
     except Exception as e:
-        logger.error(f"Centralized RAG call failed: {str(e)}. Running heuristic fallback.")
+        logger.error(f"Local extractive RAG failed: {str(e)}. Running heuristic fallback.")
 
-    # Heuristic fallback - scan text for keywords
     q_lower = question.lower()
     for c in contexts:
-        # If question asks about standard terms, scan lines
         for line in c["text"].split("\n"):
-            # Simple keyword matching
             words = q_lower.replace("?", "").split()
             matching_words = [w for w in words if w in line.lower() and len(w) > 3]
             if len(matching_words) >= 2:
                 return f"[Extracted from context in {c['filename']}]: {line.strip()}\n\n(Local search match: '{line.strip()}')"
 
-    # Default mock fallback summary
-    return f"Based on the processed documents (including {contexts[0]['filename']}), the document mentions details matching your query. (API offline, summary matches: '{question}')."
+    return f"No precise answer could be extracted from the selected documents for: '{question}'."

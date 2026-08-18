@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
@@ -15,7 +15,7 @@ class Bookmark(Base):
     name = Column(String, nullable=False)
     query_text = Column(String, nullable=False)
     filters = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Relationships
     user = relationship("User", backref="bookmarks")

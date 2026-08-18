@@ -127,68 +127,23 @@ def parse_facets(query: str) -> tuple[str, dict]:
 
 def expand_query(query: str) -> list[str]:
     """
-    Roadmap 1.4: Query expansion using LLM to generate paraphrases.
-    Returns [original, paraphrase1, paraphrase2] (max 3 variants).
-    Results are cached in Redis for 1 hour.
-    Falls back gracefully if LLM/Redis unavailable.
+    Deterministic query expansion using the local synonym dictionary.
+    Returns [original, expanded_variants...] without requiring Gemini.
     """
-    import hashlib
-
-    # Only expand non-trivial queries (> 3 words is overkill; expand all)
     if len(query.strip()) < 3:
         return [query]
-
-    cache_key = f"qex:{hashlib.md5(query.encode()).hexdigest()[:12]}"
-
-    # Try cache first
     try:
-        import redis
-        r = redis.Redis(
-            host=settings.REDIS_HOST, port=settings.REDIS_PORT,
-            password=settings.REDIS_PASSWORD, decode_responses=True,
-            socket_connect_timeout=1
-        )
-        cached = r.get(cache_key)
-        if cached:
-            return json.loads(cached)
-    except Exception:
-        r = None
-
-    try:
-        import google.generativeai as genai
-        if not settings.GEMINI_API_KEY:
-            return [query]
-
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-1.5-flash")  # fast model for expansion
-        prompt = (
-            f"Generate 2 alternative phrasings for this search query that mean the same thing.\n"
-            f"Original query: {query}\n"
-            f"Return ONLY a JSON array of strings, no explanation: [\"phrase1\", \"phrase2\"]"
-        )
-        resp = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(temperature=0.3, max_output_tokens=128),
-        )
-        import re as _re
-        arr_match = _re.search(r'\[.*?\]', resp.text, _re.DOTALL)
-        if arr_match:
-            paraphrases = json.loads(arr_match.group())[:2]
-            result = [query] + [p for p in paraphrases if p and p != query]
-        else:
-            result = [query]
-
-        # Cache for 1 hour
-        try:
-            if r:
-                r.set(cache_key, json.dumps(result), ex=3600)
-        except Exception:
-            pass
-
-        return result
-
+        from app.services.local_engine import LocalTfidfSearch
+        expanded = LocalTfidfSearch.expand_query_with_synonyms(query)
+        variants = [query]
+        if expanded and expanded != query:
+            variants.append(expanded)
+        for alt in expanded.split():
+            if alt not in variants and alt != query:
+                variants.append(alt)
+        return variants[:3]
     except Exception as e:
-        logger.debug(f"Query expansion failed (non-critical): {e}")
+        logger.debug(f"Local query expansion failed (non-critical): {e}")
         return [query]
 
 def generate_snippet(text: str, query: str) -> str:

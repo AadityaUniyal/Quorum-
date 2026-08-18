@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { api, SearchResultItem } from '@/lib/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
@@ -23,8 +23,7 @@ import {
   Bookmark,
   Download,
   Trash2,
-  BookmarkCheck,
-  Plus
+  BookmarkCheck
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -125,7 +124,6 @@ export default function SearchPage() {
     if (bm.filters?.minScore !== undefined) setMinScore(bm.filters.minScore);
     setIsBookmarksOpen(false);
     setHasSearched(true);
-    setTimeout(() => refetch(), 50);
   };
 
   const handleExportResults = async (format: 'csv' | 'pdf') => {
@@ -186,6 +184,11 @@ export default function SearchPage() {
     enabled: false, // Only trigger manually
   });
 
+  useEffect(() => {
+    if (!hasSearched || !query.trim()) return;
+    refetch();
+  }, [hasSearched, query, category, searchMode, expandActive, minScore, refetch]);
+
   const handleInputChange = async (val: string) => {
     setQuery(val);
     if (val.trim().length > 1) {
@@ -206,9 +209,7 @@ export default function SearchPage() {
     setSuggestions([]);
     setShowSuggestions(false);
     setHasSearched(true);
-    setTimeout(() => {
-      refetch();
-    }, 50);
+    refetch();
   };
 
   const handleSearchSubmit = async (e: React.FormEvent) => {
@@ -257,7 +258,10 @@ export default function SearchPage() {
       // Add a placeholder message for the assistant's response
       setChatHistory((prev) => [...prev, { role: 'assistant', content: '' }]);
 
-      const history = chatHistory.map(m => ({ role: m.role, content: m.content }));
+      const history = [...chatHistory, { role: 'user', content: userMessage }].map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
       const response = await api.fetchRagStream(selectedDocIds, userMessage, undefined, history);
       
       if (!response.body) {
@@ -312,7 +316,7 @@ export default function SearchPage() {
                   return copy;
                 });
               }
-            } catch (err) {
+            } catch {
               // Ignore partial JSON line errors
             }
           }
@@ -577,7 +581,6 @@ export default function SearchPage() {
                         type="button"
                         onClick={() => {
                           setSearchMode(mode.value as typeof searchMode);
-                          setTimeout(() => refetch(), 50);
                         }}
                         className={clsx(
                           "px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-wider font-mono cursor-pointer transition-all",
@@ -693,7 +696,6 @@ export default function SearchPage() {
                       key={cat.value}
                       onClick={() => {
                         setCategory(cat.value);
-                        setTimeout(() => refetch(), 50);
                       }}
                       className={clsx(
                         "px-3 py-1 rounded-lg text-xs transition-all duration-200 border cursor-pointer",
@@ -723,7 +725,7 @@ export default function SearchPage() {
                     <label className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Category Type</label>
                     <select
                       value={category}
-                      onChange={(e) => { setCategory(e.target.value); setTimeout(() => refetch(), 50); }}
+                      onChange={(e) => { setCategory(e.target.value); }}
                       className="w-full bg-[#111] border border-white/6 rounded-xl px-3 py-2 text-xs text-neutral-300 focus:outline-none"
                     >
                       <option value="">All Categories</option>
@@ -771,7 +773,7 @@ export default function SearchPage() {
                         ? item.score * 100 
                         : (item.consensus_score !== null ? item.consensus_score * 100 : 100);
 
-                      // Calculate mock search statistics
+                      // Derive display scores from the returned result confidence.
                       const cosineScore = (itemScore / 100).toFixed(2);
                       const ftsScore = (itemScore / 100).toFixed(2);
 

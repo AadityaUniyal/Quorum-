@@ -1,6 +1,6 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
@@ -46,8 +46,8 @@ class Document(Base):
     assigned_to_id = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     due_date = Column(DateTime, nullable=True)
     approval_stage = Column(String, default="OPERATOR_REVIEW", nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
     uploader = relationship("User", backref="uploaded_documents", foreign_keys=[uploaded_by])

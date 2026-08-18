@@ -42,8 +42,8 @@ def run_reconciler_agent(
             f"(critic={critic_score:.2f}, auditor={auditor_score:.2f}, gap={gap:.2f})"
         )
 
-        # Try Gemini reconciliation first
-        if settings.GEMINI_API_KEY:
+        # Try Gemini reconciliation only when explicitly preferred.
+        if settings.LLM_PREFERRED_PROVIDER == "gemini" and settings.GEMINI_API_KEY:
             try:
                 result = _call_gemini_reconciler(
                     ocr_text, field_key, extracted_fields[field_key],

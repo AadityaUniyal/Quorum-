@@ -6,6 +6,8 @@ FastAPI test client, and authenticated user fixtures.
 """
 
 import os
+import tempfile
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -21,6 +23,13 @@ os.environ["GEMINI_API_KEY"] = ""
 os.environ["RABBITMQ_HOST"] = "localhost"
 os.environ["REDIS_HOST"] = "localhost"
 os.environ["DEBUG"] = "true"
+
+TEST_TEMP_DIR = str(Path(__file__).resolve().parents[2] / ".tmp" / "pytest")
+Path(TEST_TEMP_DIR).mkdir(parents=True, exist_ok=True)
+os.environ["TMPDIR"] = TEST_TEMP_DIR
+os.environ["TEMP"] = TEST_TEMP_DIR
+os.environ["TMP"] = TEST_TEMP_DIR
+tempfile.tempdir = TEST_TEMP_DIR
 
 # Import using the shim package to ensure a single module namespace
 import app.database as app_db

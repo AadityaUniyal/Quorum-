@@ -1,6 +1,6 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, Column, DateTime, Enum, String
 from sqlalchemy.orm import relationship
@@ -23,7 +23,7 @@ class User(Base):
     full_name = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.VIEWER, nullable=False)
     profile = relationship('UserProfile', back_populates='user', uselist=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # 2FA / TOTP fields (Roadmap 1.2)
     totp_secret = Column(String, nullable=True)       # base32 TOTP secret

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
@@ -15,7 +15,7 @@ class AuditLog(Base):
     user_id = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     action = Column(String, nullable=False)  # e.g., "UPLOAD_DOCUMENT", "FIELD_CORRECTED", "STATUS_CHANGED"
     details = Column(JSON, nullable=True)    # For before/after diffs and event contexts
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     document = relationship("Document")

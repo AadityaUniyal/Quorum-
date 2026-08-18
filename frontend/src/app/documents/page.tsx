@@ -19,9 +19,6 @@ import {
   Eye, 
   Loader2,
   X,
-  Clock,
-  Sparkles,
-  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -80,7 +77,7 @@ export default function DocumentsPage() {
             queryClient.invalidateQueries({ queryKey: ['documentDetails', selectedDocId] });
             es?.close();
           }
-        } catch (e) {
+        } catch {
           // parse error
         }
       };
@@ -88,8 +85,8 @@ export default function DocumentsPage() {
       es.onerror = () => {
         es?.close();
       };
-    } catch (err) {
-      console.error("SSE connection failed:", err);
+    } catch {
+      console.error("SSE connection failed");
     }
 
     return () => {

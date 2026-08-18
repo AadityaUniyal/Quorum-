@@ -67,6 +67,8 @@ CLAUDE.md
 
 # Test outputs
 locust_output_*
+.tmp/
+*.xlsx
 
 # Docker
 *.log

@@ -28,7 +28,7 @@ export default function AdminPage() {
     try {
       const data = await api.get<User[]>('/admin/users');
       setUsers(data);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
@@ -40,7 +40,7 @@ export default function AdminPage() {
     try {
       const data = await api.get<LogResponse>('/admin/logs');
       setLogs(data.logs);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load logs');
     } finally {
       setLoading(false);
@@ -53,7 +53,7 @@ export default function AdminPage() {
       await api.delete(`/admin/users/${userId}`);
       toast.success('User deleted');
       fetchUsers();
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete user');
     }
   };

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, Float, Integer, String, Text
 
@@ -13,7 +13,7 @@ class SearchLog(Base):
     query_text = Column(String, nullable=False, index=True)
     results_count = Column(Integer, default=0)
     latency_ms = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class CrawledPage(Base):
     __tablename__ = "crawled_pages"
@@ -24,7 +24,11 @@ class CrawledPage(Base):
     page_content = Column(Text, nullable=True)
     page_hash = Column(String(64), nullable=True)
     pagerank = Column(Float, default=1.0, nullable=False)
-    last_crawled_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_crawled_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
 class PageLink(Base):
     __tablename__ = "page_links"

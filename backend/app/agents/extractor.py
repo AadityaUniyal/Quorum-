@@ -3,6 +3,7 @@ import logging
 import re
 from typing import Any
 
+from app.config import settings
 from app.models.document import DocumentCategory
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,26 @@ async def call_gemini_extractor(ocr_text: str, category: DocumentCategory) -> di
     if clean_text.endswith("```"):
         clean_text = clean_text[:-3]
     return json.loads(clean_text.strip())
+
+
+def run_extraction_pipeline(ocr_text: str, category: DocumentCategory) -> dict[str, Any]:
+    """
+    Deterministic-first extraction pipeline.
+    Uses local parsing by default and only calls Gemini when explicitly preferred.
+    """
+    local_result = run_extractor_agent(ocr_text, category)
+
+    if settings.LLM_PREFERRED_PROVIDER != "gemini":
+        return local_result
+
+    try:
+        import asyncio
+
+        gemini_result = asyncio.run(call_gemini_extractor(ocr_text, category))
+        return gemini_result or local_result
+    except Exception as exc:
+        logger.warning(f"Gemini extractor failed, using local extraction: {exc}")
+        return local_result
 
 def run_heuristic_extractor(ocr_text: str, category: DocumentCategory) -> dict[str, Any]:
     """

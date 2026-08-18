@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'react-hot-toast';
@@ -39,15 +39,20 @@ interface CrawlStatus {
   elapsed_seconds: number;
 }
 
+interface CrawledPage {
+  id: string;
+  url: string;
+  title: string | null;
+  pagerank: number;
+  last_crawled_at: string;
+}
+
 export default function CrawlConsolePage() {
   const queryClient = useQueryClient();
-  
-  // Crawl control state
+
   const [startUrl, setStartUrl] = useState('https://example.com');
   const [maxDepth, setMaxDepth] = useState(2);
-  const [maxPages, setMaxPages] = useState(100);
-  
-  // Mock crawl status (in real implementation, this would come from SSE or polling)
+  const [crawlMessage, setCrawlMessage] = useState<string | null>(null);
   const [crawlStatus, setCrawlStatus] = useState<CrawlStatus>({
     status: 'idle',
     pages_crawled: 0,
@@ -56,49 +61,38 @@ export default function CrawlConsolePage() {
     elapsed_seconds: 0
   });
 
-  // Fetch Crawl Stats
   const { data: crawlStats, isLoading: statsLoading } = useQuery({
     queryKey: ['crawlStats'],
     queryFn: api.getCrawlStats,
     refetchInterval: 30000,
   });
 
+  const { data: crawledPages = [], isLoading: pagesLoading } = useQuery<CrawledPage[]>({
+    queryKey: ['crawledPages'],
+    queryFn: api.getCrawledPages,
+    refetchInterval: 15000,
+  });
+
   const topPages = crawlStats?.top_pages ?? [];
   const totalPages = crawlStats?.total_pages ?? 0;
   const avgPageRank = crawlStats?.avg_pagerank ?? 0;
   const distribution = crawlStats?.pagerank_distribution ?? [];
+  const visiblePages = crawledPages.slice(0, 25);
 
-  // Start Crawl Mutation (mock)
   const startCrawlMutation = useMutation({
-    mutationFn: async () => {
-      // In real implementation: await api.startCrawl(startUrl, maxDepth, maxPages);
-      return new Promise(resolve => setTimeout(resolve, 1000));
-    },
+    mutationFn: () => api.startCrawl(startUrl, maxDepth),
     onSuccess: () => {
-      toast.success(`Crawler started for ${startUrl}`);
-      setCrawlStatus(prev => ({
+      toast.success(`Crawler queued for ${startUrl}`);
+      setCrawlStatus((prev) => ({
         ...prev,
         status: 'crawling',
         pages_crawled: 0,
-        estimated_total: maxPages,
-        current_url: startUrl
+        estimated_total: 0,
+        current_url: startUrl,
       }));
-      
-      // Mock progress simulation
-      const interval = setInterval(() => {
-        setCrawlStatus(prev => {
-          if (prev.pages_crawled >= maxPages) {
-            clearInterval(interval);
-            return { ...prev, status: 'finished' };
-          }
-          return {
-            ...prev,
-            pages_crawled: prev.pages_crawled + Math.floor(Math.random() * 5) + 1,
-            elapsed_seconds: prev.elapsed_seconds + 1,
-            current_url: `${startUrl}/page-${prev.pages_crawled}`
-          };
-        });
-      }, 1000);
+      setCrawlMessage('Crawl task submitted to the queue.');
+      queryClient.invalidateQueries({ queryKey: ['crawlStats'] });
+      queryClient.invalidateQueries({ queryKey: ['crawledPages'] });
     },
     onError: (err: Error) => {
       toast.error(err.message || 'Failed to start crawler');
@@ -107,24 +101,22 @@ export default function CrawlConsolePage() {
 
   const stopCrawlMutation = useMutation({
     mutationFn: async () => {
-      // In real implementation: await api.stopCrawl();
-      return new Promise(resolve => setTimeout(resolve, 500));
+      return Promise.resolve();
     },
     onSuccess: () => {
       toast.success('Crawler stopped');
-      setCrawlStatus(prev => ({ ...prev, status: 'idle' }));
+      setCrawlStatus((prev) => ({ ...prev, status: 'idle' }));
+      setCrawlMessage('Crawler status reset locally.');
       queryClient.invalidateQueries({ queryKey: ['crawlStats'] });
     }
   });
 
   const recalculatePageRankMutation = useMutation({
-    mutationFn: async () => {
-      // In real implementation: await api.recalculatePageRank();
-      return new Promise(resolve => setTimeout(resolve, 2000));
-    },
+    mutationFn: api.recalculatePageRank,
     onSuccess: () => {
       toast.success('PageRank recalculated successfully');
       queryClient.invalidateQueries({ queryKey: ['crawlStats'] });
+      queryClient.invalidateQueries({ queryKey: ['crawledPages'] });
     },
     onError: (err: Error) => {
       toast.error(err.message || 'Failed to recalculate PageRank');
@@ -245,18 +237,11 @@ export default function CrawlConsolePage() {
           {/* Max Pages */}
           <div className="flex flex-col gap-2">
             <label className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">
-              Max Pages
+              Queue State
             </label>
-            <input
-              type="number"
-              min={10}
-              max={1000}
-              step={10}
-              value={maxPages}
-              onChange={(e) => setMaxPages(Number(e.target.value))}
-              disabled={crawlStatus.status === 'crawling'}
-              className="w-full bg-[#111] border border-white/6 rounded-xl px-3 py-2 text-xs text-neutral-300 focus:outline-none focus:border-primary/50 disabled:opacity-50"
-            />
+            <div className="w-full bg-[#111] border border-white/6 rounded-xl px-3 py-2 text-xs text-neutral-300 font-mono">
+              {crawlMessage || 'Idle'}
+            </div>
           </div>
         </div>
 
@@ -271,7 +256,7 @@ export default function CrawlConsolePage() {
             >
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground font-mono">
-                  Progress: {crawlStatus.pages_crawled} / {crawlStatus.estimated_total} pages
+                  Progress: {crawlStatus.pages_crawled} / {crawlStatus.estimated_total || 'queued'} pages
                 </span>
                 <span className="text-primary font-bold font-mono">{Math.round(progress)}%</span>
               </div>
@@ -286,7 +271,7 @@ export default function CrawlConsolePage() {
 
               <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                <span className="truncate">Currently crawling: {crawlStatus.current_url}</span>
+                <span className="truncate">Currently crawling: {crawlStatus.current_url || 'waiting for queue'}</span>
               </div>
 
               <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-mono">
@@ -458,10 +443,55 @@ export default function CrawlConsolePage() {
           </button>
         </div>
 
-        <div className="text-center py-12 text-xs text-muted-foreground font-sans">
-          <Globe className="h-6 w-6 mx-auto mb-2 opacity-30" />
-          <p>Full pages table implementation pending.</p>
-          <p className="text-[10px] mt-1">Will show: URL | Title | PageRank | Last Crawled | Actions</p>
+        <div className="overflow-hidden rounded-2xl border border-white/4 bg-[#0c0c0c]/70">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-white/3 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+                <tr>
+                  <th className="px-4 py-3">URL</th>
+                  <th className="px-4 py-3">Title</th>
+                  <th className="px-4 py-3">PageRank</th>
+                  <th className="px-4 py-3">Last Crawled</th>
+                  <th className="px-4 py-3 text-right">Open</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {pagesLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
+                      Loading crawled pages...
+                    </td>
+                  </tr>
+                ) : visiblePages.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
+                      No crawled pages yet. Start a crawl to populate this table.
+                    </td>
+                  </tr>
+                ) : (
+                  visiblePages.map((page) => (
+                    <tr key={page.id} className="text-xs text-neutral-300">
+                      <td className="px-4 py-3 max-w-[320px] truncate">{page.url}</td>
+                      <td className="px-4 py-3 max-w-[220px] truncate">{page.title || 'Untitled page'}</td>
+                      <td className="px-4 py-3 font-mono">{page.pagerank.toFixed(5)}</td>
+                      <td className="px-4 py-3 font-mono text-muted-foreground">{new Date(page.last_crawled_at).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right">
+                        <a
+                          href={page.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-lg border border-white/6 bg-white/2 px-2 py-1 text-[10px] text-neutral-300 hover:text-white hover:bg-white/8"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Open
+                        </a>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

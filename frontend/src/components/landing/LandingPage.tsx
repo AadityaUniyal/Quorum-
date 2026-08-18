@@ -7,20 +7,18 @@ import { useRouter } from 'next/navigation';
 import CountUp from 'react-countup';
 import zxcvbn from 'zxcvbn';
 import clsx from 'clsx';
-import { 
+import {
   Sparkles, 
   Loader2, 
   ArrowRight, 
   Bot, 
   Cpu, 
   Search, 
-  ShieldCheck, 
   Database,
   FileText,
   FileCheck,
   Activity,
   ArrowUpRight,
-  MousePointer,
   Play
 } from 'lucide-react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
