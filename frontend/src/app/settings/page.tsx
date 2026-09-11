@@ -12,11 +12,13 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useUIStore } from '@/stores/ui';
 
 type TabId = 'profile' | 'appearance' | 'notifications' | 'apikeys' | 'team' | 'auditlog' | 'synonyms';
 
 export default function SettingsPage() {
   const { user, setUser } = useAuthStore();
+  const { setSidebarOpen } = useUIStore();
   const [activeTab, setActiveTab] = useState<TabId>('profile');
 
   // Synonyms management state
@@ -157,6 +159,30 @@ export default function SettingsPage() {
     setEmail(user?.email || '');
   }, [user]);
 
+  useEffect(() => {
+    const storedSidebar = localStorage.getItem('settings_sidebar_collapsed');
+    if (storedSidebar !== null) {
+      setCollapseSidebar(storedSidebar === 'true');
+      setSidebarOpen(storedSidebar !== 'true');
+    }
+    const storedFont = localStorage.getItem('settings_font_size');
+    if (storedFont === 'sm' || storedFont === 'md' || storedFont === 'lg') {
+      setFontSize(storedFont);
+    }
+  }, [setSidebarOpen]);
+
+  useEffect(() => {
+    localStorage.setItem('settings_sidebar_collapsed', String(collapseSidebar));
+    setSidebarOpen(!collapseSidebar);
+  }, [collapseSidebar, setSidebarOpen]);
+
+  useEffect(() => {
+    localStorage.setItem('settings_font_size', fontSize);
+    const scale = fontSize === 'sm' ? '15px' : fontSize === 'lg' ? '17px' : '16px';
+    document.documentElement.style.fontSize = scale;
+    document.documentElement.setAttribute('data-font-size', fontSize);
+  }, [fontSize]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,7 +242,7 @@ export default function SettingsPage() {
 
       <div className="flex flex-col md:flex-row gap-8 items-start">
         {/* Sidebar nav */}
-        <div className="w-full md:w-60 border border-white/4 bg-[#0c0c0c]/80 rounded-2xl p-2 flex flex-col gap-1 shrink-0">
+        <div className="w-full md:w-60 glass-card bg-black/40 border border-white/8 rounded-2xl p-2 flex flex-col gap-1 shrink-0 backdrop-blur-xl">
           {TABS.map(tab => {
             if (tab.adminOnly && user?.role !== 'ADMIN') return null;
             const Icon = tab.icon;
@@ -227,8 +253,8 @@ export default function SettingsPage() {
                 className={clsx(
                   'w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-semibold cursor-pointer border transition-all duration-200',
                   active
-                    ? 'bg-primary/10 border-primary/20 text-primary'
-                    : 'bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-white/2'
+                    ? 'bg-primary/10 border-primary/20 text-primary shadow-sm shadow-primary/5'
+                    : 'bg-transparent border-transparent text-muted-foreground hover:text-foreground hover:bg-white/5'
                 )}>
                 <Icon className="h-4 w-4 shrink-0" /><span>{tab.label}</span>
               </button>
@@ -237,7 +263,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Content card */}
-        <div className="flex-1 w-full border border-white/4 bg-[#0c0c0c]/80 rounded-2xl min-h-[480px] p-6 md:p-8">
+        <div className="flex-1 w-full glass-card bg-black/40 border border-white/8 rounded-2xl min-h-[480px] p-6 md:p-8 backdrop-blur-xl">
           <AnimatePresence mode="wait">
 
             {/* ── PROFILE ── */}
@@ -254,7 +280,7 @@ export default function SettingsPage() {
                   <div className="flex flex-col items-center gap-2 shrink-0">
                     <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Avatar</span>
                     <div
-                      className="relative w-24 h-24 rounded-full border border-white/8 bg-neutral-900/60 flex items-center justify-center overflow-hidden group cursor-pointer hover:border-primary/50 transition-all"
+                      className="relative w-24 h-24 rounded-full border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden group cursor-pointer hover:border-primary/50 transition-all shadow-inner"
                       onClick={() => {
                         const inp = document.createElement('input');
                         inp.type = 'file'; inp.accept = 'image/*';
@@ -288,17 +314,17 @@ export default function SettingsPage() {
                       <div key={f.label} className="flex flex-col gap-1.5">
                         <label className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">{f.label}</label>
                         <input type={f.type} value={f.value} onChange={e => f.set(e.target.value)}
-                          className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-colors" />
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-colors" />
                       </div>
                     ))}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">System Role</label>
-                      <div className="w-full bg-neutral-950 border border-neutral-900 text-muted-foreground rounded-xl px-4 py-2.5 text-xs font-semibold select-none">
+                      <div className="w-full bg-white/5 border border-white/10 text-muted-foreground rounded-xl px-4 py-2.5 text-xs font-semibold select-none">
                         {user?.role || 'OPERATOR'}
                       </div>
                     </div>
                     <button type="submit" disabled={updateProfileMutation.isPending}
-                      className="self-start px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2">
+                      className="self-start px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-primary/15">
                       {updateProfileMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                       Save Profile
                     </button>
@@ -322,11 +348,11 @@ export default function SettingsPage() {
                       <div key={f.label} className="flex flex-col gap-1.5">
                         <label className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">{f.label}</label>
                         <input type="password" value={f.value} onChange={e => f.set(e.target.value)}
-                          className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-colors" />
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-colors" />
                       </div>
                     ))}
                     <button type="submit" disabled={changePasswordMutation.isPending}
-                      className="self-start px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2">
+                      className="self-start px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2">
                       {changePasswordMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                       Update Password
                     </button>
@@ -376,8 +402,8 @@ export default function SettingsPage() {
                           toast.error((err as Error).message || 'Invalid TOTP code');
                         }
                       }}
-                      className="p-4 rounded-xl border border-white/4 bg-neutral-950 flex flex-col sm:flex-row items-center gap-5">
-                      <div className="p-2 bg-white rounded-lg shrink-0">
+                      className="p-4 rounded-xl border border-white/8 bg-white/5 flex flex-col sm:flex-row items-center gap-5">
+                      <div className="p-2 bg-white rounded-lg shrink-0 shadow-lg shadow-black/20">
                         {/* Real QR code from backend */}
                         {qrCodeData.qr_code_image ? (
                           <img src={qrCodeData.qr_code_image} alt="2FA QR Code" className="w-24 h-24" />
@@ -394,8 +420,8 @@ export default function SettingsPage() {
                         </div>
                         <div className="flex gap-2">
                           <input type="text" maxLength={6} placeholder="000000" value={twoFACode} onChange={e => setTwoFACode(e.target.value)}
-                            className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-1.5 text-xs font-mono text-center tracking-widest w-28 focus:outline-none" />
-                          <button type="submit" className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold cursor-pointer">Verify & Enable</button>
+                            className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-mono text-center tracking-widest w-28 focus:outline-none" />
+                          <button type="submit" className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-lg shadow-emerald-500/10">Verify & Enable</button>
                         </div>
                       </div>
                     </motion.form>
@@ -424,13 +450,13 @@ export default function SettingsPage() {
                     ))}
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-4 border border-white/4 bg-[#0c0c0c] rounded-xl gap-4 select-none">
+                  <div className="flex items-center justify-between p-4 border border-white/8 bg-white/5 rounded-xl gap-4 select-none">
                   <div>
                     <span className="text-xs font-bold text-foreground">Collapsed Sidebar Default</span>
                     <p className="text-[10px] text-muted-foreground mt-0.5">Start with the sidebar collapsed on every page load.</p>
                   </div>
                   <button type="button" onClick={() => { setCollapseSidebar(v => !v); toast.success('Sidebar preference saved'); }}
-                    className={clsx('relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors', collapseSidebar ? 'bg-primary' : 'bg-neutral-800')}>
+                    className={clsx('relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors', collapseSidebar ? 'bg-primary' : 'bg-white/10')}>
                     <span className={clsx('pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition', collapseSidebar ? 'translate-x-5' : 'translate-x-0')} />
                   </button>
                 </div>
@@ -440,7 +466,7 @@ export default function SettingsPage() {
                     {(['sm', 'md', 'lg'] as const).map(s => (
                       <button key={s} onClick={() => { setFontSize(s); toast.success(`Font scale set to ${s}`); }}
                         className={clsx('px-4 py-2 border rounded-xl text-xs font-semibold cursor-pointer uppercase transition-all',
-                          fontSize === s ? 'bg-neutral-800 border-neutral-700 text-foreground' : 'bg-neutral-900 border-neutral-800 text-muted-foreground hover:text-foreground')}>
+                          fontSize === s ? 'bg-white/10 border-white/15 text-foreground' : 'bg-white/5 border-white/10 text-muted-foreground hover:text-foreground')}>
                         {s}
                       </button>
                     ))}
@@ -463,7 +489,7 @@ export default function SettingsPage() {
                     { key: 'complianceFlag', label: 'Compliance Issue Flagged', desc: 'Alert when compliance score drops below tolerance threshold' },
                     { key: 'approvalRequest', label: 'Approval Request', desc: 'Notify when manager approval is requested on a document' },
                   ].map(n => (
-                    <div key={n.key} className="flex items-center justify-between p-4 border border-white/4 bg-[#0c0c0c] rounded-xl gap-4">
+                    <div key={n.key} className="flex items-center justify-between p-4 border border-white/8 bg-white/5 rounded-xl gap-4">
                       <div className="flex flex-col gap-0.5 flex-1">
                         <span className="text-xs font-bold text-foreground">{n.label}</span>
                         <p className="text-[10px] text-muted-foreground">{n.desc}</p>
@@ -492,7 +518,7 @@ export default function SettingsPage() {
                   <p className="text-[10px] text-muted-foreground mt-0.5">Generate tokens for third-party integrations using the X-API-Key header.</p>
                 </div>
 
-                <div className="border border-white/4 bg-[#090909] rounded-xl overflow-hidden">
+                <div className="border border-white/8 bg-black/30 rounded-xl overflow-hidden">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-white/4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground font-mono">
@@ -527,7 +553,7 @@ export default function SettingsPage() {
                 </div>
 
                 {generatedKey && (
-                  <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex flex-col gap-2">
+                    <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/8 flex flex-col gap-2">
                     <span className="text-[9px] font-bold text-emerald-400 uppercase">New Key — copy now, shown only once</span>
                     <div className="flex gap-2 items-center bg-black/40 border border-white/4 rounded-lg p-2 px-3">
                       <span className="text-[10px] font-mono text-neutral-300 break-all flex-1">{generatedKey}</span>
@@ -543,10 +569,10 @@ export default function SettingsPage() {
                   <div className="flex flex-col gap-1.5 flex-1">
                     <label className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Key Label</label>
                     <input type="text" placeholder="e.g. ERP Integration" value={newKeyName} onChange={e => setNewKeyName(e.target.value)}
-                      className="bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50" />
+                      className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50" />
                   </div>
                   <button type="submit" disabled={generateKeyMutation.isPending}
-                    className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer h-9 disabled:opacity-50">
+                    className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer h-9 disabled:opacity-50 shadow-lg shadow-primary/15">
                     {generateKeyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                     Generate
                   </button>

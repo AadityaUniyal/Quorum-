@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.routes.auth import RoleChecker
+from app.services.auth_access import filter_documents_for_user
 from app.services.cache import cache
 from app.services.export import export_to_csv, export_to_pdf
 from app.services.vector_store import query_rag_knowledge, search_vector_store
@@ -55,7 +56,7 @@ def get_autocomplete_suggestions(
     if not results:
         # Fall back to distinct categories or matching filenames
         from app.models.document import Document
-        filenames = db.query(Document.filename).filter(
+        filenames = filter_documents_for_user(db.query(Document), current_user).filter(
             Document.filename.ilike(f"%{prefix}%")
         ).limit(5).all()
         results = list(set([f.filename for f in filenames]))

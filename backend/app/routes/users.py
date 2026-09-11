@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.security import get_password_hash, validate_password_strength
 from app.database import get_db
 from app.models.auth import User
 from app.routes.auth import get_current_user
@@ -44,9 +45,12 @@ def change_password(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    from app.routes.auth import get_password_hash
-    if len(new_password) < 8:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password too short")
+    is_valid, err_msg = validate_password_strength(new_password)
+    if not is_valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=err_msg)
+
     current_user.hashed_password = get_password_hash(new_password)
+    # Invalidate all existing token families on password change
+    current_user.token_version = getattr(current_user, "token_version", 1) + 1
     db.commit()
-    return {"detail": "Password updated"}
+    return {"detail": "Password updated successfully. All active sessions invalidated."}

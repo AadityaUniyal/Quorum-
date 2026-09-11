@@ -12,23 +12,27 @@ class UserCreate(BaseModel):
     full_name: str
     role: UserRole | None = UserRole.VIEWER
 
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
 
 class UserResponse(BaseModel):
     id: UUID
     email: EmailStr
     full_name: str
     role: UserRole
-    created_at: datetime
+    created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class Token(BaseModel):
     access_token: str
     refresh_token: str | None = None
     token_type: str
+
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
@@ -52,4 +56,3 @@ class ChangePassword(BaseModel):
 
 class UserRoleUpdate(BaseModel):
     role: UserRole
-

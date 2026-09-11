@@ -44,7 +44,8 @@ DocIntel AI implements the following security measures:
 - **Password Security:** Bcrypt hashing with password strength enforcement (minimum length, complexity requirements).
 - **Session Protection:** httpOnly, secure cookies to prevent XSS-based token theft.
 - **Rate Limiting:** Redis-backed rate limiting on authentication and API endpoints.
-- **Authorization:** Role-Based Access Control (RBAC) with granular permission checks.
+- **Authorization & Multi-Tenancy:** Role-Based Access Control (RBAC) with strict user/organization boundary checks (`filter_documents_for_user`, `require_document_read`, `require_document_write`).
+- **SSRF Protection:** IP loopback, private subnet, and metadata URL filtering (`validate_safe_url`) on webhooks and crawler endpoints.
 
 ## Responsible Disclosure
 

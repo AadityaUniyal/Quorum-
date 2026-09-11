@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from email.header import decode_header
 
 from app.database import SessionLocal
+from app.config import settings
 from app.models.document import Document, DocumentCategory, DocumentStatus
 
 logger = logging.getLogger(__name__)
@@ -25,8 +26,11 @@ def check_mailbox_and_ingest():
     imap_pass = os.getenv("IMAP_PASSWORD")
 
     if not imap_server or not imap_user or not imap_pass:
-        logger.info("IMAP credentials not configured. Running mock email ingestion.")
-        _run_mock_ingestion()
+        if settings.ENVIRONMENT.lower() in {"development", "test"}:
+            logger.info("IMAP credentials not configured. Running mock email ingestion.")
+            _run_mock_ingestion()
+        else:
+            logger.warning("IMAP credentials not configured. Skipping email ingestion in production.")
         return
 
     try:

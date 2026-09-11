@@ -42,6 +42,7 @@ export default function DocumentsPage() {
     queryKey: ['documents', selectedCategory, selectedStatus],
     queryFn: () => api.listDocuments(selectedCategory || undefined, selectedStatus || undefined),
     refetchInterval: 10000,
+    refetchIntervalInBackground: true,
   });
 
   // Real-time SSE Document Processing Pipeline
@@ -127,6 +128,8 @@ export default function DocumentsPage() {
     queryKey: ['documentDetails', selectedDocId],
     queryFn: () => api.getDocument(selectedDocId!),
     enabled: !!selectedDocId,
+    refetchInterval: selectedDocId ? 8000 : false,
+    refetchIntervalInBackground: true,
   });
 
   // Reprocess Mutation

@@ -66,7 +66,7 @@ export const Header: React.FC = () => {
   ];
 
   return (
-    <header className="h-16 border-b border-white/[0.04] bg-[#080808]/90 backdrop-blur-md px-6 flex items-center justify-between select-none relative z-30 w-full shrink-0">
+    <header className="h-16 border-b border-white/[0.06] bg-black/30 backdrop-blur-xl px-6 flex items-center justify-between select-none relative z-30 w-full shrink-0">
       {/* Left: Breadcrumbs */}
       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <span className="hover:text-foreground cursor-pointer transition-colors" onClick={() => router.push('/dashboard')}>
@@ -93,7 +93,7 @@ export const Header: React.FC = () => {
         {/* Search Command Palette Trigger */}
         <button
           onClick={() => setCommandPaletteOpen(true)}
-          className="flex items-center gap-2 bg-[#111] hover:bg-[#161b22] border border-white/[0.04] hover:border-white/[0.08] text-muted-foreground hover:text-foreground transition-all duration-200 px-3.5 py-1.5 rounded-xl cursor-pointer shadow-inner shrink-0"
+          className="flex items-center gap-2 bg-white/5 hover:bg-white/8 border border-white/10 hover:border-white/15 text-muted-foreground hover:text-foreground transition-all duration-200 px-3.5 py-1.5 rounded-xl cursor-pointer shadow-inner shrink-0"
         >
           <Search className="h-3.5 w-3.5 text-muted-foreground/80" />
           <span className="text-[10px] font-mono leading-none tracking-wider uppercase">Search / Cmd+K</span>
@@ -102,7 +102,7 @@ export const Header: React.FC = () => {
         {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl border border-white/[0.04] bg-[#111]/80 hover:bg-[#161b22] text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+          className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
         >
           {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -119,7 +119,7 @@ export const Header: React.FC = () => {
               "p-2 rounded-xl border transition-colors cursor-pointer relative",
               showNotifications 
                 ? "bg-primary/10 border-primary/20 text-primary" 
-                : "border-white/[0.04] bg-[#111]/80 hover:bg-[#161b22] text-muted-foreground hover:text-foreground"
+                : "border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground"
             )}
           >
             <Bell className="h-4 w-4" />
@@ -139,7 +139,7 @@ export const Header: React.FC = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.98 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 mt-2.5 w-72 glass-card bg-[#0b0b0b] border border-white/[0.08] shadow-2xl rounded-2xl overflow-hidden z-50 p-1 flex flex-col gap-0.5"
+                  className="absolute right-0 mt-2.5 w-72 glass-card bg-black/60 border border-white/10 shadow-2xl rounded-2xl overflow-hidden z-50 p-1 flex flex-col gap-0.5"
                 >
                   <div className="p-3 border-b border-white/[0.04] bg-white/[0.01] flex items-center justify-between text-xs select-none">
                     <span className="font-bold text-foreground font-sans">Active Notifications</span>
@@ -178,7 +178,7 @@ export const Header: React.FC = () => {
               setShowProfileMenu(!showProfileMenu);
               setShowNotifications(false);
             }}
-            className="h-8 w-8 rounded-xl bg-neutral-900 border border-white/[0.06] hover:border-white/[0.12] flex items-center justify-center text-xs font-bold text-primary font-mono cursor-pointer transition-all duration-200 select-none shrink-0"
+            className="h-8 w-8 rounded-xl bg-white/6 border border-white/10 hover:border-white/20 flex items-center justify-center text-xs font-bold text-primary font-mono cursor-pointer transition-all duration-200 select-none shrink-0"
           >
             {user?.full_name ? user.full_name[0].toUpperCase() : 'U'}
           </button>
@@ -192,7 +192,7 @@ export const Header: React.FC = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.98 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 mt-2.5 w-52 glass-card bg-[#0b0b0b] border border-white/[0.08] shadow-2xl rounded-2xl overflow-hidden z-50 p-1 flex flex-col gap-0.5"
+                  className="absolute right-0 mt-2.5 w-52 glass-card bg-black/60 border border-white/10 shadow-2xl rounded-2xl overflow-hidden z-50 p-1 flex flex-col gap-0.5"
                 >
                   {/* User profile brief card */}
                   <div className="p-3 border-b border-white/[0.04] bg-white/[0.01] flex items-center gap-2.5">

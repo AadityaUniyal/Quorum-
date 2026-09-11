@@ -1,4 +1,5 @@
 import hashlib
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -11,7 +12,7 @@ from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.routes.auth import RoleChecker
 from app.schemas.document import DocumentCreateSchema, DocumentResponse, DocumentSimpleResponse
-from app.services.cache import cache
+from app.services.auth_access import filter_documents_for_user, require_document_read, require_document_write
 from app.services.queue import publish_document_event
 from app.services.storage import delete_stored_file, save_uploaded_file
 
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/api/documents", tags=["documents"])
 # Role permissions
 admin_or_operator = RoleChecker([UserRole.ADMIN, UserRole.OPERATOR])
 any_user = RoleChecker([UserRole.ADMIN, UserRole.OPERATOR, UserRole.REVIEWER, UserRole.VIEWER])
+
 
 # Upload file endpoint
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
@@ -43,8 +45,15 @@ async def upload_document(
         composite_string = f"{file_content_hash}:{storage_data['file_type']}:{storage_data['size_bytes']}"
         content_hash = hashlib.sha256(composite_string.encode("utf-8")).hexdigest()
 
-        # Check for duplicate upload
-        existing_doc = db.query(Document).filter(Document.content_hash == content_hash).first()
+        # Check for duplicate upload within user's organization / scope
+        dup_query = db.query(Document).filter(
+            Document.content_hash == content_hash,
+            Document.deleted_at.is_(None)
+        )
+        if current_user.organization_id:
+            dup_query = dup_query.filter(Document.organization_id == current_user.organization_id)
+
+        existing_doc = dup_query.first()
         if existing_doc:
             # Clean up the duplicate file we just saved
             delete_stored_file(storage_data["file_path"])
@@ -68,9 +77,11 @@ async def upload_document(
             filename=storage_data["filename"],
             file_path=storage_data["file_path"],
             file_type=storage_data["file_type"],
+            size_bytes=storage_data.get("size_bytes"),
             status=DocumentStatus.INGESTED,
             category=DocumentCategory.UNKNOWN,
             uploaded_by=current_user.id,
+            organization_id=current_user.organization_id,
             content_hash=content_hash,
         )
         db.add(db_doc)
@@ -87,9 +98,20 @@ async def upload_document(
                 "file_type": db_doc.file_type,
                 "size_bytes": storage_data["size_bytes"],
                 "content_hash": content_hash,
+                "organization_id": str(current_user.organization_id) if current_user.organization_id else None,
             }
         )
         db.add(audit)
+
+        # Record Transactional Outbox Event atomically
+        from app.services.outbox_relay import record_outbox_event
+        record_outbox_event(
+            db=db,
+            event_type="document.uploaded",
+            document_id=db_doc.id,
+            organization_id=current_user.organization_id,
+            payload={"filename": db_doc.filename, "file_type": db_doc.file_type}
+        )
         db.commit()
 
         # Enqueue document processing event
@@ -107,6 +129,7 @@ async def upload_document(
             detail=f"Failed to record document upload: {str(e)}"
         ) from e
 
+
 # JSON document creation endpoint (no file upload)
 @router.post("/", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 def create_document_json(
@@ -115,7 +138,6 @@ def create_document_json(
     current_user: User = Depends(admin_or_operator),
 ):
     """Create a document from JSON payload without uploading a file.
-
     Stores content in the `ocr_text` field and leaves file_path empty.
     """
     new_doc = Document(
@@ -125,6 +147,7 @@ def create_document_json(
         status=DocumentStatus.INGESTED,
         category=DocumentCategory.UNKNOWN,
         uploaded_by=current_user.id,
+        organization_id=current_user.organization_id,
     )
     new_doc.ocr_text = doc.content
     db.add(new_doc)
@@ -132,8 +155,8 @@ def create_document_json(
     db.refresh(new_doc)
     return new_doc
 
-# List all documents
-@cache(ttl_seconds=300)
+
+# List all documents (Tenant-safe)
 @router.get("", response_model=list[DocumentSimpleResponse])
 def list_documents(
     category: DocumentCategory | None = None,
@@ -141,7 +164,7 @@ def list_documents(
     db: Session = Depends(get_db),
     current_user: User = Depends(any_user)
 ):
-    query = db.query(Document)
+    query = filter_documents_for_user(db.query(Document), current_user)
     if category:
         query = query.filter(Document.category == category)
     if status:
@@ -166,8 +189,8 @@ def list_documents(
 
     return results
 
-# Get single document details
-@cache(ttl_seconds=300)
+
+# Get single document details (Tenant-safe)
 @router.get("/{document_id}", response_model=DocumentResponse)
 def get_document(
     document_id: UUID,
@@ -175,11 +198,10 @@ def get_document(
     current_user: User = Depends(any_user)
 ):
     doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
-    return doc
+    return require_document_read(current_user, doc)
 
-# Reprocess document endpoint
+
+# Reprocess document endpoint (Tenant-safe)
 @router.post("/{document_id}/reprocess", response_model=DocumentResponse)
 def reprocess_document(
     document_id: UUID,
@@ -187,8 +209,7 @@ def reprocess_document(
     current_user: User = Depends(admin_or_operator)
 ):
     doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+    require_document_write(current_user, doc)
 
     doc.status = DocumentStatus.INGESTED
     db.commit()
@@ -207,7 +228,8 @@ def reprocess_document(
     publish_document_event("document.reprocess", doc.id)
     return doc
 
-# Delete document
+
+# Delete document (Tenant-safe with audit)
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(
     document_id: UUID,
@@ -215,13 +237,13 @@ def delete_document(
     current_user: User = Depends(admin_or_operator)
 ):
     doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+    require_document_write(current_user, doc)
 
-    # Delete local file
-    delete_stored_file(doc.file_path)
+    # Delete local file if present
+    if doc.file_path:
+        delete_stored_file(doc.file_path)
 
-    # Create audit trail record before deletion (set document_id to None in table after deletion cascade)
+    # Create audit trail record before deletion
     audit = AuditLog(
         user_id=current_user.id,
         action="DELETE_DOCUMENT",
@@ -371,8 +393,7 @@ def update_synonyms(data: dict[str, list[str]], current_user: User = Depends(adm
 @router.get("/{document_id}/probabilities")
 def get_document_probabilities(document_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(any_user)):
     doc = db.query(Document).filter(Document.id == str(document_id)).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found.")
+    require_document_read(current_user, doc)
 
     from app.services.local_engine import LocalNaiveBayesClassifier
     text = doc.ocr_text or ""
@@ -383,8 +404,7 @@ def get_document_probabilities(document_id: UUID, db: Session = Depends(get_db),
 @router.get("/{document_id}/audit-line-items")
 def get_document_audit_line_items(document_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(any_user)):
     doc = db.query(Document).filter(Document.id == str(document_id)).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found.")
+    require_document_read(current_user, doc)
 
     from app.services.local_engine import LocalLayoutParser, LocalTableReconstructor
     text = doc.ocr_text or ""
@@ -392,5 +412,3 @@ def get_document_audit_line_items(document_id: UUID, db: Session = Depends(get_d
     line_items = fields.get("line_items", [])
     audit_results = LocalTableReconstructor.audit_line_items(line_items)
     return {"line_items": line_items, "audit_results": audit_results}
-
-

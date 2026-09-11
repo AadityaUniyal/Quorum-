@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core.security_net import validate_safe_url
 from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.webhook import WebhookConfig
@@ -16,9 +17,11 @@ logger = logging.getLogger(__name__)
 # Only Admin can manage webhooks
 admin_only = RoleChecker([UserRole.ADMIN])
 
+
 class WebhookCreateRequest(BaseModel):
     url: str
     event_type: str
+
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def register_webhook(
@@ -27,8 +30,14 @@ def register_webhook(
     current_user: User = Depends(admin_only)
 ):
     url_str = str(req.url).strip()
-    if not url_str.startswith(("http://", "https://")):
-        raise HTTPException(status_code=400, detail="Webhook URL must start with http:// or https://")
+    try:
+        # Check SSRF validation
+        validate_safe_url(url_str)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid webhook URL (SSRF security policy): {e}"
+        ) from e
 
     # Check for duplicate
     duplicate = db.query(WebhookConfig).filter(
@@ -36,7 +45,10 @@ def register_webhook(
         WebhookConfig.event_type == req.event_type
     ).first()
     if duplicate:
-        raise HTTPException(status_code=400, detail="This URL is already registered for this event type.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This URL is already registered for this event type."
+        )
 
     new_sub = WebhookConfig(
         url=url_str,
@@ -47,6 +59,7 @@ def register_webhook(
     db.commit()
     db.refresh(new_sub)
     return {"status": "success", "message": "Webhook registered successfully", "id": str(new_sub.id)}
+
 
 @router.get("")
 def list_webhooks(
@@ -60,10 +73,11 @@ def list_webhooks(
             "url": c.url,
             "event_type": c.event_type,
             "is_active": c.is_active,
-            "created_at": c.created_at.isoformat()
+            "created_at": c.created_at.isoformat() if c.created_at else None
         }
         for c in configs
     ]
+
 
 @router.delete("/{webhook_id}", status_code=status.HTTP_204_NO_CONTENT)
 def revoke_webhook(

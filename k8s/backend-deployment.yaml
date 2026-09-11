@@ -1,40 +1,53 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: googi-backend
-  namespace: googi-dev
+  name: backend
+  namespace: docintel
   labels:
-    app: googi-backend
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: docintel-platform
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: googi-backend
+      app.kubernetes.io/name: backend
+      app.kubernetes.io/component: api
   template:
     metadata:
       labels:
-        app: googi-backend
+        app.kubernetes.io/name: backend
+        app.kubernetes.io/component: api
+        app.kubernetes.io/part-of: docintel-platform
     spec:
       containers:
         - name: backend
-          image: ghcr.io/yourorg/googi-backend:latest
+          image: ghcr.io/aadityauniyal/docintel-backend:latest
           ports:
-            - containerPort: 8000
+            - name: http
+              containerPort: 8000
           envFrom:
             - configMapRef:
-                name: googi-config
+                name: docintel-config
             - secretRef:
-                name: googi-secret
+                name: docintel-secret
           livenessProbe:
             httpGet:
-              path: /health
+              path: /health/live
               port: 8000
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /health
+              path: /health/ready
               port: 8000
-            initialDelaySeconds: 5
+            initialDelaySeconds: 10
             periodSeconds: 5
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "2Gi"
       restartPolicy: Always

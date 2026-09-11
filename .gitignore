@@ -20,18 +20,26 @@ venv/
 env/
 .venv/
 
-# Backend runtime & Local databases
+# Environment Configuration Files
 backend/.env
 backend/.env.*
 !backend/.env.example
 .env
 .env.*
 !.env.example
+!.env.development.example
+!.env.test.example
+!.env.production.example
+
+# Uploads & Storage
 backend/uploads/*
 !backend/uploads/.gitkeep
 uploads/*
 !uploads/.gitkeep
 backend/chroma_db/
+chroma_db/
+
+# Databases
 *.db
 *.db-journal
 *.sqlite
@@ -70,5 +78,7 @@ locust_output_*
 .tmp/
 *.xlsx
 
-# Docker
+# Docker & Logs
 *.log
+MagicMock/
+backend/MagicMock/

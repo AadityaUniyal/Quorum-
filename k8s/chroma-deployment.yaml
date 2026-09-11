@@ -1,28 +1,36 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: googi-chroma
-  namespace: googi-dev
+  name: chroma
+  namespace: docintel
   labels:
-    app: googi-chroma
+    app.kubernetes.io/name: chroma
+    app.kubernetes.io/component: vector-store
+    app.kubernetes.io/part-of: docintel-platform
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: googi-chroma
+      app.kubernetes.io/name: chroma
+      app.kubernetes.io/component: vector-store
   template:
     metadata:
       labels:
-        app: googi-chroma
+        app.kubernetes.io/name: chroma
+        app.kubernetes.io/component: vector-store
+        app.kubernetes.io/part-of: docintel-platform
     spec:
       containers:
         - name: chroma
-          image: chromadb/chroma:0.4.0
+          image: chromadb/chroma:0.4.24
           ports:
-            - containerPort: 8000
-          env:
-            - name: CHROMA_DB_IMPL
-              value: "sqlite"
-            # Adjust as needed for production (e.g., PostgreSQL)
-          # Persist data via emptyDir or PVC (omitted for brevity)
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "2Gi"
       restartPolicy: Always

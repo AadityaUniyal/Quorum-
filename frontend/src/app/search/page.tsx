@@ -209,7 +209,6 @@ export default function SearchPage() {
     setSuggestions([]);
     setShowSuggestions(false);
     setHasSearched(true);
-    refetch();
   };
 
   const handleSearchSubmit = async (e: React.FormEvent) => {

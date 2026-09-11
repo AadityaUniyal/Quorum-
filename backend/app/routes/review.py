@@ -15,6 +15,7 @@ from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentStatus, ExtractedField, FieldValidationStatus
 from app.routes.auth import RoleChecker
 from app.schemas.document import DocumentResponse, DocumentReviewSubmit, DocumentSimpleResponse
+from app.services.auth_access import filter_documents_for_user, require_document_read, require_document_write
 
 router = APIRouter(prefix="/api/review", tags=["review"])
 
@@ -59,42 +60,49 @@ class InMemoryRedisFallback:
     def delete(self, key):
         return self._store.pop(key, None) is not None
     def eval(self, script, keys_num, *args):
-        # script: Lua script string
-        # keys_num: number of keys (expected 1)
-        # args: [key, value, optional ttl]
         if not args:
             return 0
         key = args[0]
         value = args[1] if len(args) > 1 else None
         if "expire" in script:
-            # Heartbeat: extend TTL if token matches
             if self._store.get(key) == value:
                 return 1
             return 0
-        # Release script (del)
         if self._store.get(key) == value:
             self._store.pop(key, None)
             return 1
         return 0
 
+
 _in_memory_redis_fallback = InMemoryRedisFallback()
+_redis_client = None
+_redis_unavailable_until = 0.0
 
 
 def get_redis_client():
-    """Return a Redis client or a local in-memory fallback if Redis is unavailable."""
+    """Return a Redis client or a fast local in-memory fallback if Redis is unavailable."""
+    global _redis_client, _redis_unavailable_until
+    import time
+    now = time.time()
+    if now < _redis_unavailable_until:
+        return _in_memory_redis_fallback
+    if _redis_client is not None:
+        return _redis_client
     try:
         r = redis.Redis(
             host=settings.REDIS_HOST,
             port=settings.REDIS_PORT,
             password=settings.REDIS_PASSWORD,
             decode_responses=True,
-            socket_connect_timeout=2
+            socket_connect_timeout=0.2,
+            socket_timeout=0.2,
         )
         r.ping()
-        return r
+        _redis_client = r
+        return _redis_client
     except Exception:
+        _redis_unavailable_until = now + 30.0
         return _in_memory_redis_fallback
-
 
 
 def acquire_document_lock(document_id: str, username: str, token: str | None = None) -> str | None:
@@ -147,22 +155,22 @@ def get_lock_holder(document_id: str) -> str | None:
     return None
 
 
-
-# Get Review Queue
+# Get Review Queue (Tenant-filtered)
 @router.get("/queue", response_model=list[DocumentSimpleResponse])
 def get_review_queue(
     db: Session = Depends(get_db),
     current_user: User = Depends(reviewer_or_admin)
 ):
-    documents = db.query(Document).filter(Document.status == DocumentStatus.AWAITING_REVIEW).order_by(Document.created_at.asc()).all()
+    base_query = db.query(Document).filter(Document.status == DocumentStatus.AWAITING_REVIEW)
+    query = filter_documents_for_user(base_query, current_user)
+    documents = query.order_by(Document.created_at.asc()).all()
 
     results = []
     for doc in documents:
         uploader_name = doc.uploader.full_name if doc.uploader else "System"
-        # Check lock status — tolerate Redis being down for read-only queue listing
         try:
             lock_holder = get_lock_holder(str(doc.id))
-        except HTTPException:
+        except Exception:
             lock_holder = None
 
         results.append({
@@ -177,12 +185,17 @@ def get_review_queue(
         })
     return results
 
-# Lock document for review
+
+# Lock document for review (Tenant-safe)
 @router.post("/{document_id}/lock", status_code=status.HTTP_200_OK)
 def lock_document(
     document_id: UUID,
+    db: Session = Depends(get_db),
     current_user: User = Depends(reviewer_or_admin)
 ):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    require_document_write(current_user, doc)
+
     doc_id_str = str(document_id)
     token = acquire_document_lock(doc_id_str, current_user.full_name)
     if not token:
@@ -193,7 +206,8 @@ def lock_document(
         )
     return {"message": "Document locked successfully", "locked_by": current_user.full_name, "lock_token": token}
 
-# Heartbeat — extend lock TTL by another 15 minutes (only if the current user holds the lock and matching token)
+
+# Heartbeat
 @router.post("/{document_id}/heartbeat", status_code=status.HTTP_200_OK)
 def heartbeat_lock(
     document_id: UUID,
@@ -232,6 +246,7 @@ def heartbeat_lock(
         )
     return {"message": "Lock extended successfully", "ttl_seconds": LOCK_TTL_SECONDS}
 
+
 # Unlock document
 @router.post("/{document_id}/unlock", status_code=status.HTTP_200_OK)
 def unlock_document(
@@ -260,7 +275,8 @@ def unlock_document(
         release_document_lock(doc_id_str, val)
     return {"message": "Document unlocked successfully"}
 
-# Submit review corrections
+
+# Submit review corrections (Atomic Transaction with Provenance)
 @router.post("/{document_id}/submit", response_model=DocumentResponse)
 def submit_review(
     document_id: UUID,
@@ -269,6 +285,9 @@ def submit_review(
     db: Session = Depends(get_db),
     current_user: User = Depends(reviewer_or_admin)
 ):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    require_document_write(current_user, doc)
+
     doc_id_str = str(document_id)
     lock_key = f"lock:document:{doc_id_str}"
     r = get_redis_client()
@@ -277,7 +296,7 @@ def submit_review(
         parts = val.split(":", 1)
         holder = parts[0]
         token = parts[1] if len(parts) > 1 else ""
-        if holder != current_user.full_name:
+        if holder != current_user.full_name and current_user.role != UserRole.ADMIN:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"This document is locked by {holder}. Please unlock it first."
@@ -287,10 +306,6 @@ def submit_review(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid lock token."
             )
-
-    doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
 
     # Apply changes and calculate before/after difference for audit logs
     diffs = {}
@@ -309,7 +324,9 @@ def submit_review(
                 field.consensus_value = after_val
                 field.is_modified = True
                 field.validation_status = FieldValidationStatus.MANUAL_CORRECTION
-                field.confidence_score = 1.0  # Set to 100% since human corrected it
+                field.verification_source = "HUMAN"
+                field.verified_by = current_user.id
+                field.verified_at = datetime.now(UTC)
 
                 diffs[update.field_key] = {
                     "before": before_val,
@@ -318,15 +335,8 @@ def submit_review(
 
     # Update document status to PROCESSED
     doc.status = DocumentStatus.PROCESSED
-    db.commit()
 
-    # Release Lock
-    if val:
-        release_document_lock(doc_id_str, val)
-    else:
-        release_document_lock(doc_id_str)
-
-    # Write Correction Audit Log
+    # Write Correction Audit Log in SAME atomic transaction
     if diffs:
         audit = AuditLog(
             document_id=doc.id,
@@ -338,7 +348,15 @@ def submit_review(
             }
         )
         db.add(audit)
-        db.commit()
+
+    # Commit all changes atomically
+    db.commit()
+
+    # Release Lock AFTER commit
+    if val:
+        release_document_lock(doc_id_str, val)
+    else:
+        release_document_lock(doc_id_str)
 
     # Reload document
     db.refresh(doc)
@@ -349,6 +367,7 @@ class DocumentAssignRequest(BaseModel):
     assigned_to_id: UUID
     due_date: datetime | None = None
 
+
 @router.post("/{document_id}/assign", status_code=status.HTTP_200_OK)
 def assign_document(
     document_id: UUID,
@@ -357,12 +376,18 @@ def assign_document(
     current_user: User = Depends(reviewer_or_admin)
 ):
     doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+    require_document_write(current_user, doc)
 
     target_user = db.query(User).filter(User.id == req_data.assigned_to_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="Assigned user not found")
+
+    # If organization exists, verify assignee belongs to the same organization
+    if current_user.organization_id and target_user.organization_id != current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot assign document to a user in a different organization."
+        )
 
     doc.assigned_to_id = req_data.assigned_to_id
     if req_data.due_date:
@@ -388,8 +413,7 @@ def approve_document_stage(
     current_user: User = Depends(reviewer_or_admin)
 ):
     doc = db.query(Document).filter(Document.id == document_id).first()
-    if not doc:
-        raise HTTPException(status_code=404, detail="Document not found")
+    require_document_write(current_user, doc)
 
     stages = ["OPERATOR_REVIEW", "MANAGER_APPROVAL", "FINANCE_STAMP", "APPROVED"]
     current_stage = doc.approval_stage or "OPERATOR_REVIEW"
@@ -405,8 +429,6 @@ def approve_document_stage(
         doc.status = DocumentStatus.PROCESSED
 
         # Dispatch webhook (Roadmap 2.4 / Webhook Studio)
-        from datetime import datetime as dt
-
         from app.services.webhook import dispatch_webhook
         dispatch_webhook(
             event_type="document.processed",
@@ -415,7 +437,7 @@ def approve_document_stage(
                 "filename": doc.filename,
                 "category": doc.category.value if doc.category else None,
                 "consensus_score": doc.consensus_score,
-                "timestamp": dt.now(UTC).isoformat()
+                "timestamp": datetime.now(UTC).isoformat()
             }
         )
 
@@ -432,5 +454,3 @@ def approve_document_stage(
 
     db.commit()
     return {"message": f"Document transitioned to stage: {next_stage}", "approval_stage": next_stage}
-
-

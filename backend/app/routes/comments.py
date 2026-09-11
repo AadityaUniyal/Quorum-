@@ -9,6 +9,7 @@ from app.models.comment import Comment
 from app.models.document import Document
 from app.routes.auth import RoleChecker
 from app.schemas.comment import CommentCreate, CommentResponse
+from app.services.auth_access import require_document_read, require_document_write
 
 router = APIRouter(prefix="/api/documents", tags=["comments"])
 
@@ -23,10 +24,11 @@ def get_comments(
     db: Session = Depends(get_db),
     current_user: User = Depends(any_active_user)
 ):
-    # Verify document exists
+    # Verify document exists and user has read access
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+    require_document_read(current_user, doc)
 
     comments = db.query(Comment).filter(Comment.document_id == document_id).order_by(Comment.created_at.asc()).all()
 
@@ -54,10 +56,11 @@ def create_comment(
     db: Session = Depends(get_db),
     current_user: User = Depends(admin_or_reviewer_or_operator)
 ):
-    # Verify document exists
+    # Verify document exists and user has write access
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+    require_document_write(current_user, doc)
 
     comment = Comment(
         document_id=document_id,

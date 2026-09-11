@@ -237,6 +237,20 @@ A standalone, pip-installable Python package in `packages/googi-crawler/`:
 - **Fallback Chain** — Primary (Gemini) → Secondary (configurable) → Tertiary (local Ollama) → Local heuristic engine
 - **Response Caching** — Redis-cached LLM responses (1-hour TTL) keyed by OCR text hash to avoid redundant API calls
 
+### Advanced Web Application & UX Capabilities
+
+- **Command Palette (`Cmd+K`)** — Global modal search bar for instant page navigation across documents, review queue, RAG search, analytics, crawler, admin, and settings
+- **Live SSE Status Indicator (`SseStatusPill`)** — Real-time stream indicator reflecting active SSE connection, automatic reconnection, and offline states
+- **Global Keyboard Shortcuts** — Productive review keybindings: `Ctrl+Enter` (Approve), `Ctrl+Shift+R` (Reject), `Ctrl+S` (Save Draft), `Alt+D` (Toggle Visual Diff), `Alt+ArrowUp/Down` (Field Navigation)
+- **IndexedDB Offline Review Storage** — Resilient client-side draft caching preventing work loss during internet dropouts
+- **Side-by-Side Visual Diff Viewer (`DocumentDiffViewer`)** — Visual comparison modal highlighting modifications between original AI extractions and current human edits
+- **PWA Web Manifest** — Standalone desktop Progressive Web App installation support (`manifest.json`)
+- **Multi-Currency Math Auditor** — Financial auditor agent supporting both US (`$1,234.50`) and European (`1.234,50`) number formatting
+
+### Audit Report & Quality Roadmap
+
+- **500+ Master Audit Report** — Complete architectural audit and issue breakdown available in [`DocIntel_AI_500_Audit_Bugs_Gaps_Improvements_Report.md`](DocIntel_AI_500_Audit_Bugs_Gaps_Improvements_Report.md) covering 515 categorized items across Security, Multi-Tenancy, Worker Queues, AI Agents, Frontend UX, and Infrastructure.
+
 ---
 
 ## Tech Stack

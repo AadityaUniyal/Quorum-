@@ -6,29 +6,30 @@ services:
     container_name: doc_intel_db
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_DB: docintel
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: ${POSTGRES_DB:-docintel}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d docintel"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-docintel}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3-management-alpine
     container_name: doc_intel_rabbitmq
     restart: unless-stopped
     ports:
-      - "5672:5672"
+      - "${RABBITMQ_PORT:-5672}:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -36,6 +37,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     deploy:
       resources:
         limits:
@@ -47,7 +49,7 @@ services:
     container_name: doc_intel_redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -55,11 +57,47 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
     deploy:
       resources:
         limits:
           memory: 256M
           cpus: '0.25'
+
+  minio:
+    image: minio/minio:latest
+    container_name: doc_intel_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: doc_intel_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 0"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   backend:
     build:
@@ -69,21 +107,41 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/docintel
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-docintel}
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
-      - RABBITMQ_USER=guest
-      - RABBITMQ_PASS=guest
+      - RABBITMQ_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_PASS=${RABBITMQ_PASS:-guest}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - DEBUG=true
-      - JWT_SECRET_KEY=k8X2mP9vQ4rT7wY1aB5cD3fG6hJ0nL8sU2xE4zA7bC1dF5gH9jK3lM6oP0qR4tV
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-local}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_BUCKET=${MINIO_BUCKET:-docintel-uploads}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1:8b}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - LLM_PREFERRED_PROVIDER=${LLM_PREFERRED_PROVIDER:-local}
+      - LLM_FALLBACK_ENABLED=true
       - LLM_OFFLINE_MOCK_FALLBACK=true
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev_insecure_secret_key_change_in_production_min_32_chars_long}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      - DEBUG=${DEBUG:-true}
     volumes:
       - uploads_data:/app/uploads
       - chroma_data:/app/chroma_db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: sh -c "python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     depends_on:
       db:
         condition: service_healthy
@@ -98,20 +156,33 @@ services:
       dockerfile: Dockerfile.worker
     container_name: doc_intel_worker
     environment:
-      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/docintel
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-docintel}
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
-      - RABBITMQ_USER=guest
-      - RABBITMQ_PASS=guest
+      - RABBITMQ_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_PASS=${RABBITMQ_PASS:-guest}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - DEBUG=true
-      - JWT_SECRET_KEY=k8X2mP9vQ4rT7wY1aB5cD3fG6hJ0nL8sU2xE4zA7bC1dF5gH9jK3lM6oP0qR4tV
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-local}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_BUCKET=${MINIO_BUCKET:-docintel-uploads}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1:8b}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - LLM_PREFERRED_PROVIDER=${LLM_PREFERRED_PROVIDER:-local}
+      - LLM_FALLBACK_ENABLED=true
       - LLM_OFFLINE_MOCK_FALLBACK=true
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev_insecure_secret_key_change_in_production_min_32_chars_long}
+      - DEBUG=${DEBUG:-true}
     volumes:
       - uploads_data:/app/uploads
       - chroma_data:/app/chroma_db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
@@ -131,11 +202,14 @@ services:
       - BACKEND_URL=http://backend:8000
       - NEXT_PUBLIC_API_URL=
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   db_data:
   rabbitmq_data:
   redis_data:
+  minio_data:
+  ollama_data:
   uploads_data:
   chroma_data:

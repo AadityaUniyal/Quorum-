@@ -40,6 +40,15 @@ def _send_webhook_request_sync(webhook_config_id: str, url: str, event_type: str
         db.refresh(log_entry)
 
         try:
+            from app.core.security_net import validate_safe_url
+            validate_safe_url(url)
+        except ValueError as ssrf_err:
+            log_entry.status = "FAILED"
+            log_entry.error_message = f"SSRF Blocked: {ssrf_err}"
+            db.commit()
+            return False
+
+        try:
             resp = httpx.post(
                 url,
                 json={

@@ -89,7 +89,7 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
         run_agent_safe(run_auditor_agent, category, extracted_fields, timeout_seconds=15.0),
         run_agent_safe(run_compliance_agent, ocr_text, category, extracted_fields, timeout_seconds=15.0)
     )
-    logger.info("Critic, Auditor, and Compliance concurrent validation step finished (with timeout budget check).")
+    logger.info("Critic, Auditor, and Compliance concurrent validation step finished.")
 
     # ── Step 5: Reconciler (conflict resolution) ─────────────────────────────
     try:
@@ -148,13 +148,22 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
     total_confidence = 0.0
 
     for key, value in extracted_fields.items():
-        critic_eval     = critic_results.get(key,     {"score": 1.0, "notes": ""})
-        auditor_eval    = auditor_results.get(key,    {"score": 1.0, "notes": ""})
-        compliance_eval = compliance_results.get(key, {"score": 1.0, "notes": ""})
+        # Avoid treating failed/timeout agents as 1.0 (100% confidence)
+        critic_eval = critic_results.get(key)
+        if not critic_eval:
+            critic_eval = {"score": 0.70, "notes": "Critic check unavailable"}
 
-        critic_score     = critic_eval["score"]
-        auditor_score    = auditor_eval["score"]
-        compliance_score = compliance_eval["score"]
+        auditor_eval = auditor_results.get(key)
+        if not auditor_eval:
+            auditor_eval = {"score": 0.70, "notes": "Auditor check unavailable"}
+
+        compliance_eval = compliance_results.get(key)
+        if not compliance_eval:
+            compliance_eval = {"score": 0.70, "notes": "Compliance check unavailable"}
+
+        critic_score     = critic_eval.get("score", 0.70)
+        auditor_score    = auditor_eval.get("score", 0.70)
+        compliance_score = compliance_eval.get("score", 0.70)
 
         # If the Reconciler overrode this field, blend its score in (50/50 weight)
         if key in reconciler_results:
@@ -178,11 +187,11 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
 
         # Build validation notes
         notes_list = []
-        if critic_eval["notes"]:
+        if critic_eval.get("notes"):
             notes_list.append(f"Critic: {critic_eval['notes']}")
-        if auditor_eval["notes"] and auditor_score < 1.0:
+        if auditor_eval.get("notes") and auditor_score < 1.0:
             notes_list.append(f"Auditor: {auditor_eval['notes']}")
-        if compliance_eval["notes"] and compliance_score < 1.0:
+        if compliance_eval.get("notes") and compliance_score < 1.0:
             notes_list.append(f"Compliance: {compliance_eval['notes']}")
         if key in reconciler_results:
             notes_list.append(f"Reconciler: {reconciler_results[key]['notes']}")

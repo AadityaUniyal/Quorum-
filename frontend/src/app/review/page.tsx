@@ -137,6 +137,7 @@ export default function ReviewPage() {
       return allDocs.filter(d => d.status === 'AWAITING_REVIEW' || d.status === 'PROCESSING');
     },
     refetchInterval: 12000,
+    refetchIntervalInBackground: true,
   });
 
   // Fetch Full Document Details when selected
@@ -144,6 +145,8 @@ export default function ReviewPage() {
     queryKey: ['documentDetails', selectedDocId],
     queryFn: () => api.getDocument(selectedDocId),
     enabled: !!selectedDocId,
+    refetchInterval: selectedDocId ? 8000 : false,
+    refetchIntervalInBackground: true,
   });
 
   // Fetch Naive Bayes Document Probabilities
@@ -151,6 +154,8 @@ export default function ReviewPage() {
     queryKey: ['probabilities', selectedDocId],
     queryFn: () => api.getDocumentProbabilities(selectedDocId),
     enabled: !!selectedDocId,
+    refetchInterval: selectedDocId ? 15000 : false,
+    refetchIntervalInBackground: true,
   });
 
   // Fetch Extracted Table & Mathematical Audits
@@ -158,6 +163,8 @@ export default function ReviewPage() {
     queryKey: ['auditData', selectedDocId],
     queryFn: () => api.getDocumentAuditLineItems(selectedDocId),
     enabled: !!selectedDocId,
+    refetchInterval: selectedDocId ? 15000 : false,
+    refetchIntervalInBackground: true,
   });
 
   // Comments State, Queries, & Mutations
@@ -168,7 +175,8 @@ export default function ReviewPage() {
     queryKey: ['comments', selectedDocId],
     queryFn: () => api.getComments(selectedDocId),
     enabled: !!selectedDocId,
-    refetchInterval: 5000 // Real-time feed polling
+    refetchInterval: 5000, // Real-time feed polling
+    refetchIntervalInBackground: true,
   });
 
   const createCommentMutation = useMutation({

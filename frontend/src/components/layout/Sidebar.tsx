@@ -39,7 +39,7 @@ export const Sidebar: React.FC = () => {
   return (
     <aside
       className={clsx(
-        'relative z-20 flex flex-col justify-between border-r border-white/[0.04] bg-[#080808] transition-all duration-300 ease-in-out select-none shrink-0 h-screen',
+        'relative z-20 flex flex-col justify-between border-r border-white/[0.06] bg-black/30 backdrop-blur-xl transition-all duration-300 ease-in-out select-none shrink-0 h-screen',
         sidebarOpen ? 'w-64' : 'w-20'
       )}
     >
@@ -124,7 +124,7 @@ export const Sidebar: React.FC = () => {
       )}
 
       {/* User Info / Profile & Logout */}
-      <div className="flex flex-col border-t border-white/[0.04] p-4 gap-4 bg-[#0a0a0a]/50">
+      <div className="flex flex-col border-t border-white/[0.06] p-4 gap-4 bg-white/[0.03]">
         {user && (
           <div className="flex items-center gap-3 overflow-hidden px-1">
             <div className="h-9 w-9 rounded-xl bg-neutral-900 border border-white/[0.06] flex items-center justify-center text-sm font-bold text-primary font-mono shrink-0">

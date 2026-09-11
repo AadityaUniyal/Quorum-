@@ -243,12 +243,24 @@ def root():
     }
 
 
-@cache(ttl_seconds=10)
+@app.get("/health/live")
+def health_liveness():
+    """Lightweight process liveness probe for Kubernetes / load balancers."""
+    return {"status": "alive", "timestamp": time.time()}
+
+
+@app.get("/health/startup")
+def health_startup():
+    """Startup probe confirming initialization."""
+    return {"status": "started"}
+
+
 @app.get("/health")
-def health_check():
+@app.get("/health/ready")
+def health_readiness():
     """
-    Comprehensive health check that verifies connectivity to all
-    backing services: PostgreSQL, Redis, RabbitMQ.
+    Comprehensive readiness check that verifies connectivity to backing services:
+    PostgreSQL, Redis, RabbitMQ, and ChromaDB.
     """
     health: dict[str, Any] = {
         "status": "healthy",
@@ -260,9 +272,10 @@ def health_check():
         from sqlalchemy import text
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        health["checks"]["database"] = {"status": "connected", "type": "postgresql"}
+        health["checks"]["database"] = {"status": "connected"}
     except Exception as e:
-        health["checks"]["database"] = {"status": "disconnected", "error": str(e)}
+        logger.warning(f"Health check: Database disconnected: {e}")
+        health["checks"]["database"] = {"status": "disconnected"}
         health["status"] = "degraded"
 
     # Check Redis
@@ -277,7 +290,8 @@ def health_check():
         r.ping()
         health["checks"]["redis"] = {"status": "connected"}
         r.close()
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Health check: Redis disconnected: {e}")
         health["checks"]["redis"] = {"status": "disconnected"}
         health["status"] = "degraded"
 
@@ -297,7 +311,8 @@ def health_check():
         )
         connection.close()
         health["checks"]["rabbitmq"] = {"status": "connected"}
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Health check: RabbitMQ disconnected: {e}")
         health["checks"]["rabbitmq"] = {"status": "disconnected"}
         health["status"] = "degraded"
 
@@ -307,7 +322,8 @@ def health_check():
         chroma_client.heartbeat()
         health["checks"]["chroma"] = {"status": "connected"}
     except Exception as e:
-        health["checks"]["chroma"] = {"status": "disconnected", "error": str(e)}
+        logger.warning(f"Health check: ChromaDB disconnected: {e}")
+        health["checks"]["chroma"] = {"status": "disconnected"}
         health["status"] = "degraded"
 
     status_code = 200 if health["checks"].get("database", {}).get("status") == "connected" else 503

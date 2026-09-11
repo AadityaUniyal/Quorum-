@@ -1,19 +1,22 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: googi-hpa-backend
-  namespace: googi-dev
+  name: backend-hpa
+  namespace: docintel
+  labels:
+    app.kubernetes.io/name: backend-hpa
+    app.kubernetes.io/part-of: docintel-platform
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: googi-backend
-  minReplicas: 1
-  maxReplicas: 8
+    name: backend
+  minReplicas: 2
+  maxReplicas: 10
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 60
+          averageUtilization: 65

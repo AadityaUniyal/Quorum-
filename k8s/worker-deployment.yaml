@@ -1,27 +1,39 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: googi-worker
-  namespace: googi-dev
+  name: worker
+  namespace: docintel
   labels:
-    app: googi-worker
+    app.kubernetes.io/name: worker
+    app.kubernetes.io/component: queue-worker
+    app.kubernetes.io/part-of: docintel-platform
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: googi-worker
+      app.kubernetes.io/name: worker
+      app.kubernetes.io/component: queue-worker
   template:
     metadata:
       labels:
-        app: googi-worker
+        app.kubernetes.io/name: worker
+        app.kubernetes.io/component: queue-worker
+        app.kubernetes.io/part-of: docintel-platform
     spec:
       containers:
         - name: worker
-          image: ghcr.io/yourorg/googi-worker:latest
+          image: ghcr.io/aadityauniyal/docintel-worker:latest
+          command: ["python", "-m", "app.worker"]
           envFrom:
             - configMapRef:
-                name: googi-config
+                name: docintel-config
             - secretRef:
-                name: googi-secret
-          command: ["celery", "-A", "app.workers", "worker", "--loglevel=info"]
+                name: docintel-secret
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
       restartPolicy: Always

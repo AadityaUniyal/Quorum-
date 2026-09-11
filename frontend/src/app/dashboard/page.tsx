@@ -38,6 +38,7 @@ export default function DashboardPage() {
     queryKey: ['kpis'],
     queryFn: api.getKpis,
     refetchInterval: 15000,
+    refetchIntervalInBackground: true,
   });
 
   // Fetch Chart Data
@@ -45,6 +46,7 @@ export default function DashboardPage() {
     queryKey: ['charts'],
     queryFn: api.getCharts,
     refetchInterval: 15000,
+    refetchIntervalInBackground: true,
   });
 
   // Fetch System Health
@@ -52,6 +54,7 @@ export default function DashboardPage() {
     queryKey: ['health'],
     queryFn: api.getHealth,
     refetchInterval: 10000,
+    refetchIntervalInBackground: true,
   });
 
   const weeklyVolume = charts?.daily_trends || [];

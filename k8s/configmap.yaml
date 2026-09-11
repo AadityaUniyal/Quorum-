@@ -1,13 +1,19 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: googi-config
-  namespace: googi
+  name: docintel-config
+  namespace: docintel
   labels:
-    app: googi
-
+    app.kubernetes.io/name: docintel-config
+    app.kubernetes.io/part-of: docintel-platform
 data:
-  # Example non‑secret env vars
-  APP_NAME: "GOOGI"
+  APP_NAME: "DocIntel AI"
   LOG_LEVEL: "INFO"
-  CORS_ORIGINS: "*"
+  CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+  BACKEND_URL: "http://backend:8000"
+  DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/docintel"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  CHROMA_PERSIST_DIR: "/app/chroma_db"

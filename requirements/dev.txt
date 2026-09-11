@@ -1,0 +1,7 @@
+-r test.txt
+
+# Development, Formatting & Linting
+ruff>=0.4.0
+mypy>=1.9.0
+pip-tools>=7.4.0
+locust>=2.24.0

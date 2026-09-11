@@ -256,10 +256,10 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#050810] text-[#f1f5f9] font-sans selection:bg-primary/30 overflow-x-hidden">
+    <div className="relative min-h-screen bg-[radial-gradient(circle_at_top,rgba(79,110,247,0.12),transparent_30%),radial-gradient(circle_at_80%_0%,rgba(168,85,247,0.10),transparent_26%),linear-gradient(180deg,#05070d_0%,#070b13_100%)] text-[#f1f5f9] font-sans selection:bg-primary/30 overflow-x-hidden">
       
       {/* 1. HERO SECTION WITH PARTICLE BACKGROUND */}
-      <section className="relative min-h-screen flex flex-col justify-between items-center px-4 py-8 md:px-12 md:py-16 overflow-hidden border-b border-white/[0.04]">
+      <section className="relative min-h-screen flex flex-col justify-between items-center px-4 py-8 md:px-12 md:py-16 overflow-hidden border-b border-white/[0.06]">
         <ParticleBackground />
 
         {/* Top Header Row */}
@@ -422,19 +422,7 @@ export default function LandingPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            toast.success("Connecting Google SSO Authentication...");
-                            setIsLoading(true);
-                            setTimeout(async () => {
-                              try {
-                                await login("operator@googi.io", "password123");
-                                toast.success("Successfully logged in via Google SSO!");
-                                router.push('/dashboard');
-                              } catch {
-                                toast.error("Google SSO login failed");
-                              } finally {
-                                setIsLoading(false);
-                              }
-                            }, 1000);
+                            toast.error("Enterprise SSO must be initiated through your organization's OAuth gateway.");
                           }}
                           className="flex items-center justify-center gap-2 py-2 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.05] hover:border-white/[0.08] text-[10px] font-semibold text-neutral-300 hover:text-white transition-all cursor-pointer"
                         >
@@ -450,19 +438,7 @@ export default function LandingPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            toast.success("Connecting Microsoft SSO Authentication...");
-                            setIsLoading(true);
-                            setTimeout(async () => {
-                              try {
-                                await login("operator@googi.io", "password123");
-                                toast.success("Successfully logged in via Microsoft SSO!");
-                                router.push('/dashboard');
-                              } catch {
-                                toast.error("Microsoft SSO login failed");
-                              } finally {
-                                setIsLoading(false);
-                              }
-                            }, 1000);
+                            toast.error("Enterprise SSO must be initiated through your organization's OAuth gateway.");
                           }}
                           className="flex items-center justify-center gap-2 py-2 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.05] hover:border-white/[0.08] text-[10px] font-semibold text-neutral-350 hover:text-white transition-all cursor-pointer"
                         >
@@ -506,7 +482,7 @@ export default function LandingPage() {
       </section>
 
       {/* 2. SECTION A — WHAT IS GOOGI? */}
-      <section id="features" className="py-24 px-6 md:px-12 border-b border-white/[0.04] bg-[#070b17]/30 relative">
+      <section id="features" className="py-24 px-6 md:px-12 border-b border-white/[0.06] bg-white/[0.015] relative">
         <div className="max-w-7xl mx-auto flex flex-col gap-12">
           <div className="text-center max-w-2xl mx-auto flex flex-col gap-3">
             <span className="text-[10px] font-bold tracking-widest text-[#4f8ef7] font-mono uppercase">Googi Core Features</span>
@@ -537,7 +513,7 @@ export default function LandingPage() {
             ].map((feat, idx) => (
               <div 
                 key={idx}
-                className="group border border-white/[0.04] bg-[#0d1117]/60 hover:bg-[#0d1117] rounded-2xl p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl relative select-none cursor-default"
+                className="group border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.05] rounded-2xl p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl relative select-none cursor-default backdrop-blur-xl"
               >
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-[#4f8ef7] w-11 h-11 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-primary/10">
                   <feat.icon className="h-5 w-5" />

@@ -1,62 +1,80 @@
+import logging
 import os
 import secrets
-
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.config_validator import ConfigValidator
 
 
 class Settings(BaseSettings):
     # App General Config
-    APP_NAME: str = "Distributed AI Document Intelligence Platform"
-    DEBUG: bool = True
+    APP_NAME: str = "DocIntel AI Platform"
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    DEBUG: bool = os.getenv("DEBUG", "true").lower() in ("true", "1", "t")
 
-    # Database Config (set via DATABASE_URL env var or .env file)
+    # Database Config
     DATABASE_URL: str = os.getenv("DATABASE_URL") or "sqlite:///./test.db"
 
     # Security & Auth Config
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY") or secrets.token_urlsafe(64)  # Auto‑generated if not set
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY") or secrets.token_urlsafe(64)
+    JWT_SECRET_KEYS_ROTATION: str = os.getenv("JWT_SECRET_KEYS_ROTATION", "")  # Comma-separated previous valid keys
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # 15 Minutes
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7     # 7 Days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # Cookie Config
-    COOKIE_SECURE: bool = False  # Set to True in production
-    COOKIE_DOMAIN: str | None = None
-    COOKIE_SAMESITE: str = "lax"
+    COOKIE_SECURE: bool = os.getenv("COOKIE_SECURE", "false").lower() in ("true", "1", "t")
+    COOKIE_DOMAIN: str | None = os.getenv("COOKIE_DOMAIN") or None
+    COOKIE_SAMESITE: str = os.getenv("COOKIE_SAMESITE", "lax")
 
+    # Object Storage Config (local / minio / s3)
+    STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "local")
+    STORAGE_LOCAL_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+    MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+    MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+    MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+    MINIO_BUCKET: str = os.getenv("MINIO_BUCKET", "docintel-uploads")
+    MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "false").lower() in ("true", "1", "t")
+    AWS_REGION: str = os.getenv("AWS_REGION", "us-east-1")
+    AWS_ACCESS_KEY_ID: str | None = os.getenv("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY: str | None = os.getenv("AWS_SECRET_ACCESS_KEY")
+    S3_BUCKET_NAME: str = os.getenv("S3_BUCKET_NAME", "docintel-uploads")
 
     # AI Config
-    GEMINI_API_KEY: str | None = None
-    EMBEDDING_PROVIDER: str = "local"  # "local" (sentence-transformers) or "gemini"
-    LLM_MODEL: str = "gemini-1.5-pro"  # Primary LLM model
-    LLM_OFFLINE_MOCK_FALLBACK: bool = True  # Enable local regex/extractive fallback when APIs are offline
+    GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
+    GOOGLE_APPLICATION_CREDENTIALS: str | None = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    GOOGLE_CLOUD_PROJECT: str | None = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCP_PROJECT")
+    GOOGLE_CLOUD_LOCATION: str = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+    GOOGLE_GENAI_USE_ENTERPRISE: bool = os.getenv("GOOGLE_GENAI_USE_ENTERPRISE", "true").lower() in ("true", "1", "t")
+    EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "local")  # "local" or "gemini"
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+    LLM_OFFLINE_MOCK_FALLBACK: bool = os.getenv("LLM_OFFLINE_MOCK_FALLBACK", "false").lower() in ("true", "1", "t")
 
-    # LLM Fallback Configuration (Roadmap 1.3)
-    # Primary → Secondary → Tertiary (local Ollama)
+    # LLM Fallback & Ollama Configuration
     LLM_FALLBACK_ENABLED: bool = True
-    # Prefer deterministic/local providers first. Set to "gemini" only if you want AI-first behavior.
-    LLM_PREFERRED_PROVIDER: str = "local"
-    LLM_SECONDARY_PROVIDER: str | None = None  # e.g., "openai", "anthropic"
-    LLM_SECONDARY_API_KEY: str | None = None
-    LLM_SECONDARY_MODEL: str | None = None  # e.g., "gpt-4o-mini"
-    LLM_TERTIARY_OLLAMA_URL: str = "http://localhost:11434"  # Local Ollama endpoint
-    LLM_TERTIARY_MODEL: str = "llama3.1:8b"  # Local fallback model
+    LLM_PREFERRED_PROVIDER: str = os.getenv("LLM_PREFERRED_PROVIDER", "local")  # "local" (Ollama) or "gemini"
+    LLM_SECONDARY_PROVIDER: str | None = os.getenv("LLM_SECONDARY_PROVIDER")
+    LLM_SECONDARY_API_KEY: str | None = os.getenv("LLM_SECONDARY_API_KEY")
+    LLM_SECONDARY_MODEL: str | None = os.getenv("LLM_SECONDARY_MODEL")
+    OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL") or os.getenv("LLM_TERTIARY_OLLAMA_URL", "http://localhost:11434")
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL") or os.getenv("LLM_TERTIARY_MODEL", "llama3.1:8b")
 
     # LLM Retry Configuration
     LLM_MAX_RETRIES: int = 3
-    LLM_RETRY_DELAY_SECONDS: float = 2.0  # Initial delay, uses exponential backoff
+    LLM_RETRY_DELAY_SECONDS: float = 2.0
     LLM_TIMEOUT_SECONDS: int = 60
 
     # Broker & Cache Config
-    RABBITMQ_HOST: str = "localhost"
-    RABBITMQ_PORT: int = 5672
-    RABBITMQ_USER: str = "guest"
-    RABBITMQ_PASS: str = "guest"
+    RABBITMQ_HOST: str = os.getenv("RABBITMQ_HOST", "localhost")
+    RABBITMQ_PORT: int = int(os.getenv("RABBITMQ_PORT", "5672"))
+    RABBITMQ_USER: str = os.getenv("RABBITMQ_USER", "guest")
+    RABBITMQ_PASS: str = os.getenv("RABBITMQ_PASS", "guest")
+    RABBITMQ_VHOST: str = os.getenv("RABBITMQ_VHOST", "/")
 
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
-    REDIS_PASSWORD: str | None = None  # None = no auth (default for dev)
-    # Full Redis URL — computed after env resolution via model_validator
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_PASSWORD: str | None = os.getenv("REDIS_PASSWORD") or None
     REDIS_URL: str = ""
 
     @model_validator(mode="after")
@@ -67,53 +85,43 @@ class Settings(BaseSettings):
         return self
 
     def get_redis_url(self) -> str:
-        """Return the Redis connection URL (used by aioredis)."""
+        """Return the Redis connection URL."""
         return self.REDIS_URL
+
+    def get_all_jwt_secrets(self) -> list[str]:
+        """Return primary JWT secret followed by any rotation keys."""
+        secrets_list = [self.JWT_SECRET_KEY]
+        if self.JWT_SECRET_KEYS_ROTATION:
+            for k in self.JWT_SECRET_KEYS_ROTATION.split(","):
+                k_clean = k.strip()
+                if k_clean and k_clean not in secrets_list:
+                    secrets_list.append(k_clean)
+        return secrets_list
 
     # Storage & RAG Directories
     UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
     CHROMA_PERSIST_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "chroma_db")
 
-    # CORS — comma-separated origins, e.g. "http://localhost:3000,https://app.googi.io"
-    # Defaults to localhost dev origins.  Set CORS_ORIGINS env var in production.
-    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    # CORS
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+    APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:3000")
 
     def get_cors_origins(self) -> list[str]:
         """Return CORS_ORIGINS as a parsed list."""
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
-    # Observability (Roadmap 1.8)
-    SENTRY_DSN: str | None = None           # Set in env to enable Sentry error tracking
-    OTLP_ENDPOINT: str = "http://localhost:4317"  # Jaeger / OTel Collector gRPC endpoint
+    # Observability
+    SENTRY_DSN: str | None = os.getenv("SENTRY_DSN")
+    OTLP_ENDPOINT: str = os.getenv("OTLP_ENDPOINT", "http://localhost:4317")
 
-    # Enable reading from .env file
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
 
 settings = Settings()
 
-# Ensure directories exist
+# Ensure storage directories exist
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 os.makedirs(settings.CHROMA_PERSIST_DIR, exist_ok=True)
 
-# ─── Startup Validation ──────────────────────────────────────────────────────
-import logging as _logging
-
-_startup_logger = _logging.getLogger("app.config")
-
-if not settings.JWT_SECRET_KEY or settings.JWT_SECRET_KEY == "":
-    _startup_logger.critical("⚠ JWT_SECRET_KEY is not set! Authentication will not work.")
-elif len(settings.JWT_SECRET_KEY) < 32:
-    _startup_logger.warning("⚠ JWT_SECRET_KEY is shorter than 32 characters. Consider using a stronger key.")
-
-if not settings.GEMINI_API_KEY:
-    _startup_logger.warning("ℹ GEMINI_API_KEY is not set. AI features will use offline local fallback.")
-
-if settings.DATABASE_URL == "postgresql://user:password@localhost:5432/docintel":
-    _startup_logger.warning("⚠ DATABASE_URL is using the default placeholder. Set it in .env file.")
-
-if settings.DEBUG:
-    _startup_logger.warning("⚠ DEBUG mode is active. This enables interactive tracebacks and should be disabled in production.")
-
-if not settings.COOKIE_SECURE:
-    _startup_logger.warning("⚠ COOKIE_SECURE is False. Session and auth cookies will be sent over unencrypted HTTP. Set COOKIE_SECURE=True in production.")
-
+# Run validation on startup
+ConfigValidator.validate(settings)

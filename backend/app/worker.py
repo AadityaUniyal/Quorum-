@@ -111,7 +111,11 @@ def process_document(document_id: str):
                 confidence_score=field["confidence_score"],
                 is_modified=field["is_modified"],
                 validation_status=field["validation_status"],
-                validation_notes=field["validation_notes"]
+                validation_notes=field["validation_notes"],
+                page_number=field.get("page_number", 1),
+                bounding_box=field.get("bounding_box"),
+                evidence_text=field.get("evidence_text") or field.get("evidence"),
+                chunk_id=field.get("chunk_id"),
             )
             db.add(db_field)
 

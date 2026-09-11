@@ -1,3 +1,4 @@
+import collections
 import hashlib
 import logging
 import urllib.robotparser
@@ -9,6 +10,7 @@ import httpx
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
+from app.core.security_net import is_ip_blocked, validate_safe_url
 from app.models.search import CrawledPage, PageLink
 from app.services.vector_store import add_document_to_vector_store
 
@@ -16,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 # Cache for Robots.txt Parsers
 _robots_cache: dict[str, urllib.robotparser.RobotFileParser] = {}
+MAX_PAGE_BYTES = 5 * 1024 * 1024  # 5 MB max per crawled page
+
 
 def normalize_url(url: str) -> str:
     """
@@ -49,12 +53,15 @@ def normalize_url(url: str) -> str:
         logger.warning(f"Error normalizing URL {url}: {e}")
         return ""
 
+
 def is_allowed_by_robots(url: str) -> bool:
     """
     Checks if a URL is allowed to be crawled according to robots.txt rules.
     """
     parsed = urlparse(url)
     if not parsed.netloc:
+        return False
+    if parsed.scheme.lower() not in ("http", "https"):
         return False
 
     netloc = parsed.netloc.lower()
@@ -64,7 +71,6 @@ def is_allowed_by_robots(url: str) -> bool:
         robots_url = f"{scheme}://{netloc}/robots.txt"
         parser = urllib.robotparser.RobotFileParser()
         try:
-            # Fetch using httpx with short timeout
             resp = httpx.get(robots_url, timeout=3.0, headers={"User-Agent": "GoogiBot/1.0"})
             if resp.status_code == 200:
                 parser.parse(resp.text.splitlines())
@@ -79,14 +85,22 @@ def is_allowed_by_robots(url: str) -> bool:
 
     return _robots_cache[netloc].can_fetch("GoogiBot/1.0", url)
 
+
 def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
     """
     Performs a web crawl starting at seed_url using a queue-based BFS traversal up to max_depth.
-    Politely rate-limited and stays within the seed domain.
+    Politely rate-limited, SSRF-safe, and stays within the seed domain.
     """
     canonical_seed = normalize_url(seed_url)
     if not canonical_seed:
         logger.error(f"Invalid seed URL: {seed_url}")
+        return []
+
+    # Validate seed URL against SSRF
+    try:
+        validate_safe_url(canonical_seed, allow_local_for_testing=True)
+    except ValueError as err:
+        logger.error(f"SSRF validation blocked seed URL {canonical_seed}: {err}")
         return []
 
     seed_parsed = urlparse(canonical_seed)
@@ -109,7 +123,9 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
     except Exception as e:
         logger.debug(f"Sitemap discovery failed/skipped for {sitemap_url}: {e}")
 
-    queue = [(canonical_seed, 0)]  # (url, current_depth)
+    # Use deque for efficient O(1) popping
+    queue: collections.deque[tuple[str, int]] = collections.deque()
+    queue.append((canonical_seed, 0))
     for s_url in sitemap_urls:
         if s_url != canonical_seed:
             queue.append((s_url, 0))
@@ -120,7 +136,7 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
     logger.info(f"Starting crawl for seed {canonical_seed} up to depth {max_depth}")
 
     while queue:
-        current_url, depth = queue.pop(0)
+        current_url, depth = queue.popleft()
 
         if current_url in visited:
             continue
@@ -151,6 +167,11 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
             content_type = resp.headers.get("content-type", "").lower()
             if "html" not in content_type:
                 logger.info(f"Skipping non-HTML page {current_url} (type: {content_type})")
+                continue
+
+            # Enforce max byte size
+            if len(resp.content) > MAX_PAGE_BYTES:
+                logger.warning(f"Page {current_url} exceeds max allowed size ({len(resp.content)} bytes). Skipping.")
                 continue
 
             # Compute SHA-256 to check for content duplication
@@ -244,6 +265,7 @@ def crawl_url_task(db: Session, seed_url: str, max_depth: int = 2) -> list[str]:
     # Auto-calculate PageRank after successful crawl
     compute_pagerank(db)
     return crawled_urls
+
 
 def compute_pagerank(db: Session, d: float = 0.85, max_iter: int = 100, tol: float = 1e-6):
     """

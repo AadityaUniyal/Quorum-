@@ -121,11 +121,19 @@ DocIntel AI is an event-driven, microservice-oriented platform built on an async
 |------|----------|
 | `dashboard/` | KPI overview, system health, quick actions |
 | `documents/` | Document list, upload, grid/table views, filters |
-| `review/` | Split-screen HITL review with real-time validation |
+| `review/` | Split-screen HITL review with real-time validation, keyboard shortcuts (`useKeyboardShortcuts.ts`), visual diff viewer (`DocumentDiffViewer.tsx`), and IndexedDB offline draft caching (`offlineStorage.ts`) |
 | `search/` | Hybrid search, RAG chat, bookmarks, export |
 | `analytics/` | Charts and metrics (Documents, AI Agents, Search, Crawl tabs) |
 | `crawl/` | Crawler console, PageRank visualization |
 | `settings/` | User profile and preferences |
+
+### Frontend UI Components & State (`frontend/src/components/`)
+
+- **Command Palette (`CommandPalette.tsx`)** — Global `Cmd+K` keyboard shortcut navigation and instant search modal
+- **Live SSE Status Indicator (`SseStatusPill.tsx`)** — Stream connection status pill (Connected / Reconnecting / Offline)
+- **Visual Diff Viewer (`DocumentDiffViewer.tsx`)** — Side-by-side modal displaying original AI extractions vs current human edits
+- **Offline Review Storage (`offlineStorage.ts`)** — IndexedDB draft persistence for client resilience
+- **PWA Web Manifest (`public/manifest.json`)** — Standalone desktop web app support
 
 ## Infrastructure
 
@@ -139,9 +147,9 @@ DocIntel AI is an event-driven, microservice-oriented platform built on an async
 ### Production (Kubernetes)
 
 Manifests in `k8s/` provide:
-- Namespace isolation
-- ConfigMaps and Secrets
-- Deployments: backend, frontend, worker, Redis, RabbitMQ, ChromaDB
+- Namespace isolation (`docintel`)
+- ConfigMaps (`docintel-config`) and Secrets (`docintel-secret`)
+- Deployments: backend, frontend, worker (`python -m app.worker`), Redis, RabbitMQ, ChromaDB
 - Services and Ingress
 - HPA for worker auto-scaling (CPU ≥60%, 1–8 replicas)
 
@@ -149,10 +157,12 @@ Manifests in `k8s/` provide:
 
 | Layer | Mechanism |
 |-------|-----------|
+| Multi-Tenancy Isolation | Explicit user/organization scoping via `filter_documents_for_user`, `require_document_read`, and `require_document_write` |
 | Authentication | JWT access + refresh tokens via httpOnly cookies |
-| Authorization | Role-based access control (RBAC) middleware |
+| Authorization | Role-based access control (RBAC) middleware + tenant ownership checks |
 | Rate Limiting | Redis-backed per-endpoint limits |
 | Password Security | bcrypt hashing + strength enforcement |
 | Token Management | Redis blacklist on logout/rotation |
+| SSRF Defense | Strict URL validation policies (`validate_safe_url`) on webhooks and crawler endpoints |
 | API Keys | SHA-256 hashed keys for programmatic access |
 | Concurrency | Redis distributed locks for review sessions |

@@ -43,9 +43,28 @@ def _create_gemini_client():
     """Create a Gemini client using the supported google-genai SDK."""
     if genai is None or types is None:
         raise LLMProviderError("google-genai SDK is not installed")
-    if not settings.GEMINI_API_KEY:
-        raise LLMProviderError("GEMINI_API_KEY not configured")
-    return genai.Client(api_key=settings.GEMINI_API_KEY)
+    if settings.GOOGLE_CLOUD_PROJECT:
+        return genai.Client(
+            vertexai=True,
+            project=settings.GOOGLE_CLOUD_PROJECT,
+            location=settings.GOOGLE_CLOUD_LOCATION,
+        )
+    if settings.GEMINI_API_KEY:
+        return genai.Client(api_key=settings.GEMINI_API_KEY)
+    raise LLMProviderError("No Gemini/Vertex credentials configured")
+
+
+def _create_vertex_client():
+    """Create a Vertex AI client when project credentials are configured."""
+    if genai is None or types is None:
+        raise LLMProviderError("google-genai SDK is not installed")
+    if not settings.GOOGLE_CLOUD_PROJECT:
+        raise LLMProviderError("GOOGLE_CLOUD_PROJECT not configured")
+    return genai.Client(
+        vertexai=True,
+        project=settings.GOOGLE_CLOUD_PROJECT,
+        location=settings.GOOGLE_CLOUD_LOCATION,
+    )
 
 
 @retry(
@@ -141,17 +160,17 @@ async def call_llm_with_fallback(
     # Prefer local / deterministic providers first so Gemini stays optional.
     if settings.LLM_PREFERRED_PROVIDER != "gemini" and settings.LLM_FALLBACK_ENABLED:
         try:
-            logger.info(f"Attempting local LLM fallback first: {settings.LLM_TERTIARY_MODEL}")
+            logger.info(f"Attempting local LLM fallback first: {settings.OLLAMA_MODEL}")
             response = await call_ollama(
                 prompt=prompt,
-                model=settings.LLM_TERTIARY_MODEL,
+                model=settings.OLLAMA_MODEL,
                 temperature=temperature,
             )
-            logger.info(f"✓ Local LLM succeeded: {settings.LLM_TERTIARY_MODEL}")
-            return response, f"local:{settings.LLM_TERTIARY_MODEL}"
+            logger.info(f"✓ Local LLM succeeded: {settings.OLLAMA_MODEL}")
+            return response, f"local:{settings.OLLAMA_MODEL}"
         except Exception as e:
             logger.warning(f"✗ Local LLM failed: {e}")
-            errors.append(f"Local ({settings.LLM_TERTIARY_MODEL}): {e}")
+            errors.append(f"Local ({settings.OLLAMA_MODEL}): {e}")
 
     # Try Primary (Gemini) only after local fallback fails or if explicitly preferred.
     try:
@@ -182,17 +201,17 @@ async def call_llm_with_fallback(
     # Try Tertiary (Local Ollama) if Gemini and any secondary providers fail.
     if settings.LLM_FALLBACK_ENABLED:
         try:
-            logger.info(f"Attempting tertiary LLM (Ollama): {settings.LLM_TERTIARY_MODEL}")
+            logger.info(f"Attempting tertiary LLM (Ollama): {settings.OLLAMA_MODEL}")
             response = await call_ollama(
                 prompt=prompt,
-                model=settings.LLM_TERTIARY_MODEL,
+                model=settings.OLLAMA_MODEL,
                 temperature=temperature,
             )
-            logger.info(f"✓ Tertiary LLM (Ollama) succeeded: {settings.LLM_TERTIARY_MODEL}")
-            return response, f"tertiary:{settings.LLM_TERTIARY_MODEL}"
+            logger.info(f"✓ Tertiary LLM (Ollama) succeeded: {settings.OLLAMA_MODEL}")
+            return response, f"tertiary:{settings.OLLAMA_MODEL}"
         except Exception as e:
             logger.error(f"✗ Tertiary LLM (Ollama) failed: {e}")
-            errors.append(f"Tertiary (Ollama {settings.LLM_TERTIARY_MODEL}): {e}")
+            errors.append(f"Tertiary (Ollama {settings.OLLAMA_MODEL}): {e}")
 
     # All providers failed
     error_summary = "; ".join(errors)
@@ -221,7 +240,7 @@ async def call_ollama(
     """
     import aiohttp
 
-    url = f"{settings.LLM_TERTIARY_OLLAMA_URL}/api/generate"
+    url = f"{settings.OLLAMA_BASE_URL}/api/generate"
 
     payload = {
         "model": model,

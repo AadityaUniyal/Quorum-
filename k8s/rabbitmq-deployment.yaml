@@ -1,36 +1,49 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: googi-rabbitmq
-  namespace: googi-dev
+  name: rabbitmq
+  namespace: docintel
   labels:
-    app: googi-rabbitmq
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/component: message-broker
+    app.kubernetes.io/part-of: docintel-platform
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: googi-rabbitmq
+      app.kubernetes.io/name: rabbitmq
+      app.kubernetes.io/component: message-broker
   template:
     metadata:
       labels:
-        app: googi-rabbitmq
+        app.kubernetes.io/name: rabbitmq
+        app.kubernetes.io/component: message-broker
+        app.kubernetes.io/part-of: docintel-platform
     spec:
       containers:
         - name: rabbitmq
-          image: rabbitmq:3-management
+          image: rabbitmq:3-management-alpine
           ports:
-            - containerPort: 5672
-            - containerPort: 15672
+            - name: amqp
+              containerPort: 5672
+            - name: management
+              containerPort: 15672
           env:
             - name: RABBITMQ_DEFAULT_USER
               valueFrom:
                 secretKeyRef:
-                  name: googi-secret
+                  name: docintel-secret
                   key: RABBITMQ_USER
             - name: RABBITMQ_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
-                  name: googi-secret
+                  name: docintel-secret
                   key: RABBITMQ_PASS
-          # Management UI accessible via port 15672
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
       restartPolicy: Always
