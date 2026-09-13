@@ -6,9 +6,10 @@ import uuid
 from decimal import Decimal
 
 import pytest
+from app.config import settings
 from app.domain.aggregate import DocumentAggregate, DomainExtractedField
 from app.domain.consensus_engine import AgentVote, MajorityConsensus, WeightedConsensus
-from app.domain.provider_router import CircuitBreaker, ProviderRouter
+from app.domain.provider_router import CircuitBreaker, MockLocalFallbackProvider, ProviderRouter
 from app.domain.rule_engine import (
     CurrencyValidationRule,
     DateValidationRule,
@@ -157,8 +158,9 @@ def test_circuit_breaker():
 
 
 @pytest.mark.asyncio
-async def test_provider_router_fallback():
-    router = ProviderRouter()
+async def test_provider_router_fallback(monkeypatch):
+    monkeypatch.setattr(settings, "LLM_OFFLINE_MOCK_FALLBACK", True)
+    router = ProviderRouter(fallback=MockLocalFallbackProvider())
     res, provider = await router.generate("Test prompt")
     assert isinstance(res, str)
     assert isinstance(provider, str)
