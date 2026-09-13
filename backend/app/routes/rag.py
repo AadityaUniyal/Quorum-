@@ -11,6 +11,7 @@ Implements:
   - Q&A session history: persisted to DB via RAG audit logs
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -239,8 +240,9 @@ def ask_rag(
         answer_text, raw_citations = local_extractive_rag(req.question, docs)
     else:
         try:
-            from app.services.llm import _create_gemini_client
             from google.genai import types
+
+            from app.services.llm import _create_gemini_client
             client = _create_gemini_client()
             response = client.models.generate_content(
                 model=settings.LLM_MODEL,
@@ -374,8 +376,9 @@ def stream_rag(
                     await asyncio.sleep(0.01)
             else:
                 try:
-                    from app.services.llm import _create_gemini_client
                     from google.genai import types
+
+                    from app.services.llm import _create_gemini_client
                     client = _create_gemini_client()
                     response_stream = client.models.generate_content_stream(
                         model=settings.LLM_MODEL,

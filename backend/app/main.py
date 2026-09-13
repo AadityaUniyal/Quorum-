@@ -26,7 +26,6 @@ from app.config import settings
 from app.database import Base, engine
 from app.limiter import limiter
 from app.logging_config import generate_trace_id, get_logger, setup_logging, trace_id_var
-from app.services.cache import cache
 
 logger = get_logger(__name__)
 

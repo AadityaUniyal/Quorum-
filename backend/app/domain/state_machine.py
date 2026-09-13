@@ -4,9 +4,9 @@ Document Lifecycle State Machine
 Enforces valid lifecycle transitions for documents and prevents invalid state progressions.
 """
 
-from enum import StrEnum
 import logging
-from typing import Callable
+from collections.abc import Callable
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 

@@ -67,7 +67,7 @@ class TestFeature3RateLimiting(unittest.TestCase):
         """Verify that sending more than 10 login attempts triggers HTTP 429."""
         custom_headers = {"X-Forwarded-For": "192.168.1.40"}
         responses = []
-        for i in range(11):
+        for _i in range(11):
             resp = self.client.login(
                 username="flood_user",
                 password="P@ssw0rd2026!#LoginFlood",

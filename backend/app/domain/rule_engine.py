@@ -4,12 +4,12 @@ Polymorphic Business Rule Engine
 Provides composable, typed validation rules for document domain contexts.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from enum import StrEnum
-import logging
 from typing import Any, Generic, TypeVar
 
 from app.domain.value_objects import Money

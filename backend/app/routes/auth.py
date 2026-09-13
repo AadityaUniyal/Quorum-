@@ -4,7 +4,6 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -13,12 +12,20 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.security import (
     blacklist_token,
-    create_access_token as sec_create_access_token,
-    create_refresh_token as sec_create_refresh_token,
     decode_token,
-    get_password_hash as sec_get_password_hash,
     is_token_blacklisted,
     validate_password_strength,
+)
+from app.core.security import (
+    create_access_token as sec_create_access_token,
+)
+from app.core.security import (
+    create_refresh_token as sec_create_refresh_token,
+)
+from app.core.security import (
+    get_password_hash as sec_get_password_hash,
+)
+from app.core.security import (
     verify_password as sec_verify_password,
 )
 from app.database import get_db
@@ -27,14 +34,11 @@ from app.models.api_key import ApiKey
 from app.models.auth import User, UserRole
 from app.schemas.api_key import ApiKeyCreate, ApiKeyCreateResponse, ApiKeyResponse
 from app.schemas.auth import (
-    ChangePassword,
     RefreshTokenRequest,
     Token,
     UserCreate,
     UserLogin,
     UserResponse,
-    UserRoleUpdate,
-    UserUpdate,
 )
 
 logger = logging.getLogger(__name__)

@@ -2,10 +2,10 @@
 Immutable Domain Value Objects
 """
 
-from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
 import re
 import uuid
+from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 
 
 @dataclass(frozen=True)

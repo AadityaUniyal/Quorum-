@@ -79,7 +79,7 @@ class TestPageRankEmpiricalConvergence(unittest.TestCase):
         N = 100
         graph = {f"n_{i}": [] for i in range(N)}
         for i in range(N):
-            targets = random.sample(range(N), k=random.randint(1, 10))
+            targets = random.sample(range(N), k=random.randint(1, 10))  # noqa: S311
             graph[f"n_{i}"] = [f"n_{t}" for t in targets if t != i]
 
         t0 = time.perf_counter()
@@ -96,7 +96,7 @@ class TestPageRankEmpiricalConvergence(unittest.TestCase):
         N = 500
         graph = {f"n_{i}": [] for i in range(N)}
         for i in range(N):
-            targets = random.sample(range(N), k=random.randint(0, 15))
+            targets = random.sample(range(N), k=random.randint(0, 15))  # noqa: S311
             graph[f"n_{i}"] = [f"n_{t}" for t in targets if t != i]
 
         t0 = time.perf_counter()
@@ -118,7 +118,7 @@ class TestPageRankEmpiricalConvergence(unittest.TestCase):
             elif i % 2 == 0:  # Sparse
                 graph[f"n_{i}"] = [f"n_{(i+1)%N}"]
             else:  # Dense cluster
-                graph[f"n_{i}"] = [f"n_{random.randint(0, N-1)}" for _ in range(20)]
+                graph[f"n_{i}"] = [f"n_{random.randint(0, N-1)}" for _ in range(20)]  # noqa: S311
 
         t0 = time.perf_counter()
         result = compute_pagerank(graph, max_iterations=100, tolerance=1e-6)

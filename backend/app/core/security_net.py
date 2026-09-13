@@ -88,7 +88,7 @@ def resolve_and_validate_host(hostname: str, allow_local_for_testing: bool = Fal
         raise ValueError(f"Unable to resolve host '{clean_host}': {e}") from e
 
     resolved_ips = []
-    for family, _, _, _, sockaddr in addr_infos:
+    for _family, _, _, _, sockaddr in addr_infos:
         ip_str = sockaddr[0]
         ip_obj = ipaddress.ip_address(ip_str)
         if not allow_local_for_testing and is_ip_blocked(ip_obj):

@@ -83,9 +83,9 @@ def cache(ttl_seconds: int = 300):
                 # Extract user context if present in kwargs to guarantee tenant isolation
                 for kw_val in kwargs.values():
                     if hasattr(kw_val, "organization_id") and getattr(kw_val, "organization_id", None):
-                        safe_kwargs["_tenant_org"] = str(getattr(kw_val, "organization_id"))
+                        safe_kwargs["_tenant_org"] = str(kw_val.organization_id)
                     elif hasattr(kw_val, "id") and getattr(kw_val, "id", None) and hasattr(kw_val, "email"):
-                        safe_kwargs["_user_id"] = str(getattr(kw_val, "id"))
+                        safe_kwargs["_user_id"] = str(kw_val.id)
 
                 cache_key = (
                     f"cache:{func.__name__}"

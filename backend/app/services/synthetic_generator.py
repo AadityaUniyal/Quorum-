@@ -5,9 +5,9 @@ Generates realistic benchmark documents with controlled anomalies (arithmetic er
 date discrepancies, vendor mismatches) for continuous evaluation and testing.
 """
 
+import random
 from dataclasses import dataclass
 from decimal import Decimal
-import random
 from typing import Any
 
 
@@ -35,9 +35,9 @@ class SyntheticDocumentGenerator:
 
     @classmethod
     def generate_invoice(cls, inject_arithmetic_error: bool = False, invoice_num: int = 1001) -> SyntheticDocument:
-        vendor = random.choice(cls.VENDORS)
-        item1_name, item1_price = random.choice(cls.ITEMS)
-        qty = random.randint(1, 4)
+        vendor = random.choice(cls.VENDORS)  # noqa: S311
+        item1_name, item1_price = random.choice(cls.ITEMS)  # noqa: S311
+        qty = random.randint(1, 4)  # noqa: S311
         subtotal = item1_price * qty
         tax = round(subtotal * Decimal("0.10"), 2)
         shipping = Decimal("25.00")

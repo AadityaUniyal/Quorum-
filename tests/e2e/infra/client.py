@@ -558,13 +558,13 @@ class E2EClient:
             try:
                 import urllib.error
                 import urllib.request
-                req = urllib.request.Request(
+                req = urllib.request.Request(  # noqa: S310
                     f"{self.base_url}{path}",
                     data=encoded_body if encoded_body else None,
                     headers=req_headers,
                     method=method
                 )
-                with urllib.request.urlopen(req, timeout=3) as resp:
+                with urllib.request.urlopen(req, timeout=3) as resp:  # noqa: S310
                     resp_body = resp.read()
                     resp_headers = dict(resp.headers)
                     parsed_cookies = self.parse_cookies(resp_headers)

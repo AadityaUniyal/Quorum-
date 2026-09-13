@@ -6,8 +6,8 @@ import secrets
 from datetime import UTC, datetime
 from email.header import decode_header
 
-from app.database import SessionLocal
 from app.config import settings
+from app.database import SessionLocal
 from app.models.document import Document, DocumentCategory, DocumentStatus
 
 logger = logging.getLogger(__name__)

@@ -2,22 +2,21 @@
 Unit & Integration Tests for Domain Orchestration Layer
 """
 
-from decimal import Decimal
-import pytest
 import uuid
+from decimal import Decimal
 
+import pytest
 from app.domain.aggregate import DocumentAggregate, DomainExtractedField
-from app.domain.consensus_engine import AgentVote, ConsensusEngine, MajorityConsensus, WeightedConsensus
-from app.domain.provider_router import CircuitBreaker, MockLocalFallbackProvider, ProviderRouter
+from app.domain.consensus_engine import AgentVote, MajorityConsensus, WeightedConsensus
+from app.domain.provider_router import CircuitBreaker, ProviderRouter
 from app.domain.rule_engine import (
     CurrencyValidationRule,
     DateValidationRule,
     InvoiceTotalRule,
-    RuleEngine,
     RuleStatus,
 )
 from app.domain.state_machine import DocumentState, DocumentStateMachine, InvalidStateTransitionError
-from app.domain.value_objects import ConfidenceScore, DocumentHash, DocumentId, Money, TenantId
+from app.domain.value_objects import ConfidenceScore, DocumentHash, Money
 
 
 def test_money_value_object():

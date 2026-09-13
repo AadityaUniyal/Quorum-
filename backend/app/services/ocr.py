@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import time
 from concurrent.futures import ThreadPoolExecutor
 
 import pytesseract
@@ -26,6 +25,7 @@ except ImportError:
     pypdf = _DummyPypdf
 
 from app.config import Settings
+
 settings = Settings()
 
 logger = logging.getLogger(__name__)

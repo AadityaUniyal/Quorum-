@@ -15,7 +15,7 @@ from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentStatus, ExtractedField, FieldValidationStatus
 from app.routes.auth import RoleChecker
 from app.schemas.document import DocumentResponse, DocumentReviewSubmit, DocumentSimpleResponse
-from app.services.auth_access import filter_documents_for_user, require_document_read, require_document_write
+from app.services.auth_access import filter_documents_for_user, require_document_write
 
 router = APIRouter(prefix="/api/review", tags=["review"])
 

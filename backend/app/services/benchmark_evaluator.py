@@ -4,8 +4,8 @@ AI Pipeline Benchmark Evaluator
 Evaluates precision, recall, F1, citation accuracy, and hallucination rate across a dataset.
 """
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 from app.domain.rule_engine import InvoiceTotalRule, RuleStatus

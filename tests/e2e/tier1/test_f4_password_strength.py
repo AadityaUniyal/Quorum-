@@ -26,7 +26,6 @@ class TestFeature4PasswordStrength(unittest.TestCase):
     def test_f4_01_strong_password_accepted(self):
         """Verify that a strong password (length >= 12, uppercase, lowercase, numbers, symbols) is accepted."""
         password = "P@ssw0rd2026!#DocIntelSecure"
-        headers = {"X-Forwarded-For": "10.0.0.1"}
         res = self.client.test_password_validation(password)
         self.assertGreaterEqual(res["score"], 3)
         self.assertTrue(res["accepted"])
@@ -51,7 +50,6 @@ class TestFeature4PasswordStrength(unittest.TestCase):
     def test_f4_04_short_password_rejected(self):
         """Verify that short passwords under 8 characters receive low score and are rejected."""
         short_passwords = ["a", "123456", "abc12!"]
-        headers = {"X-Forwarded-For": "10.0.0.4"}
         for pwd in short_passwords:
             res = self.client.test_password_validation(pwd)
             self.assertFalse(res["accepted"], f"Short password '{pwd}' should be rejected")
@@ -59,7 +57,6 @@ class TestFeature4PasswordStrength(unittest.TestCase):
     def test_f4_05_common_pattern_passwords_rejected(self):
         """Verify that common predictable pattern passwords score low and are rejected."""
         common_passwords = ["password", "qwerty1234", "admin123", "letmein123"]
-        headers = {"X-Forwarded-For": "10.0.0.5"}
         for pwd in common_passwords:
             res = self.client.test_password_validation(pwd)
             self.assertFalse(res["accepted"], f"Common password '{pwd}' should be rejected")

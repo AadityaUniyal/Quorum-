@@ -32,6 +32,7 @@ class TestFeature5CrawlerPackage(unittest.TestCase):
             from googi_crawler.crawler import CrawledPageData, GoogiCrawler
             from googi_crawler.pagerank import compute_pagerank
             self.assertTrue(callable(GoogiCrawler))
+            self.assertTrue(callable(CrawledPageData))
             self.assertTrue(callable(compute_pagerank))
         except ImportError as e:
             self.fail(f"Failed to import googi_crawler package components: {e}")

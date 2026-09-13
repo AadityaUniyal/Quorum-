@@ -5,10 +5,10 @@ Implements pluggable consensus strategies: MajorityConsensus, WeightedConsensus,
 and ConfidenceThresholdConsensus for reliable multi-agent agreement.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from collections import Counter
-from dataclasses import dataclass, field
-import logging
+from dataclasses import dataclass
 from typing import Any
 
 from app.domain.value_objects import ConfidenceScore

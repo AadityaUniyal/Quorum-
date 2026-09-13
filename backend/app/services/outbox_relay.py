@@ -6,7 +6,6 @@ Events are committed to the `outbox_events` table as part of the primary busines
 transaction, and then dispatched by the OutboxRelay to RabbitMQ.
 """
 
-import json
 import logging
 import uuid
 from datetime import UTC, datetime

@@ -7,8 +7,8 @@ os.environ.setdefault('DEBUG', 'true')
 os.environ.setdefault('RABBITMQ_HOST', 'localhost')
 os.environ.setdefault('REDIS_HOST', 'localhost')
 
-from app.database import Base, engine
 import app.models  # Registers all SQLAlchemy models
+from app.database import Base, engine
 from app.main import app
 
 Base.metadata.create_all(bind=engine)

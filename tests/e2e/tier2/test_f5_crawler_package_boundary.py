@@ -18,7 +18,7 @@ if str(pkg_dir) not in sys.path:
     sys.path.insert(0, str(pkg_dir))
 
 try:
-    from googi_crawler.crawler import CrawledPageData, GoogiCrawler
+    from googi_crawler.crawler import GoogiCrawler
 except ImportError:
     # Fallback if package structure varies
     from packages.googi_crawler.googi_crawler.crawler import GoogiCrawler

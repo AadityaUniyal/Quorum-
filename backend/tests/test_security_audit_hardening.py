@@ -13,24 +13,16 @@ Tests:
 """
 
 import uuid
-from datetime import UTC, datetime
-from decimal import Decimal
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.agents.auditor import run_auditor_agent
-from app.core.security import create_access_token, get_password_hash, validate_password_strength
-from app.core.security_net import is_ip_blocked, validate_safe_url
-from app.database import Base, get_db
-from app.main import app
+from app.core.security import create_access_token, get_password_hash
+from app.core.security_net import validate_safe_url
 from app.models.auth import Organization, User, UserRole
-from app.models.document import Document, DocumentCategory, DocumentStatus, ExtractedField
+from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.services.auth_access import can_read_document, can_write_document
 from app.services.vector_store import add_document_to_vector_store, search_vector_store
-
-
-
 
 # ── 1. SSRF & Network Security Tests ──────────────────────────────────────────
 
@@ -90,7 +82,7 @@ class TestMultiTenantAuthorization:
 
         doc_alpha = Document(
             filename="alpha_invoice.pdf",
-            file_path="/tmp/alpha.pdf",
+            file_path="/tmp/alpha.pdf",  # noqa: S108
             file_type="PDF",
             organization_id=org1.id,
             uploaded_by=user_alpha.id,
@@ -129,7 +121,7 @@ class TestMultiTenantAuthorization:
 
         doc = Document(
             filename="gamma_report.pdf",
-            file_path="/tmp/gamma.pdf",
+            file_path="/tmp/gamma.pdf",  # noqa: S108
             file_type="PDF",
             organization_id=org.id,
             uploaded_by=reviewer.id,

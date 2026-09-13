@@ -5,10 +5,10 @@ Encapsulates document metadata, extracted fields, validation results,
 lifecycle transitions, and domain events.
 """
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
-import uuid
 
 from app.domain.rule_engine import RuleEngine, RuleResult
 from app.domain.state_machine import DocumentState, DocumentStateMachine

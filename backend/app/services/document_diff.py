@@ -5,9 +5,9 @@ Compares two document versions or two different documents to detect ADDED, REMOV
 CHANGED, and CONFLICT modifications with evidence grounding.
 """
 
+import logging
 from dataclasses import dataclass, field
 from enum import StrEnum
-import logging
 from typing import Any
 
 logger = logging.getLogger(__name__)

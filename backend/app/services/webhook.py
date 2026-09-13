@@ -120,7 +120,7 @@ def dispatch_webhook(event_type: str, payload: dict, organization_id: str | None
     try:
         query = db.query(WebhookConfig).filter(
             WebhookConfig.event_type == event_type,
-            WebhookConfig.is_active == True
+            WebhookConfig.is_active
         )
         if organization_id:
             try:
