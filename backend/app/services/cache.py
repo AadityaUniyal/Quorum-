@@ -67,8 +67,10 @@ def cache(ttl_seconds: int = 300):
 
     The result is cached under a key derived from the function name and the
     JSON‑serialisable arguments. If Redis is unavailable the original function
-    is executed and its result is returned un‑cached.
+    executed and its result is returned un‑cached.
     """
+    import inspect
+
     def decorator(func: Callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -77,6 +79,14 @@ def cache(ttl_seconds: int = 300):
             try:
                 safe_args = [a for a in args if isinstance(a, (str, int, float, bool, type(None)))]
                 safe_kwargs = {k: v for k, v in kwargs.items() if isinstance(v, (str, int, float, bool, type(None)))}
+
+                # Extract user context if present in kwargs to guarantee tenant isolation
+                for kw_val in kwargs.values():
+                    if hasattr(kw_val, "organization_id") and getattr(kw_val, "organization_id", None):
+                        safe_kwargs["_tenant_org"] = str(getattr(kw_val, "organization_id"))
+                    elif hasattr(kw_val, "id") and getattr(kw_val, "id", None) and hasattr(kw_val, "email"):
+                        safe_kwargs["_user_id"] = str(getattr(kw_val, "id"))
+
                 cache_key = (
                     f"cache:{func.__name__}"
                     f":{_serialize(safe_args)}"
@@ -105,6 +115,12 @@ def cache(ttl_seconds: int = 300):
                 logger.debug(f"Cache write error for {func.__name__}: {exc}")
 
             return result
+
+        try:
+            wrapper.__signature__ = inspect.signature(func)
+        except Exception:
+            pass
+
         return wrapper
     return decorator
 
@@ -114,7 +130,7 @@ def invalidate_cache_prefix(prefix: str) -> int:
     """
     try:
         client = get_redis_client()
-        keys = client.keys(f"cache:{prefix}*")
+        keys = list(client.scan_iter(match=f"cache:{prefix}*"))
         if keys:
             return client.delete(*keys)
     except Exception as exc:

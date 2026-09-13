@@ -88,13 +88,19 @@ export default function AnalyticsPage() {
 
   const handleExportChart = (chartName: string) => {
     toast.success(`Preparing ${chartName} data export...`);
+    const exportPayload = {
+      chart: chartName,
+      exported_at: new Date().toISOString(),
+      kpis: kpis || {},
+      charts: charts || {},
+      agent_stats: agentStats || {},
+      search_stats: searchStats || {},
+      crawl_stats: crawlStats || {},
+    };
     const element = document.createElement("a");
-    const file = new Blob(
-      [JSON.stringify({ chart: chartName, exported_at: new Date().toISOString() }, null, 2)],
-      { type: 'application/json' }
-    );
+    const file = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
     element.href = URL.createObjectURL(file);
-    element.download = `${chartName.toLowerCase()}_analytics_chart.json`;
+    element.download = `${chartName.toLowerCase()}_analytics_report.json`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);

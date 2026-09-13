@@ -12,6 +12,7 @@ from app.routes.auth import RoleChecker
 from app.services.auth_access import filter_documents_for_user
 from app.services.cache import cache
 from app.services.export import export_to_csv, export_to_pdf
+from app.services.reranker import rerank_search_results
 from app.services.vector_store import query_rag_knowledge, search_vector_store
 
 logger = logging.getLogger(__name__)
@@ -271,8 +272,8 @@ def export_search_results(
 
 
 # Structured metadata SQL search & Hybrid search
-@cache(ttl_seconds=60)
 @router.get("")
+@cache(ttl_seconds=60)
 def search_documents_metadata(
     response: Response,
     query: str | None = None,
@@ -293,7 +294,7 @@ def search_documents_metadata(
 
     # 1. Fallback: Metadata listing when no query parameter is provided
     if not query:
-        sql_query = db.query(Document)
+        sql_query = filter_documents_for_user(db.query(Document), current_user)
         if category:
             sql_query = sql_query.filter(Document.category == category)
         if status:
@@ -346,14 +347,16 @@ def search_documents_metadata(
             tsvector = func.to_tsvector('english', Document.ocr_text)
             tsquery = func.plainto_tsquery('english', q_variant)
             rank = func.ts_rank_cd(tsvector, tsquery)
-            doc_matches = db.query(Document, rank).filter(tsvector.op("@@")(tsquery)).all()
+            base_doc_q = filter_documents_for_user(db.query(Document, rank), current_user)
+            doc_matches = base_doc_q.filter(tsvector.op("@@")(tsquery)).all()
             for doc, score in doc_matches:
                 key = str(doc.id)
                 # Keep highest score across expansions
                 if key not in keyword_text_results or score > keyword_text_results[key]["score"]:
                     keyword_text_results[key] = {"type": "file", "obj": doc, "score": score}
         else:
-            doc_matches = db.query(Document).filter(
+            base_doc_q = filter_documents_for_user(db.query(Document), current_user)
+            doc_matches = base_doc_q.filter(
                 or_(*[Document.ocr_text.ilike(f"%{t}%") for t in terms]) if terms else True
             ).all()
             for doc in doc_matches:
@@ -553,6 +556,7 @@ def search_documents_metadata(
         return res_list
 
     combined_results = token_overlap_similarity_rerank(combined_results, clean_query)
+    combined_results = rerank_search_results(clean_query, combined_results, top_n=len(combined_results))
     combined_results.sort(key=lambda x: x["score"], reverse=True)
 
     # Save search metrics log

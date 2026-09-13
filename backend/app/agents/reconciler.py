@@ -92,8 +92,8 @@ Extracted value: {field_value}
 Critic Agent score: {critic_score} — Notes: {critic_notes}
 Auditor Agent score: {auditor_score} — Notes: {auditor_notes}
 
-Relevant OCR text (excerpt, max 800 chars):
-{ocr_text[:800]}
+Relevant OCR text (up to 4000 chars):
+{ocr_text[:4000]}
 
 Your task: Decide the correct confidence score (0.0 to 1.0) for this field
 by examining the OCR text and the agents' reasoning.
@@ -109,14 +109,22 @@ Respond ONLY with valid JSON in this exact format:
         )
         return response_text
 
-    content = asyncio.run(_run()).strip()
-    if content.startswith("```json"):
-        content = content[7:]
-    if content.endswith("```"):
-        content = content[:-3]
-    data = json.loads(content.strip())
-    score = max(0.0, min(1.0, float(data.get("reconciled_score", 0.75))))
-    return {
-        "reconciled_score": round(score, 4),
-        "notes": data.get("notes", "Reconciled by Gemini."),
-    }
+    try:
+        content = asyncio.run(_run()).strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.endswith("```"):
+            content = content[:-3]
+        data = json.loads(content.strip())
+        score = max(0.0, min(1.0, float(data.get("reconciled_score", 0.75))))
+        return {
+            "reconciled_score": round(score, 4),
+            "notes": data.get("notes", "Reconciled by Gemini."),
+        }
+    except Exception as e:
+        logger.warning(f"Gemini reconciler failed for field {field_key}: {e}")
+        blended = round((critic_score * 0.4 + auditor_score * 0.6), 4)
+        return {
+            "reconciled_score": blended,
+            "notes": f"Fallback resolution (conflict deltas > 0.3): blended score {blended}"
+        }

@@ -70,8 +70,8 @@ class Document(Base):
     deleted_at = Column(DateTime, nullable=True)
     deleted_by = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), index=True)
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), onupdate=lambda: datetime.now(UTC).replace(tzinfo=None))
 
     # Composite indexes for multi-tenant querying performance & security
     __table_args__ = (
@@ -132,7 +132,7 @@ class DocumentVersion(Base):
     executive_summary = Column(Text, nullable=True)
     consensus_score = Column(Float, nullable=True)
     pipeline_version = Column(String(32), default="1.0.0", nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
     created_by = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     document = relationship("Document", back_populates="versions")
@@ -150,7 +150,7 @@ class ReviewTask(Base):
     priority = Column(String, default="MEDIUM", nullable=False)  # LOW, MEDIUM, HIGH, URGENT
     status = Column(String, default="PENDING", nullable=False)   # PENDING, IN_PROGRESS, COMPLETED, ESCALATED
     due_date = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
 

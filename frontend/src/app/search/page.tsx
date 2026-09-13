@@ -889,85 +889,91 @@ export default function SearchPage() {
                   Export PDF
                 </button>
                 <span className="text-[10px] font-mono font-bold text-muted-foreground bg-white/3 px-2 py-0.5 rounded-full border border-white/4">
-                  Context: {selectedDocIds.length} docs
+                  {selectedDocIds.length} doc{selectedDocIds.length > 1 ? 's' : ''}
                 </span>
+                <button
+                  onClick={() => setIsChatOpen(false)}
+                  className="p-1 text-neutral-400 hover:text-white rounded cursor-pointer transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             </div>
 
-            {/* Chat Messages flow */}
-            <div className="flex-1 overflow-y-auto p-4 scrollbar flex flex-col gap-4 bg-[#080808]/20">
+            {/* Chat History */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs scrollbar">
               {chatHistory.length === 0 ? (
-                <div className="grow flex flex-col items-center justify-center text-center gap-2 text-muted-foreground font-sans text-xs py-12 select-none">
-                  <Sparkles className="h-5 w-5 text-primary/60 animate-pulse" />
-                  <span>Ask a question about the selected document context...</span>
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 text-neutral-400 space-y-2">
+                  <Sparkles className="h-8 w-8 text-primary/40 animate-pulse" />
+                  <p className="font-semibold text-neutral-200">Ask DocIntel Copilot</p>
+                  <p className="text-[11px] leading-relaxed">
+                    Query across all {selectedDocIds.length} selected document context sources using RAG search synthesis.
+                  </p>
                 </div>
               ) : (
                 chatHistory.map((msg, idx) => (
-                  <div 
+                  <div
                     key={idx}
                     className={clsx(
-                      "flex flex-col gap-2 max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed font-sans",
+                      'flex flex-col gap-1.5 p-3 rounded-xl max-w-[90%]',
                       msg.role === 'user'
-                        ? "bg-primary border border-primary/20 text-white self-end rounded-tr-none"
-                        : "bg-[#111] border border-white/4 text-neutral-300 self-start rounded-tl-none select-text"
+                        ? 'ml-auto bg-primary/20 border border-primary/30 text-neutral-100'
+                        : 'mr-auto bg-white/3 border border-white/6 text-neutral-200'
                     )}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                    
-                    {msg.role === 'assistant' && msg.citations && msg.citations.length > 0 && (
-                      <div className="mt-2 border-t border-white/4 pt-1.5 flex flex-col gap-1 select-none">
-                        <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Cited Sources:</span>
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {msg.citations.map((cite, cIdx) => (
-                            <button
-                              key={cIdx}
-                              onClick={() => router.push(`/review?doc_id=${cite.id}`)}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/3 border border-white/6 hover:bg-white/8 text-[9px] text-neutral-400 hover:text-white transition-all cursor-pointer font-sans"
-                            >
-                              <FileText className="h-2.5 w-2.5 text-primary shrink-0" />
-                              <span className="truncate max-w-[100px]">{cite.name}</span>
-                            </button>
-                          ))}
-                        </div>
+                    <div className="flex items-center justify-between gap-2 text-[10px] text-neutral-400 font-mono">
+                      <span>{msg.role === 'user' ? 'You' : 'DocIntel AI'}</span>
+                    </div>
+                    <div className="whitespace-pre-wrap leading-relaxed">
+                      {msg.content || (isChatLoading && idx === chatHistory.length - 1 ? (
+                        <span className="inline-flex items-center gap-1 text-primary">
+                          <Loader2 className="h-3 w-3 animate-spin" /> Thinking...
+                        </span>
+                      ) : (
+                        ''
+                      ))}
+                    </div>
+                    {msg.citations && msg.citations.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-white/6 flex flex-col gap-1">
+                        <span className="text-[10px] font-mono text-neutral-400 uppercase font-bold">Sources:</span>
+                        {msg.citations.map((cit: any, cIdx: number) => (
+                          <button
+                            key={cIdx}
+                            onClick={() => window.open(`/review?doc_id=${cit.id}`, '_blank')}
+                            className="text-left text-[11px] text-primary hover:underline truncate"
+                          >
+                            • {cit.name}
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
                 ))
               )}
-
-              {/* RAG Thinking loader */}
-              {isChatLoading && (
-                <div className="bg-[#111] border border-white/4 text-neutral-400 self-start rounded-2xl rounded-tl-none px-3.5 py-2.5 text-xs flex items-center gap-2 font-sans select-none animate-pulse">
-                  <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
-                  <span>AI agent analyzing document context...</span>
-                </div>
-              )}
             </div>
 
-            {/* Chat Input form */}
-            <form onSubmit={handleSendChatMessage} className="p-4 border-t border-white/4 bg-white/1 flex items-center gap-2">
+            {/* Chat Input */}
+            <form onSubmit={handleSendChatMessage} className="p-3 border-t border-white/4 bg-black/40 flex items-center gap-2">
               <input
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ask about prices, dates, terms..."
-                disabled={isChatLoading}
-                className="flex-1 bg-[#111] border border-white/6 rounded-xl px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:border-primary/50 font-sans"
+                placeholder="Ask about selected docs..."
+                className="flex-1 bg-[#111] border border-white/8 rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-neutral-500 focus:outline-none focus:border-primary/50"
               />
               <button
                 type="submit"
                 disabled={!chatInput.trim() || isChatLoading}
-                className="p-2.5 rounded-xl bg-primary border border-primary/20 text-white hover:bg-primary-hover disabled:opacity-50 transition-all cursor-pointer shadow-md shadow-primary/10 shrink-0"
+                className="p-2 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white rounded-xl transition-all shrink-0 cursor-pointer"
               >
-                <Send className="h-3.5 w-3.5" />
+                {isChatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </button>
             </form>
-
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Bookmarks Modal Drawer */}
+      {/* Bookmarks Modal */}
       <AnimatePresence>
         {isBookmarksOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">

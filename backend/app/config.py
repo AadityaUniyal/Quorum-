@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = os.getenv("DATABASE_URL") or "sqlite:///./test.db"
 
     # Security & Auth Config
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY") or secrets.token_urlsafe(64)
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY") or "docintel_dev_secret_key_change_in_production_32bytes_minimum"
     JWT_SECRET_KEYS_ROTATION: str = os.getenv("JWT_SECRET_KEYS_ROTATION", "")  # Comma-separated previous valid keys
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
 import { useUIStore } from '@/stores/ui';
+import { SseStatusPill } from '@/components/layout/SseStatusPill';
 import {
   Search, 
   Bell, 
@@ -23,7 +24,7 @@ export const Header: React.FC = () => {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const { setCommandPaletteOpen } = useUIStore();
-  
+
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -90,6 +91,8 @@ export const Header: React.FC = () => {
 
       {/* Right Actions */}
       <div className="flex items-center gap-4">
+        <SseStatusPill />
+
         {/* Search Command Palette Trigger */}
         <button
           onClick={() => setCommandPaletteOpen(true)}

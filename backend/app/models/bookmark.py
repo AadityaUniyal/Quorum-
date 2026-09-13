@@ -15,7 +15,7 @@ class Bookmark(Base):
     name = Column(String, nullable=False)
     query_text = Column(String, nullable=False)
     filters = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), nullable=False)
 
     # Relationships
     user = relationship("User", backref="bookmarks")

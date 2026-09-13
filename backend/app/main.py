@@ -257,6 +257,7 @@ def health_startup():
 
 @app.get("/health")
 @app.get("/health/ready")
+@app.get("/api/v1/health")
 def health_readiness():
     """
     Comprehensive readiness check that verifies connectivity to backing services:

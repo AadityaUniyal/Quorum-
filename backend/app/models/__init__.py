@@ -14,6 +14,7 @@ from app.models.document import (
     FieldValidationStatus,
     ReviewTask,
 )
+from app.models.finops import TokenUsage
 from app.models.notification import Notification
 from app.models.outbox import InboxEvent, OutboxEvent
 from app.models.search import CrawledPage, PageLink, SearchLog
@@ -47,4 +48,5 @@ __all__ = [
     "WebhookLog",
     "OutboxEvent",
     "InboxEvent",
+    "TokenUsage",
 ]

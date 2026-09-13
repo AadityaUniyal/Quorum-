@@ -20,8 +20,7 @@ def get_collection():
     return chroma_client.get_or_create_collection(name="document_intelligence")
 
 
-# Maintain backward compatibility for modules importing vector_store.collection
-@property
+# Maintain backward compatibility for modules calling collection() or get_collection()
 def collection():
     return get_collection()
 

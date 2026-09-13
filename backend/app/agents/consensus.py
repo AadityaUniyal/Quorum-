@@ -151,19 +151,19 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
         # Avoid treating failed/timeout agents as 1.0 (100% confidence)
         critic_eval = critic_results.get(key)
         if not critic_eval:
-            critic_eval = {"score": 0.70, "notes": "Critic check unavailable"}
+            critic_eval = {"score": 0.0, "notes": "Critic check unavailable (failed/skipped)"}
 
         auditor_eval = auditor_results.get(key)
         if not auditor_eval:
-            auditor_eval = {"score": 0.70, "notes": "Auditor check unavailable"}
+            auditor_eval = {"score": 0.0, "notes": "Auditor check unavailable (failed/skipped)"}
 
         compliance_eval = compliance_results.get(key)
         if not compliance_eval:
-            compliance_eval = {"score": 0.70, "notes": "Compliance check unavailable"}
+            compliance_eval = {"score": 0.0, "notes": "Compliance check unavailable (failed/skipped)"}
 
-        critic_score     = critic_eval.get("score", 0.70)
-        auditor_score    = auditor_eval.get("score", 0.70)
-        compliance_score = compliance_eval.get("score", 0.70)
+        critic_score     = critic_eval.get("score", 0.0)
+        auditor_score    = auditor_eval.get("score", 0.0)
+        compliance_score = compliance_eval.get("score", 0.0)
 
         # If the Reconciler overrode this field, blend its score in (50/50 weight)
         if key in reconciler_results:

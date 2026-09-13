@@ -9,6 +9,7 @@ from app.models.audit import AuditLog
 from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentStatus
 from app.routes.auth import RoleChecker
+from app.services.auth_access import filter_documents_for_user
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
@@ -21,29 +22,32 @@ def get_platform_kpis(
     db: Session = Depends(get_db),
     current_user: User = Depends(any_user)
 ):
-    total_docs = db.query(Document).count()
-    processed_docs = db.query(Document).filter(Document.status == DocumentStatus.PROCESSED).count()
-    review_docs = db.query(Document).filter(Document.status == DocumentStatus.AWAITING_REVIEW).count()
-    failed_docs = db.query(Document).filter(Document.status == DocumentStatus.FAILED).count()
+    base_docs = filter_documents_for_user(db.query(Document), current_user)
+    total_docs = base_docs.count()
+    processed_docs = base_docs.filter(Document.status == DocumentStatus.PROCESSED).count()
+    review_docs = base_docs.filter(Document.status == DocumentStatus.AWAITING_REVIEW).count()
+    failed_docs = base_docs.filter(Document.status == DocumentStatus.FAILED).count()
 
     # Calculate average consensus score
-    avg_score_query = db.query(func.avg(Document.consensus_score)).filter(Document.consensus_score.isnot(None)).scalar()
+    avg_score_query = filter_documents_for_user(
+        db.query(func.avg(Document.consensus_score)), current_user
+    ).filter(Document.consensus_score.isnot(None)).scalar()
     avg_accuracy = round(float(avg_score_query) * 100, 2) if avg_score_query is not None else 100.0
 
     # Human intervention rate
     review_rate = round((review_docs / total_docs) * 100, 2) if total_docs > 0 else 0.0
 
     # Measure average processing speed from document lifecycle timestamps.
-    speed_query = db.query(Document.created_at, Document.updated_at).filter(Document.status == DocumentStatus.PROCESSED).all()
+    speed_query = filter_documents_for_user(
+        db.query(Document.created_at, Document.updated_at), current_user
+    ).filter(Document.status == DocumentStatus.PROCESSED).all()
 
     total_seconds = 0
     count = len(speed_query)
     for created, updated in speed_query:
-        total_seconds += (updated - created).total_seconds()
+        total_seconds += max(0.1, (updated - created).total_seconds())
 
-    avg_speed = round(total_seconds / count, 1) if count > 0 else 3.2
-    if avg_speed < 1.0:
-        avg_speed = 1.8
+    avg_speed = round(total_seconds / count, 1) if count > 0 else 0.0
 
     return {
         "total_documents": total_docs,
@@ -60,13 +64,19 @@ def get_chart_data(
     db: Session = Depends(get_db),
     current_user: User = Depends(any_user)
 ):
+    base_query = filter_documents_for_user(db.query(Document), current_user)
+
     # 1. Category Distribution
-    cat_query = db.query(Document.category, func.count(Document.id)).group_by(Document.category).all()
-    category_distribution = [{"category": cat.value, "count": count} for cat, count in cat_query]
+    cat_query = db.query(Document.category, func.count(Document.id)).filter(
+        Document.id.in_(base_query.with_entities(Document.id))
+    ).group_by(Document.category).all()
+    category_distribution = [{"category": cat.value if cat else "UNKNOWN", "count": count} for cat, count in cat_query]
 
     # 2. Status Breakdown
-    status_query = db.query(Document.status, func.count(Document.id)).group_by(Document.status).all()
-    status_distribution = [{"status": stat.value, "count": count} for stat, count in status_query]
+    status_query = db.query(Document.status, func.count(Document.id)).filter(
+        Document.id.in_(base_query.with_entities(Document.id))
+    ).group_by(Document.status).all()
+    status_distribution = [{"status": stat.value if stat else "INGESTED", "count": count} for stat, count in status_query]
 
     # 3. Daily trends (Last 7 Days)
     daily_trends = []
@@ -76,7 +86,7 @@ def get_chart_data(
         start_day = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0, tzinfo=UTC)
         end_day = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59, tzinfo=UTC)
 
-        count = db.query(Document).filter(
+        count = base_query.filter(
             Document.created_at >= start_day,
             Document.created_at <= end_day
         ).count()
@@ -91,6 +101,7 @@ def get_chart_data(
         "status_distribution": status_distribution,
         "daily_trends": daily_trends
     }
+
 
 @router.get("/audit-logs")
 def get_audit_trail_feed(
@@ -112,7 +123,7 @@ def get_audit_trail_feed(
             "operator": operator,
             "action": log.action,
             "details": log.details,
-            "timestamp": log.timestamp
+            "timestamp": log.timestamp.isoformat() if log.timestamp else None
         })
     return formatted
 
@@ -122,31 +133,24 @@ def get_agent_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(any_user)
 ):
-    """
-    Returns per-agent performance stats derived from audit logs and extracted fields.
-    Covers: average critic/auditor scores, documents flagged per agent, compliance pass rate.
-    """
-    # Average critic and auditor scores per document category
-    from sqlalchemy import func
+    from app.models.document import ExtractedField, FieldValidationStatus
+    user_docs = filter_documents_for_user(db.query(Document), current_user).with_entities(Document.id)
 
-    from app.models.document import DocumentStatus, ExtractedField
-    avg_critic = db.query(func.avg(ExtractedField.critic_score)).scalar() or 0.0
-    avg_auditor = db.query(func.avg(ExtractedField.auditor_score)).scalar() or 0.0
-    avg_confidence = db.query(func.avg(ExtractedField.confidence_score)).scalar() or 0.0
+    avg_critic = db.query(func.avg(ExtractedField.critic_score)).filter(ExtractedField.document_id.in_(user_docs)).scalar() or 0.0
+    avg_auditor = db.query(func.avg(ExtractedField.auditor_score)).filter(ExtractedField.document_id.in_(user_docs)).scalar() or 0.0
+    avg_confidence = db.query(func.avg(ExtractedField.confidence_score)).filter(ExtractedField.document_id.in_(user_docs)).scalar() or 0.0
 
-    # Flagged fields count
-    from app.models.document import FieldValidationStatus
     flagged_count = db.query(ExtractedField).filter(
+        ExtractedField.document_id.in_(user_docs),
         ExtractedField.validation_status == FieldValidationStatus.FLAGGED
     ).count()
-    total_fields = db.query(ExtractedField).count()
+    total_fields = db.query(ExtractedField).filter(ExtractedField.document_id.in_(user_docs)).count()
     flag_rate = round((flagged_count / total_fields) * 100, 1) if total_fields > 0 else 0.0
 
-    # Documents by status counts
-    processed = db.query(Document).filter(Document.status == DocumentStatus.PROCESSED).count()
-    failed = db.query(Document).filter(Document.status == DocumentStatus.FAILED).count()
+    base_docs = filter_documents_for_user(db.query(Document), current_user)
+    processed = base_docs.filter(Document.status == DocumentStatus.PROCESSED).count()
+    failed = base_docs.filter(Document.status == DocumentStatus.FAILED).count()
 
-    # Agent latency estimates from audit log timing (system processing complete events)
     agent_latency_data = [
         {"name": "Extractor", "latency": 1.4},
         {"name": "Critic", "latency": round(float(1.5 + (1.0 - avg_critic) * 2), 2)},
@@ -174,42 +178,32 @@ def get_search_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(any_user)
 ):
-    """
-    Returns search analytics: top queries, zero-result queries, volume trend.
-    """
-    from sqlalchemy import func
-
     from app.models.search import SearchLog
 
-    # Top 20 queries by frequency
     top_queries = db.query(
         SearchLog.query_text,
         func.count(SearchLog.id).label("count")
     ).group_by(SearchLog.query_text).order_by(func.count(SearchLog.id).desc()).limit(20).all()
 
-    # Zero-result queries (results_count == 0)
     zero_results = db.query(SearchLog).filter(
         SearchLog.results_count == 0
     ).order_by(SearchLog.created_at.desc()).limit(10).all()
 
-    # Average search latency
     avg_latency = db.query(func.avg(SearchLog.latency_ms)).scalar() or 0
 
-    # Volume over last 7 days
-    from datetime import datetime, timedelta
     daily_volume = []
     now = datetime.now(UTC)
     for i in range(6, -1, -1):
         day = now - timedelta(days=i)
-        start = datetime(day.year, day.month, day.day, 0, 0, 0)
-        end = datetime(day.year, day.month, day.day, 23, 59, 59)
+        start = datetime(day.year, day.month, day.day, 0, 0, 0, tzinfo=UTC)
+        end = datetime(day.year, day.month, day.day, 23, 59, 59, tzinfo=UTC)
         cnt = db.query(SearchLog).filter(
             SearchLog.created_at >= start, SearchLog.created_at <= end
         ).count()
         daily_volume.append({"date": day.strftime("%b %d"), "count": cnt})
 
     return {
-        "top_queries": [{"text": q.query_text, "count": c} for q, c in [(r, r[1]) for r in top_queries]],
+        "top_queries": [{"text": q[0], "count": q[1]} for q in top_queries],
         "zero_result_queries": [
             {"query": r.query_text, "timestamp": r.created_at.isoformat() if r.created_at else "", "count": 1}
             for r in zero_results
@@ -263,3 +257,16 @@ def get_crawl_stats(
             {"bucket": k, "count": v} for k, v in buckets.items()
         ],
     }
+
+
+@router.get("/finops")
+def get_finops_analytics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(any_user)
+):
+    """
+    Returns LLM FinOps token usage, model allocations, and estimated USD cost metering.
+    """
+    from app.services.finops import get_finops_summary
+    return get_finops_summary(db, current_user.organization_id)
+

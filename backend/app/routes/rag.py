@@ -253,6 +253,23 @@ def ask_rag(
             logger.error(f"LLM error in RAG: {e}. Falling back to local extractive RAG.")
             answer_text, raw_citations = local_extractive_rag(req.question, docs)
 
+    # Record FinOps token usage metrics
+    try:
+        from app.services.finops import record_token_usage
+        prompt_tokens = max(1, len(prompt.split()) * 2)
+        completion_tokens = max(1, len(answer_text.split()) * 2)
+        model_name = settings.LLM_MODEL if settings.LLM_PREFERRED_PROVIDER == "gemini" else "local-extractive"
+        record_token_usage(
+            db=db,
+            model_name=model_name,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            organization_id=current_user.organization_id,
+            user_id=current_user.id,
+        )
+    except Exception as e:
+        logger.warning(f"Failed to record token usage: {e}")
+
     # Map citations back to real document filenames and verify provenance
     doc_map = {str(d.id): d.filename for d in docs}
     doc_text_map = {str(d.id): (d.ocr_text or "") for d in docs}
@@ -344,33 +361,33 @@ def stream_rag(
         yield f"data: {json.dumps({'type': 'start', 'session_id': session_id})}\n\n"
 
         full_response = ""
+        raw_cits = []
         try:
             from app.services.llm import local_extractive_rag
-            if settings.LLM_PREFERRED_PROVIDER != "gemini":
+            if settings.LLM_PREFERRED_PROVIDER != "gemini" or not settings.GEMINI_API_KEY:
                 answer_text, raw_cits = local_extractive_rag(req.question, docs)
-                # Stream words
                 words = answer_text.split(" ")
                 for i, word in enumerate(words):
                     chunk = word if i == 0 else " " + word
                     full_response += chunk
                     yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
+                    await asyncio.sleep(0.01)
             else:
                 try:
                     from app.services.llm import _create_gemini_client
                     from google.genai import types
                     client = _create_gemini_client()
-                    response = client.models.generate_content(
+                    response_stream = client.models.generate_content_stream(
                         model=settings.LLM_MODEL,
                         contents=prompt,
                         config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=1024),
                     )
-                    raw_answer = response.text.strip()
-                    answer_text, raw_cits = _parse_llm_json(raw_answer)
-                    words = answer_text.split(" ")
-                    for i, word in enumerate(words):
-                        chunk = word if i == 0 else " " + word
-                        full_response += chunk
-                        yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
+                    for chunk in response_stream:
+                        if chunk.text:
+                            full_response += chunk.text
+                            yield f"data: {json.dumps({'type': 'token', 'content': chunk.text})}\n\n"
+                            await asyncio.sleep(0.005)
+                    parsed_ans, raw_cits = _parse_llm_json(full_response)
                 except Exception as e:
                     logger.error(f"Gemini streaming error: {e}. Falling back to local RAG.")
                     answer_text, raw_cits = local_extractive_rag(req.question, docs)
@@ -378,6 +395,7 @@ def stream_rag(
                     for i, word in enumerate(words):
                         chunk = word if i == 0 else " " + word
                         full_response += chunk
+                        yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
                         yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
 
             # Parse citations and verify

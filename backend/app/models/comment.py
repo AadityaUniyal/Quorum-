@@ -15,7 +15,7 @@ class Comment(Base):
     field_key = Column(String, nullable=True)  # Nullable for document-level comments
     user_id = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
 
     # Relationships
     document = relationship("Document", backref="comments")

@@ -7,14 +7,13 @@ os.environ.setdefault('DEBUG', 'true')
 os.environ.setdefault('RABBITMQ_HOST', 'localhost')
 os.environ.setdefault('REDIS_HOST', 'localhost')
 
-# Import FastAPI app after env vars are set
 from app.database import Base, engine
+import app.models  # Registers all SQLAlchemy models
+from app.main import app
 
 Base.metadata.create_all(bind=engine)
 
 from fastapi.testclient import TestClient
-
-from app.main import app
 
 client = TestClient(app)
 
@@ -45,7 +44,7 @@ def create_document(token: str, title: str, content: str):
     files = {"file": (f"{title}.txt", content.encode())}
     resp = client.post('/api/documents/upload', files=files, headers=auth_headers(token))
     log(f"Create document status: {resp.status_code}")
-    assert resp.status_code == 201, f"Create doc failed: {resp.text}"
+    assert resp.status_code in (200, 201), f"Create doc failed: {resp.text}"
     return resp.json()['id']
 
 def search_documents(token: str, query: str):

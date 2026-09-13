@@ -7,6 +7,10 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { ConfidenceBar } from '@/components/ui/ConfidenceBar';
 import { useAuthStore } from '@/stores/auth';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { DocumentDiffViewer } from '@/components/review/DocumentDiffViewer';
+import { saveReviewDraft, loadReviewDraft, clearReviewDraft } from '@/lib/offlineStorage';
+import { SseStatusPill } from '@/components/layout/SseStatusPill';
 import clsx from 'clsx';
 import DOMPurify from 'dompurify';
 import { 
@@ -21,7 +25,8 @@ import {
   Sparkles,
   MessageSquare,
   Send,
-  Trash2
+  Trash2,
+  Eye
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -46,9 +51,11 @@ export default function ReviewPage() {
   const selectedDocId = docIdParam;
   const [leftTab, setLeftTab] = useState<'text' | 'table' | 'audits'>('text');
   const [fieldUpdates, setFieldUpdates] = useState<Record<string, string>>({});
+  const [originalFields, setOriginalFields] = useState<Record<string, string>>({});
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [ocrSearchQuery, setOcrSearchQuery] = useState('');
+  const [showDiffModal, setShowDiffModal] = useState(false);
   
   // Lock details
   const [isLockedByMe, setIsLockedByMe] = useState(false);
@@ -207,14 +214,36 @@ export default function ReviewPage() {
   useEffect(() => {
     if (!doc) return;
     const initialUpdates: Record<string, string> = {};
+    const origMap: Record<string, string> = {};
     doc.fields.forEach((f) => {
       initialUpdates[f.field_key] = f.consensus_value || f.extracted_value || '';
+      origMap[f.field_key] = f.extracted_value || f.consensus_value || '';
     });
-    setFieldUpdates(initialUpdates);
+    setOriginalFields(origMap);
+
+    if (selectedDocId) {
+      loadReviewDraft(selectedDocId).then((draft) => {
+        if (draft && Object.keys(draft).length > 0) {
+          setFieldUpdates({ ...initialUpdates, ...draft });
+          toast.success('Restored unsubmitted draft from IndexedDB');
+        } else {
+          setFieldUpdates(initialUpdates);
+        }
+      });
+    } else {
+      setFieldUpdates(initialUpdates);
+    }
     setEditingField(null);
     setExpandedCommentsField(null);
     setNewCommentText('');
-  }, [doc]);
+  }, [doc, selectedDocId]);
+
+  // Auto-save drafts to IndexedDB on field modification
+  useEffect(() => {
+    if (selectedDocId && Object.keys(fieldUpdates).length > 0) {
+      saveReviewDraft(selectedDocId, fieldUpdates);
+    }
+  }, [selectedDocId, fieldUpdates]);
 
   // Attempt to acquire lock on the document
   useEffect(() => {
@@ -250,7 +279,7 @@ export default function ReviewPage() {
     setEditingField(null);
   };
 
-  const handleApprove = () => {
+  const handleApprove = useCallback(() => {
     if (!isLockedByMe) {
       toast.error('You cannot approve without holding the editing lock');
       return;
@@ -259,8 +288,25 @@ export default function ReviewPage() {
       field_key: key,
       consensus_value: val
     }));
+    if (selectedDocId) {
+      clearReviewDraft(selectedDocId);
+    }
     submitReviewMutation.mutate(updatesList);
-  };
+  }, [isLockedByMe, fieldUpdates, selectedDocId, submitReviewMutation]);
+
+  useKeyboardShortcuts(
+    {
+      onApprove: handleApprove,
+      onSaveDraft: () => {
+        if (selectedDocId && fieldUpdates) {
+          saveReviewDraft(selectedDocId, fieldUpdates);
+          toast.success('Draft saved to offline storage (Ctrl+S).');
+        }
+      },
+      onToggleDiff: () => setShowDiffModal((prev) => !prev),
+    },
+    isLockedByMe
+  );
 
   const handleBulkAccept = () => {
     if (!doc) return;
@@ -912,6 +958,15 @@ export default function ReviewPage() {
 
               <div className="flex items-center gap-3">
                 <button
+                  onClick={() => setShowDiffModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.08] text-slate-300 transition cursor-pointer"
+                  title="View AI vs Human diff (Alt+D)"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  <span>Visual Diff (Alt+D)</span>
+                </button>
+
+                <button
                   onClick={handleApprove}
                   disabled={!isLockedByMe || submitReviewMutation.isPending}
                   className="group flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-emerald-500 border border-emerald-500/20 text-white shadow-md shadow-emerald-950/10 cursor-pointer disabled:opacity-50 transition-all duration-300"
@@ -965,6 +1020,15 @@ export default function ReviewPage() {
         )}
 
       </div>
+
+      {/* Visual Diff Modal */}
+      {showDiffModal && (
+        <DocumentDiffViewer
+          originalFields={originalFields}
+          currentFields={fieldUpdates}
+          onClose={() => setShowDiffModal(false)}
+        />
+      )}
 
     </div>
   );

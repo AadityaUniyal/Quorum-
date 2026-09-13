@@ -5,15 +5,27 @@ from app.models.webhook import WebhookConfig
 
 logger = logging.getLogger(__name__)
 
-def _send_webhook_request_sync(webhook_config_id: str, url: str, event_type: str, payload: dict, idempotency_key: str, attempt: int) -> bool:
+def _send_webhook_request_sync(
+    webhook_config_id: str,
+    url: str,
+    event_type: str,
+    payload: dict,
+    idempotency_key: str,
+    attempt: int,
+    secret: str | None = None
+) -> bool:
     """
     Performs a synchronous POST for the webhook, logging it in the database.
     Returns True if successfully delivered, False otherwise.
     """
+    import hashlib
+    import hmac
+    import json
     import uuid
 
     import httpx
 
+    from app.config import settings
     from app.models.webhook import WebhookLog
 
     db = SessionLocal()
@@ -48,17 +60,24 @@ def _send_webhook_request_sync(webhook_config_id: str, url: str, event_type: str
             db.commit()
             return False
 
+        # Compute HMAC SHA-256 signature
+        body_dict = {
+            "event": event_type,
+            "payload": payload
+        }
+        raw_body = json.dumps(body_dict, sort_keys=True)
+        hmac_key = (secret or settings.JWT_SECRET_KEY).encode("utf-8")
+        signature = hmac.new(hmac_key, raw_body.encode("utf-8"), hashlib.sha256).hexdigest()
+
         try:
             resp = httpx.post(
                 url,
-                json={
-                    "event": event_type,
-                    "payload": payload
-                },
+                content=raw_body,
                 headers={
                     "Content-Type": "application/json",
-                    "User-Agent": "GoogiWebhookStudio/1.0",
-                    "X-Googi-Event-ID": idempotency_key
+                    "User-Agent": "DocIntelWebhookStudio/2.0",
+                    "X-Googi-Event-ID": idempotency_key,
+                    "X-DocIntel-Signature-256": f"sha256={signature}"
                 },
                 timeout=5.0
             )
@@ -85,9 +104,9 @@ def _send_webhook_request_sync(webhook_config_id: str, url: str, event_type: str
     finally:
         db.close()
 
-def dispatch_webhook(event_type: str, payload: dict):
+def dispatch_webhook(event_type: str, payload: dict, organization_id: str | None = None):
     """
-    Query all active webhook subscriptions for this event_type
+    Query all active webhook subscriptions for this event_type (optionally filtered by organization_id)
     and publish them to the webhook_queue in RabbitMQ.
     """
     import json
@@ -99,11 +118,20 @@ def dispatch_webhook(event_type: str, payload: dict):
 
     db = SessionLocal()
     try:
-        subscriptions = (
-            db.query(WebhookConfig)
-            .filter(WebhookConfig.event_type == event_type, WebhookConfig.is_active)
-            .all()
+        query = db.query(WebhookConfig).filter(
+            WebhookConfig.event_type == event_type,
+            WebhookConfig.is_active == True
         )
+        if organization_id:
+            try:
+                org_uuid = uuid.UUID(organization_id) if isinstance(organization_id, str) else organization_id
+                query = query.filter(
+                    (WebhookConfig.organization_id == org_uuid) | (WebhookConfig.organization_id.is_(None))
+                )
+            except Exception:
+                pass
+
+        subscriptions = query.all()
         if not subscriptions:
             return
 
@@ -124,6 +152,7 @@ def dispatch_webhook(event_type: str, payload: dict):
             message_body = {
                 "webhook_config_id": str(sub.id),
                 "url": sub.url,
+                "secret": getattr(sub, "secret", None),
                 "event_type": event_type,
                 "payload": payload,
                 "idempotency_key": idempotency_key
@@ -144,3 +173,4 @@ def dispatch_webhook(event_type: str, payload: dict):
         logger.error(f"Error publishing webhooks to queue: {e}")
     finally:
         db.close()
+

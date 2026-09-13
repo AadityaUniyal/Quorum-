@@ -15,6 +15,6 @@ class UserProfile(Base):
     full_name = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
     bio = Column(String, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
 
     user = relationship('User', back_populates='profile')

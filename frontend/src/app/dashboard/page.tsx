@@ -57,6 +57,14 @@ export default function DashboardPage() {
     refetchIntervalInBackground: true,
   });
 
+  // Fetch Audit Logs
+  const { data: auditLogs, isLoading: auditLogsLoading } = useQuery({
+    queryKey: ['audit-logs'],
+    queryFn: () => api.getAuditLogs(10),
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
+  });
+
   const weeklyVolume = charts?.daily_trends || [];
   const categoryDistribution = charts?.category_distribution || [];
 
@@ -313,25 +321,33 @@ export default function DashboardPage() {
         <div className="glass-card p-6 border border-white/[0.04] bg-[#0c0c0c]/80 flex flex-col gap-5 lg:col-span-2 min-h-[300px]">
           <div>
             <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Recent Activity Timeline</h3>
-            <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">Real-time trace logs from worker ingestion instances.</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">Real-time audit log traces from system worker instances.</p>
           </div>
 
           <div className="flex-grow overflow-y-auto max-h-[180px] pr-2 scrollbar flex flex-col gap-3 font-mono text-[10px]">
-            {[
-              { time: '12:04:12', user: 'Aaditya Uniyal', text: 'Uploaded document Stellar_Dynamics_Titanium_Rods_Invoice.pdf', color: 'text-primary' },
-              { time: '11:58:30', user: 'Operator Node', text: 'consensus engines started for document doc_98a12k3m', color: 'text-[#8b5cf6]' },
-              { time: '11:42:01', user: 'System Worker', text: 'Ingested sitemap crawl endpoints from wikipedia.org', color: 'text-[#22c55e]' },
-              { time: '11:35:10', user: 'Reviewer Manager', text: 'Acquired manual validation edit lock on Contract_Acme.pdf', color: 'text-amber-400' },
-              { time: '11:20:45', user: 'FastAPI Router', text: 'API Gateway initialized check status operational', color: 'text-neutral-500' }
-            ].map((activity, idx) => (
-              <div key={idx} className="flex gap-4 border-b border-white/[0.02] pb-2 last:border-0 last:pb-0">
-                <span className="text-muted-foreground font-mono shrink-0 select-none">{activity.time}</span>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-neutral-200 font-semibold">{activity.user}</span>
-                  <span className={clsx("text-neutral-400 leading-relaxed", activity.color)}>{activity.text}</span>
-                </div>
+            {auditLogsLoading ? (
+              <div className="py-6 text-center text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
               </div>
-            ))}
+            ) : !auditLogs || auditLogs.length === 0 ? (
+              <div className="py-6 text-center text-muted-foreground text-xs font-sans">
+                No system audit events recorded yet.
+              </div>
+            ) : (
+              auditLogs.map((activity: any, idx: number) => (
+                <div key={activity.id || idx} className="flex gap-4 border-b border-white/[0.02] pb-2 last:border-0 last:pb-0">
+                  <span className="text-muted-foreground font-mono shrink-0 select-none">
+                    {activity.created_at ? new Date(activity.created_at).toLocaleTimeString() : 'Recent'}
+                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-neutral-200 font-semibold">{activity.user_email || activity.user_id || 'System Worker'}</span>
+                    <span className="text-neutral-400 leading-relaxed font-mono text-[10px]">
+                      <span className="text-primary font-bold">{activity.action}:</span> {activity.resource_type ? `${activity.resource_type} ${activity.resource_id || ''}` : JSON.stringify(activity.details || {})}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

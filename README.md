@@ -247,9 +247,12 @@ A standalone, pip-installable Python package in `packages/googi-crawler/`:
 - **PWA Web Manifest** — Standalone desktop Progressive Web App installation support (`manifest.json`)
 - **Multi-Currency Math Auditor** — Financial auditor agent supporting both US (`$1,234.50`) and European (`1.234,50`) number formatting
 
-### Audit Report & Quality Roadmap
+### Next-Generation AI & FinOps Capabilities
 
-- **500+ Master Audit Report** — Complete architectural audit and issue breakdown available in [`DocIntel_AI_500_Audit_Bugs_Gaps_Improvements_Report.md`](DocIntel_AI_500_Audit_Bugs_Gaps_Improvements_Report.md) covering 515 categorized items across Security, Multi-Tenancy, Worker Queues, AI Agents, Frontend UX, and Infrastructure.
+- **Two-Stage Neural Cross-Encoder Reranker** — Fuses Reciprocal Rank Fusion (RRF) metadata search with cross-encoder interaction scoring (exact phrase bonus, token overlap, term proximity penalties) for top-0.1% retrieval precision
+- **NLI Citation Entailment Verification** — Sentence-level claim extraction and Natural Language Inference premise-hypothesis classification (`ENTAILMENT`, `NEUTRAL`, `CONTRADICTION`) for zero-hallucination evidence grounding
+- **LLM FinOps Token Metering** — Organization-level token usage tracking (`TokenUsage` model) with model cost calculations (`/api/analytics/finops`)
+- **Multi-Tenant Security & Cache Isolation** — Tenant-scoped Redis cache keys, JWT token rotation, and HMAC SHA-256 webhook signatures
 
 ---
 

@@ -15,7 +15,7 @@ class ApiKey(Base):
     hashed_key = Column(String, unique=True, index=True, nullable=False)
     prefix = Column(String, nullable=False)
     user_id = Column(GUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
     expires_at = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
 

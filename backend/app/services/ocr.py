@@ -25,6 +25,9 @@ except ImportError:
                 raise ImportError("pypdf is not installed")
     pypdf = _DummyPypdf
 
+from app.config import Settings
+settings = Settings()
+
 logger = logging.getLogger(__name__)
 
 # Thread pool for non-blocking OCR (bounded to avoid resource exhaustion)
@@ -189,11 +192,6 @@ Vendor: Supply Chain Logistics Corp
 Ship To: Enterprise Warehouse A
 
 Details:
-Item: Replacement Conveyor Belt (Part No: CB-450-HD)
-Quantity: 2 units
-Unit Price: $650.00
-Total: $1300.00
-Tax: $107.25
 Grand Total: $1407.25
 
 Approved by: Michael Smith, Procurement Manager
@@ -235,13 +233,12 @@ def extract_text_from_pdf(pdf_path: str) -> str:
 
     return "\n".join(text_content)
 
+
 def perform_ocr(file_path: str, filename: str, file_type: str) -> str:
     """
     Coordinates file reading and OCR processing (synchronous).
     Used by the background worker which runs in its own thread.
     """
-    time.sleep(1.0)  # Simulate processing latency
-
     # 1. Plain text file - just read directly
     if file_type == "TXT":
         try:
@@ -255,19 +252,31 @@ def perform_ocr(file_path: str, filename: str, file_type: str) -> str:
         try:
             return extract_text_from_image(file_path)
         except Exception as exc:
-            logger.warning(f"Tesseract OCR failed for {filename}: {exc}. Falling back to sample text.")
-            return get_high_fidelity_sample_text(filename)
+            logger.warning(f"Tesseract OCR failed for {filename}: {exc}")
+            if settings.LLM_OFFLINE_MOCK_FALLBACK:
+                return get_high_fidelity_sample_text(filename)
+            return ""
 
-    # 3. PDF files - extract text and tables dynamically (Roadmap 2.1)
+    # 3. PDF files - extract text and tables dynamically
     if file_type == "PDF":
         try:
-            return extract_text_from_pdf(file_path)
+            extracted = extract_text_from_pdf(file_path)
+            if extracted and extracted.strip():
+                return extracted
+            logger.warning(f"PDF extraction yielded empty text for {filename}")
+            if settings.LLM_OFFLINE_MOCK_FALLBACK:
+                return get_high_fidelity_sample_text(filename)
+            return ""
         except Exception as exc:
-            logger.warning(f"PDF extraction failed for {filename}: {exc}. Falling back to sample text.")
-            return get_high_fidelity_sample_text(filename)
+            logger.warning(f"PDF extraction failed for {filename}: {exc}")
+            if settings.LLM_OFFLINE_MOCK_FALLBACK:
+                return get_high_fidelity_sample_text(filename)
+            return ""
 
-    # 4. DOCX or others - Fallback to high-fidelity mock text directly
-    return get_high_fidelity_sample_text(filename)
+    # 4. DOCX or others
+    if settings.LLM_OFFLINE_MOCK_FALLBACK:
+        return get_high_fidelity_sample_text(filename)
+    return ""
 
 
 async def perform_ocr_async(file_path: str, filename: str, file_type: str) -> str:
@@ -305,5 +314,3 @@ async def perform_ocr_async(file_path: str, filename: str, file_type: str) -> st
         raise RuntimeError(f"OCR processing failed: {str(e)}") from e
     finally:
         release_redis_semaphore("ocr", owner_id)
-
-

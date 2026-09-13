@@ -15,6 +15,6 @@ class Notification(Base):
     title = Column(String, nullable=False)
     message = Column(String, nullable=False)
     is_read = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
 
     user = relationship("User", backref="notifications")

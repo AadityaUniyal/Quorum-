@@ -21,7 +21,7 @@ class Organization(Base):
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     slug = Column(String, unique=True, index=True, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
 
     members = relationship("OrganizationMember", back_populates="organization", cascade="all, delete-orphan")
 
@@ -33,7 +33,7 @@ class OrganizationMember(Base):
     organization_id = Column(GUID, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(GUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     role = Column(String, default="MEMBER", nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
 
     organization = relationship("Organization", back_populates="members")
     user = relationship("User")
@@ -51,7 +51,7 @@ class User(Base):
     token_version = Column(Integer, default=1, nullable=False)
 
     profile = relationship("UserProfile", back_populates="user", uselist=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
 
     # 2FA / TOTP fields (Roadmap 1.2)
     totp_secret = Column(String, nullable=True)       # base32 TOTP secret
@@ -76,7 +76,7 @@ class RefreshSession(Base):
     user_id = Column(GUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     token_family_id = Column(String, nullable=False, index=True)
     current_jti_hash = Column(String, nullable=False, index=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
     expires_at = Column(DateTime, nullable=False)
     revoked_at = Column(DateTime, nullable=True)
     last_rotated_at = Column(DateTime, nullable=True)

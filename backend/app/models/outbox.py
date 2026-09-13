@@ -25,7 +25,7 @@ class OutboxEvent(Base):
     payload = Column(JSON, nullable=False)
     status = Column(String(32), default="PENDING", nullable=False)  # PENDING, PUBLISHED, FAILED
     retry_count = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), index=True)
     published_at = Column(DateTime, nullable=True)
 
 
@@ -35,7 +35,7 @@ class InboxEvent(Base):
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
     event_id = Column(String(64), index=True, nullable=False)
     consumer = Column(String(128), index=True, nullable=False)
-    received_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    received_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
     processed_at = Column(DateTime, nullable=True)
     status = Column(String(32), default="PROCESSED", nullable=False)
 

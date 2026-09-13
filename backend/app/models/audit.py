@@ -15,7 +15,7 @@ class AuditLog(Base):
     user_id = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     action = Column(String, nullable=False)  # e.g., "UPLOAD_DOCUMENT", "FIELD_CORRECTED", "STATUS_CHANGED"
     details = Column(JSON, nullable=True)    # For before/after diffs and event contexts
-    timestamp = Column(DateTime, default=lambda: datetime.now(UTC))
+    timestamp = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None))
 
     # Relationships
     document = relationship("Document")
