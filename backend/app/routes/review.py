@@ -349,6 +349,18 @@ def submit_review(
         )
         db.add(audit)
 
+        # Active Learning: Record human feedback into exemplar memory for future few-shot extraction
+        try:
+            from app.services.active_learning import ActiveLearningService
+            ActiveLearningService.record_corrections(
+                document_id=str(doc.id),
+                category=str(doc.category.value if doc.category else "UNKNOWN"),
+                corrections=diffs,
+                organization_id=str(doc.organization_id) if doc.organization_id else None,
+            )
+        except Exception as e:
+            logger.warning(f"ActiveLearning: Failed to record exemplar: {e}")
+
     # Commit all changes atomically
     db.commit()
 

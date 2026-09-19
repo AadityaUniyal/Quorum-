@@ -254,6 +254,14 @@ A standalone, pip-installable Python package in `packages/googi-crawler/`:
 - **LLM FinOps Token Metering** — Organization-level token usage tracking (`TokenUsage` model) with model cost calculations (`/api/analytics/finops`)
 - **Multi-Tenant Security & Cache Isolation** — Tenant-scoped Redis cache keys, JWT token rotation, and HMAC SHA-256 webhook signatures
 
+### Frontier Core Capabilities (Enterprise Grade)
+
+- **Spatial PDF Visual Grounding & Bounding Box Canvas** — Extracts token-level coordinate polygons `[x0, y0, x1, y1]` via `spatial_grounding.py` and provides an interactive SVG visual grounding canvas (`SpatialBoundingCanvas.tsx`) in the human review portal (`GET /api/documents/{id}/spatial-layout`).
+- **Enterprise 3-Way Cross-Document Reconciliation** — Automated cross-document matching engine linking Purchase Orders, Goods Receipt / Delivery Slips, and Vendor Invoices (`POST /api/v1/reconciliation/3way`) to flag quantity mismatches, price variance exceeding 0.5% tolerance, and unfulfilled line items.
+- **Multi-Turn Reflexive Agent Debate (Graph of Thoughts)** — Dynamic multi-round adversarial verification loops between Extractor, Critic, Auditor, Compliance, and Adjudicator, recording complete thought-graph trajectories until mathematical convergence.
+- **Active Learning & Continual Human Feedback Memory** — Captures reviewer corrections on document approval into vendor-specific exemplar memory, automatically injecting relevant historical corrections as few-shot prompt context on future extractions.
+- **Zero-Trust PII/PHI Redaction & ABAC Vault** — Automatically identifies and masks sensitive identifiers (SSNs, credit cards with Luhn check, IBAN with Mod-97 check, Tax IDs/EIN, emails, phone numbers) before vector indexing and LLM prompt context injection, with role-based de-anonymization restricted to compliance officers.
+
 ---
 
 ## Tech Stack
@@ -524,14 +532,15 @@ The backend exposes a comprehensive REST API documented via Swagger UI at `/docs
 | Route Group | Prefix | Endpoints |
 |------------|--------|-----------|
 | **Authentication** | `/api/auth` | Register, login, logout, refresh tokens, profile management, API key CRUD, team management |
-| **Documents** | `/api/documents` | Upload, list, detail, reprocess, batch operations, status filtering |
-| **Review** | `/api/review` | Review queue, document lock/unlock (Redis), approve/reject with field edits |
-| **Search** | `/api/search` | Hybrid search (SQL + vector), query expansion, faceted filtering |
-| **RAG** | `/api/rag` | Context-constrained Q&A, document-scoped chatbot |
+| **Documents** | `/api/documents` | Upload, list, detail, reprocess, spatial layout coordinates (`/{id}/spatial-layout`), status filtering |
+| **Review** | `/api/review` | Review queue, document lock/unlock (Redis), approve/reject with field edits, active learning feedback |
+| **Reconciliation** | `/api/v1/reconciliation` | Enterprise 3-way cross-document matching (`/3way`) across PO, Delivery Slips, and Invoices |
+| **Search** | `/api/search` | Hybrid search (SQL + vector), two-stage neural reranker, query expansion, faceted filtering |
+| **RAG** | `/api/rag` | Context-constrained Q&A, SSE streaming, NLI citation entailment verification |
 | **Bookmarks** | `/api/bookmarks` | Save/delete/list search bookmarks |
-| **Analytics** | `/api/analytics` | Processing KPIs, agent latency, system health, node monitoring |
+| **Analytics** | `/api/analytics` | Processing KPIs, agent latency, system health, node monitoring, FinOps token metering |
 | **Crawl** | `/api/crawl` | Start/stop crawler, PageRank scores, sitemap management |
-| **Webhooks** | `/api/webhooks` | Register/manage outbound webhook endpoints |
+| **Webhooks** | `/api/webhooks` | Register/manage outbound HMAC-SHA256 signed webhook endpoints |
 | **Streaming** | `/api/streaming` | Server-Sent Events for real-time processing updates |
 
 ---

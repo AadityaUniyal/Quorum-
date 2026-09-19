@@ -19,6 +19,10 @@ export interface ExtractedField {
   is_modified: boolean;
   validation_status: "VALID" | "FLAGGED" | "MANUAL_CORRECTION";
   validation_notes: string | null;
+  page_number?: number | null;
+  bounding_box?: [number, number, number, number] | null;
+  evidence_text?: string | null;
+  chunk_id?: string | null;
 }
 
 export interface DocumentResponse {

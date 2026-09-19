@@ -17,6 +17,10 @@ class ExtractedFieldResponse(BaseModel):
     is_modified: bool
     validation_status: FieldValidationStatus
     validation_notes: str | None = None
+    page_number: int | None = None
+    bounding_box: list[float] | None = None
+    evidence_text: str | None = None
+    chunk_id: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

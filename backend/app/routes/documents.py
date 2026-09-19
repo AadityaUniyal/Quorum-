@@ -411,3 +411,21 @@ def get_document_audit_line_items(document_id: UUID, db: Session = Depends(get_d
     line_items = fields.get("line_items", [])
     audit_results = LocalTableReconstructor.audit_line_items(line_items)
     return {"line_items": line_items, "audit_results": audit_results}
+
+
+@router.get("/{document_id}/spatial-layout")
+def get_document_spatial_layout(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(any_user)
+):
+    """
+    Returns spatial token bounding box coordinates and page dimensions for interactive canvas visual grounding.
+    """
+    doc = db.query(Document).filter(Document.id == str(document_id)).first()
+    require_document_read(current_user, doc)
+
+    from app.services.spatial_grounding import SpatialGroundingEngine
+    layout = SpatialGroundingEngine.extract_spatial_layout(doc.file_path)
+    return layout
+

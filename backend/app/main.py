@@ -208,6 +208,7 @@ from app.routes import (  # noqa: E402
     documents,
     notifications,
     rag,
+    reconciliation,
     review,
     search,
     streaming,
@@ -218,6 +219,7 @@ from app.routes import (  # noqa: E402
 app.include_router(auth.router)
 app.include_router(documents.router)
 app.include_router(review.router)
+app.include_router(reconciliation.router)
 app.include_router(search.router)
 app.include_router(analytics.router)
 app.include_router(streaming.router)

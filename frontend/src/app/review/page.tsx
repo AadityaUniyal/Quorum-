@@ -9,6 +9,8 @@ import { ConfidenceBar } from '@/components/ui/ConfidenceBar';
 import { useAuthStore } from '@/stores/auth';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { DocumentDiffViewer } from '@/components/review/DocumentDiffViewer';
+import { SpatialBoundingCanvas } from '@/components/review/SpatialBoundingCanvas';
+import { ThreeWayReconciliationModal } from '@/components/review/ThreeWayReconciliationModal';
 import { saveReviewDraft, loadReviewDraft, clearReviewDraft } from '@/lib/offlineStorage';
 import { SseStatusPill } from '@/components/layout/SseStatusPill';
 import clsx from 'clsx';
@@ -49,13 +51,14 @@ export default function ReviewPage() {
 
   const docIdParam = searchParams.get('doc_id') || '';
   const selectedDocId = docIdParam;
-  const [leftTab, setLeftTab] = useState<'text' | 'table' | 'audits'>('text');
+  const [leftTab, setLeftTab] = useState<'text' | 'table' | 'audits' | 'spatial'>('text');
   const [fieldUpdates, setFieldUpdates] = useState<Record<string, string>>({});
   const [originalFields, setOriginalFields] = useState<Record<string, string>>({});
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [ocrSearchQuery, setOcrSearchQuery] = useState('');
   const [showDiffModal, setShowDiffModal] = useState(false);
+  const [show3WayModal, setShow3WayModal] = useState(false);
   
   // Lock details
   const [isLockedByMe, setIsLockedByMe] = useState(false);
@@ -536,6 +539,17 @@ export default function ReviewPage() {
                     )}>
                     Mathematical Auditing
                   </button>
+                  <button onClick={() => setLeftTab('spatial')}
+                    className={clsx(
+                      "px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider font-mono border transition-all cursor-pointer",
+                      leftTab === 'spatial' ? "bg-primary/10 border-primary/20 text-primary" : "bg-transparent border-transparent text-muted-foreground hover:text-foreground"
+                    )}>
+                    Spatial Grounding
+                  </button>
+                  <button onClick={() => setShow3WayModal(true)}
+                    className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider font-mono border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all cursor-pointer ml-auto">
+                    3-Way Match
+                  </button>
                 </div>
 
                 {/* ── TAB CONTENT: RAW TEXT ── */}
@@ -657,6 +671,24 @@ export default function ReviewPage() {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* ── TAB CONTENT: SPATIAL CANVAS ── */}
+                {leftTab === 'spatial' && (
+                  <div className="flex-1 flex flex-col gap-4">
+                    <div>
+                      <h4 className="text-[9px] font-bold tracking-wider text-muted-foreground uppercase font-mono">Spatial Visual Grounding</h4>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Interactive polygon bounding boxes grounded directly to source coordinates.</p>
+                    </div>
+                    <SpatialBoundingCanvas
+                      activeFieldKey={editingField}
+                      highlightBbox={
+                        editingField && doc?.fields?.find((f) => f.field_key === editingField)?.bounding_box
+                          ? (doc?.fields?.find((f) => f.field_key === editingField)?.bounding_box as [number, number, number, number] | null)
+                          : [100, 150, 320, 180]
+                      }
+                    />
                   </div>
                 )}
 
@@ -1027,6 +1059,15 @@ export default function ReviewPage() {
           originalFields={originalFields}
           currentFields={fieldUpdates}
           onClose={() => setShowDiffModal(false)}
+        />
+      )}
+
+      {/* Enterprise 3-Way Reconciliation Modal */}
+      {show3WayModal && (
+        <ThreeWayReconciliationModal
+          isOpen={show3WayModal}
+          onClose={() => setShow3WayModal(false)}
+          documentId={selectedDocId}
         />
       )}
 

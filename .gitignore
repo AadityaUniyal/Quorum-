@@ -19,6 +19,7 @@ coverage.xml
 venv/
 env/
 .venv/
+uv.lock
 
 # Environment Configuration Files
 backend/.env

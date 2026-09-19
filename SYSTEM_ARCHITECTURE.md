@@ -81,22 +81,30 @@ DocIntel AI is an event-driven, microservice-oriented platform built on an async
 | `compliance.py` | Regulatory compliance validation |
 | `memory.py` | Historical anomaly detection |
 | `reconciler.py` | Inter-agent conflict resolution |
+| `reflexive_debate.py` | Multi-turn reflexive agent debate & Graph-of-Thoughts consensus convergence |
 | `summary.py` | Executive summary generation |
-| `consensus.py` | Weighted score aggregation and routing |
+| `consensus.py` | Weighted score aggregation, debate routing, and spatial grounding |
 
 ### Services (`backend/app/services/`)
 
 | Service | Responsibility |
 |---------|---------------|
 | `llm.py` | Gemini API client with retry, fallback chain, Redis caching |
-| `ocr.py` | Tesseract OCR with layout extraction |
+| `ocr.py` | Tesseract & pdfplumber OCR with layout extraction |
+| `spatial_grounding.py` | Token-level bounding box polygon extraction `[x0, y0, x1, y1]` for visual grounding |
+| `reconciliation_3way.py` | Enterprise 3-way matching across PO, Delivery Slip, and Invoice trios |
+| `active_learning.py` | Human feedback capture into vendor exemplar memory for few-shot prompt injection |
+| `pii_governance.py` | Zero-Trust PII/PHI detection (SSN, Cards, IBAN, Tax IDs) & ABAC tokenization vault |
+| `reranker.py` | Two-Stage Cross-Encoder neural reranking for hybrid search |
+| `citation_verifier.py` | NLI citation entailment verification (`ENTAILMENT`, `NEUTRAL`, `CONTRADICTION`) |
+| `finops.py` | Token usage metering and tenant cost attribution service |
 | `queue.py` | RabbitMQ publisher/consumer |
-| `vector_store.py` | ChromaDB embedding and search |
-| `cache.py` | Redis cache operations |
+| `vector_store.py` | ChromaDB embedding, zero-trust sanitization, and semantic search |
+| `cache.py` | Redis cache operations with tenant namespacing |
 | `crawler.py` | Web crawling integration |
 | `export.py` | CSV/PDF export generation |
 | `storage.py` | File storage management |
-| `webhook.py` | Outbound webhook dispatch |
+| `webhook.py` | Outbound HMAC-SHA256 signed webhook dispatch |
 | `email_ingest.py` | IMAP email attachment ingestion |
 | `local_engine.py` | Heuristic fallback (TF-IDF, regex) |
 
@@ -105,12 +113,13 @@ DocIntel AI is an event-driven, microservice-oriented platform built on an async
 | Route | Endpoints |
 |-------|-----------|
 | `auth.py` | Login, register, refresh, logout, profile, API keys, RBAC |
-| `documents.py` | Upload, list, detail, reprocess, batch operations |
-| `review.py` | HITL review queue, lock/unlock, approve/reject |
-| `search.py` | Hybrid search, query expansion, facets, bookmarks, export |
-| `analytics.py` | KPI metrics, processing stats, system health |
+| `documents.py` | Upload, list, detail, reprocess, spatial layout coordinates |
+| `review.py` | HITL review queue, lock/unlock, approve/reject, active learning feedback |
+| `reconciliation.py` | Enterprise 3-way cross-document matching (`POST /api/v1/reconciliation/3way`) |
+| `search.py` | Hybrid search, query expansion, neural reranking, bookmarks, export |
+| `analytics.py` | KPI metrics, processing stats, system health, FinOps cost tracking |
 | `crawl.py` | Crawler control, PageRank, sitemap |
-| `rag.py` | RAG chatbot, context-constrained Q&A |
+| `rag.py` | RAG chatbot, real SSE streaming, NLI citation entailment verification |
 | `webhooks.py` | Webhook registration and management |
 | `bookmarks.py` | Saved search management |
 | `streaming.py` | Server-Sent Events for live updates |
@@ -121,17 +130,19 @@ DocIntel AI is an event-driven, microservice-oriented platform built on an async
 |------|----------|
 | `dashboard/` | KPI overview, system health, quick actions |
 | `documents/` | Document list, upload, grid/table views, filters |
-| `review/` | Split-screen HITL review with real-time validation, keyboard shortcuts (`useKeyboardShortcuts.ts`), visual diff viewer (`DocumentDiffViewer.tsx`), and IndexedDB offline draft caching (`offlineStorage.ts`) |
-| `search/` | Hybrid search, RAG chat, bookmarks, export |
-| `analytics/` | Charts and metrics (Documents, AI Agents, Search, Crawl tabs) |
+| `review/` | Split-screen HITL review with real-time validation, spatial geometry canvas, 3-way reconciliation modal, keyboard shortcuts, and IndexedDB draft persistence |
+| `search/` | Hybrid search, RAG chat with streaming, bookmarks, export |
+| `analytics/` | Charts and metrics (Documents, AI Agents, Search, Crawl, FinOps tabs) |
 | `crawl/` | Crawler console, PageRank visualization |
 | `settings/` | User profile and preferences |
 
 ### Frontend UI Components & State (`frontend/src/components/`)
 
+- **Spatial Bounding Canvas (`SpatialBoundingCanvas.tsx`)** — Interactive SVG overlay displaying token bounding boxes and active field highlight
+- **3-Way Reconciliation Modal (`ThreeWayReconciliationModal.tsx`)** — Line-by-line cross-document matrix between PO, Delivery Slips, and Invoices
+- **Visual Diff Viewer (`DocumentDiffViewer.tsx`)** — Side-by-side modal displaying original AI extractions vs current human edits
 - **Command Palette (`CommandPalette.tsx`)** — Global `Cmd+K` keyboard shortcut navigation and instant search modal
 - **Live SSE Status Indicator (`SseStatusPill.tsx`)** — Stream connection status pill (Connected / Reconnecting / Offline)
-- **Visual Diff Viewer (`DocumentDiffViewer.tsx`)** — Side-by-side modal displaying original AI extractions vs current human edits
 - **Offline Review Storage (`offlineStorage.ts`)** — IndexedDB draft persistence for client resilience
 - **PWA Web Manifest (`public/manifest.json`)** — Standalone desktop web app support
 
