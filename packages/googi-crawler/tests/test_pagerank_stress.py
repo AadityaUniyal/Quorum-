@@ -89,7 +89,7 @@ class TestPageRankEmpiricalConvergence(unittest.TestCase):
         self.assertEqual(len(result), N)
         self.assertAlmostEqual(sum(result.values()), 1.0, places=5)
         self.assertFalse(any(math.isnan(v) or math.isinf(v) for v in result.values()))
-        print(f"\n[PageRank 100 Nodes Benchmark] Time: {duration_ms:.2f}ms | Sum: {sum(result.values()):.8f} | Max: {max(result.values()):.6f} | Min: {min(result.values()):.6f}")
+        print(f"\n[PageRank 100 Nodes Benchmark] Time: {duration_ms:.2f}ms | Sum: {sum(result.values()):.8f} | Max: {max(result.values()):.6f} | Min: {min(result.values()):.6f}")  # noqa: T201
 
     def test_large_graph_500_nodes(self):
         random.seed(123)
@@ -106,7 +106,7 @@ class TestPageRankEmpiricalConvergence(unittest.TestCase):
         self.assertEqual(len(result), N)
         self.assertAlmostEqual(sum(result.values()), 1.0, places=5)
         self.assertFalse(any(math.isnan(v) or math.isinf(v) for v in result.values()))
-        print(f"[PageRank 500 Nodes Benchmark] Time: {duration_ms:.2f}ms | Sum: {sum(result.values()):.8f} | Max: {max(result.values()):.6f} | Min: {min(result.values()):.6f}")
+        print(f"[PageRank 500 Nodes Benchmark] Time: {duration_ms:.2f}ms | Sum: {sum(result.values()):.8f} | Max: {max(result.values()):.6f} | Min: {min(result.values()):.6f}")  # noqa: T201
 
     def test_large_graph_1000_nodes_with_dangling_chains(self):
         random.seed(999)
@@ -127,7 +127,7 @@ class TestPageRankEmpiricalConvergence(unittest.TestCase):
         self.assertEqual(len(result), N)
         self.assertAlmostEqual(sum(result.values()), 1.0, places=5)
         self.assertFalse(any(math.isnan(v) or math.isinf(v) for v in result.values()))
-        print(f"[PageRank 1000 Nodes Benchmark] Time: {duration_ms:.2f}ms | Sum: {sum(result.values()):.8f} | Max: {max(result.values()):.6f} | Min: {min(result.values()):.6f}")
+        print(f"[PageRank 1000 Nodes Benchmark] Time: {duration_ms:.2f}ms | Sum: {sum(result.values()):.8f} | Max: {max(result.values()):.6f} | Min: {min(result.values()):.6f}")  # noqa: T201
 
 
 class TestSitemapParserEmpiricalStress(unittest.TestCase):
@@ -304,7 +304,7 @@ class TestSitemapParserEmpiricalStress(unittest.TestCase):
         self.assertEqual(len(urls), 5000)
         self.assertEqual(urls[0], "https://example.com/item-0")
         self.assertEqual(urls[-1], "https://example.com/item-4999")
-        print(f"\n[SitemapParser 5,000 URLs Parse Benchmark] Time: {duration_ms:.2f}ms ({5000 / (duration_ms/1000):.0f} URLs/sec)")
+        print(f"\n[SitemapParser 5,000 URLs Parse Benchmark] Time: {duration_ms:.2f}ms ({5000 / (duration_ms/1000):.0f} URLs/sec)")  # noqa: T201
 
 
 if __name__ == "__main__":
