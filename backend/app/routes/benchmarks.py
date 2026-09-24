@@ -7,11 +7,12 @@ single-pass LLM models against DocIntel AI 6-Agent Consensus Circle.
 
 from typing import Any
 
+from fastapi import APIRouter, Query, status
+
 from app.agents.extractor import run_extractor_agent
 from app.models.document import DocumentCategory
 from app.services.benchmark_evaluator import BenchmarkEvaluator
 from app.services.synthetic_generator import SyntheticDocumentGenerator
-from fastapi import APIRouter, Query, status
 
 router = APIRouter(prefix="/api/v1/benchmarks", tags=["benchmarks"])
 

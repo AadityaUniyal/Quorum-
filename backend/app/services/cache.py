@@ -4,8 +4,9 @@ from collections.abc import Callable
 from functools import wraps
 
 import redis
-from app.config import settings
 from redis import asyncio as aioredis
+
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 

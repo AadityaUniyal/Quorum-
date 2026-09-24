@@ -7,7 +7,6 @@ Tests for Admin API endpoints (/admin/users, /admin/logs) covering:
 - Invalid parameter validation (HTTP 422)
 """
 
-from pathlib import Path
 import pytest
 from fastapi import status
 

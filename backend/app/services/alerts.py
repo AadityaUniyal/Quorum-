@@ -10,9 +10,9 @@ Evaluates real-time anomalies and financial risk indicators directly from Neon P
 Zero paid dependencies, 100% self-contained in Neon Postgres.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
-from sqlalchemy import func
+
 from sqlalchemy.orm import Session
 
 from app.models.document import Document, DocumentStatus, ExtractedField, FieldValidationStatus

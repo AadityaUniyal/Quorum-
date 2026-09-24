@@ -24,6 +24,7 @@ def _send_webhook_request_sync(
     import uuid
 
     import httpx
+
     from app.config import settings
     from app.models.webhook import WebhookLog
 
@@ -112,6 +113,7 @@ def dispatch_webhook(event_type: str, payload: dict, organization_id: str | None
     import uuid
 
     import pika
+
     from app.config import settings
 
     db = SessionLocal()

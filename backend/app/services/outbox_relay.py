@@ -12,10 +12,11 @@ import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+from sqlalchemy.orm import Session
+
 from app.database import SessionLocal
 from app.models.outbox import InboxEvent, OutboxEvent
 from app.services.queue import publish_document_event
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

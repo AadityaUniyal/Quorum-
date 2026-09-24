@@ -20,16 +20,17 @@ import uuid
 from collections.abc import AsyncGenerator
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from app.config import settings
 from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.document import Document
 from app.routes.auth import RoleChecker
 from app.services.auth_access import require_document_read
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -253,8 +254,9 @@ def ask_rag(
         answer_text, raw_citations = local_extractive_rag(req.question, docs)
     else:
         try:
-            from app.services.llm import _create_gemini_client
             from google.genai import types
+
+            from app.services.llm import _create_gemini_client
             client = _create_gemini_client()
             response = client.models.generate_content(
                 model=settings.LLM_MODEL,
@@ -388,8 +390,9 @@ def stream_rag(
                     await asyncio.sleep(0.01)
             else:
                 try:
-                    from app.services.llm import _create_gemini_client
                     from google.genai import types
+
+                    from app.services.llm import _create_gemini_client
                     client = _create_gemini_client()
                     response_stream = client.models.generate_content_stream(
                         model=settings.LLM_MODEL,

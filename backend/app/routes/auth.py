@@ -5,6 +5,10 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import jwt
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+
 from app.config import settings
 from app.core.security import (
     blacklist_token,
@@ -36,9 +40,6 @@ from app.schemas.auth import (
     UserLogin,
     UserResponse,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

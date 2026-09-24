@@ -5,10 +5,11 @@ Transactional Outbox Relay, State Transitions, Failure Retries, and Loop Lifecyc
 
 import asyncio
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from app.models.document import Document
 from app.models.outbox import OutboxEvent
 from app.services.email_ingest import _run_mock_ingestion
@@ -17,7 +18,6 @@ from app.services.outbox_relay import (
     relay_outbox_events,
     run_outbox_relay_loop,
 )
-
 
 # =========================================================================
 # 1. Mixed Batch & Partial Failure Isolation

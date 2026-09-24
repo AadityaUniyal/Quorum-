@@ -4,9 +4,10 @@ Uses Redis backend storage when available, with graceful fallback to in-memory s
 """
 import logging
 
-from app.config import settings
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
+from app.config import settings
 
 logger = logging.getLogger("app.limiter")
 

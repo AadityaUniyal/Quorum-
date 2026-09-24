@@ -7,11 +7,12 @@ from datetime import UTC, datetime
 from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 
 import httpx
+from bs4 import BeautifulSoup
+from sqlalchemy.orm import Session
+
 from app.core.security_net import validate_safe_url
 from app.models.search import CrawledPage, PageLink
 from app.services.vector_store import add_document_to_vector_store
-from bs4 import BeautifulSoup
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

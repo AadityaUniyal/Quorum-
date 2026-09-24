@@ -1,8 +1,9 @@
 from datetime import datetime
 from uuid import UUID
 
-from app.models.auth import UserRole
 from pydantic import BaseModel, ConfigDict, EmailStr
+
+from app.models.auth import UserRole
 
 
 class UserCreate(BaseModel):

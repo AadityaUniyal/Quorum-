@@ -13,6 +13,6 @@ if str(tests_path) not in sys.path:
 
 # Expose backend fixtures if available for cross-directory imports
 try:
-    from backend.tests.conftest import TestingSessionLocal, test_engine
+    from backend.tests.conftest import TestingSessionLocal, test_engine  # noqa: F401
 except ImportError:
     pass

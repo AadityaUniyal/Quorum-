@@ -8,8 +8,9 @@ as well as idempotent worker consumer processing.
 import uuid
 from datetime import UTC, datetime
 
-from app.database import GUID, Base
 from sqlalchemy import JSON, Column, DateTime, Integer, String, UniqueConstraint
+
+from app.database import GUID, Base
 
 
 class OutboxEvent(Base):

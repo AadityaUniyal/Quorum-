@@ -1,8 +1,9 @@
 import uuid
 from datetime import UTC, datetime
 
-from app.database import GUID, Base
 from sqlalchemy import Column, DateTime, Float, Integer, String, Text
+
+from app.database import GUID, Base
 
 
 class SearchLog(Base):

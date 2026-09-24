@@ -1,12 +1,13 @@
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.auth import User
 from app.models.bookmark import Bookmark
 from app.routes.auth import get_current_user
 from app.schemas.bookmark import BookmarkCreate, BookmarkResponse
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/bookmarks", tags=["bookmarks"])
 

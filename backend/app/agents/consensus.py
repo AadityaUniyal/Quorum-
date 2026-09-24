@@ -27,8 +27,9 @@ async def run_agent_safe(agent_func, *args, timeout_seconds: float = 15.0) -> di
     import asyncio
     import time
 
-    from app.main import metrics
     from opentelemetry import trace
+
+    from app.main import metrics
 
     tracer = trace.get_tracer(__name__)
     func_name = getattr(agent_func, "__name__", getattr(type(agent_func), "__name__", "agent"))

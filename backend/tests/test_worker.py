@@ -10,11 +10,13 @@ Tests for background worker execution (app.worker) covering:
 
 import threading
 from unittest.mock import MagicMock, patch
+
 import pytest
 
 from app.database import Base
 from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.worker import classify_document, process_document
+
 try:
     from backend.tests.conftest import TestingSessionLocal, test_engine
 except ImportError:
@@ -48,12 +50,15 @@ def test_process_document_missing_id():
     process_document("00000000-0000-0000-0000-000000000000")
 
 
+import tempfile
+
+
 def test_process_document_fallback_thread_marks_failed_without_crash():
     """Local fallback worker thread catches processing failures, marks status FAILED, and does not re-raise."""
     session = TestingSessionLocal()
     doc = Document(
         filename="test_broken.pdf",
-        file_path="/tmp/test_broken.pdf",
+        file_path=f"{tempfile.gettempdir()}/test_broken.pdf",
         file_type="pdf",
         status=DocumentStatus.INGESTED,
     )
@@ -89,7 +94,7 @@ def test_process_document_rabbitmq_thread_reraises():
     session = TestingSessionLocal()
     doc = Document(
         filename="test_dlq.pdf",
-        file_path="/tmp/test_dlq.pdf",
+        file_path=f"{tempfile.gettempdir()}/test_dlq.pdf",
         file_type="pdf",
         status=DocumentStatus.INGESTED,
     )
@@ -137,7 +142,7 @@ def test_process_document_db_rollback_on_inner_failure(monkeypatch):
     ]
     mock_doc.id = "test-doc-id"
     mock_doc.filename = "test.pdf"
-    mock_doc.file_path = "/tmp/test.pdf"
+    mock_doc.file_path = f"{tempfile.gettempdir()}/test.pdf"
     mock_doc.file_type = "pdf"
 
     # Make second commit (inside except block) raise a database error

@@ -2,7 +2,6 @@ import enum
 import uuid
 from datetime import UTC, datetime
 
-from app.database import GUID, Base
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -17,6 +16,8 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import relationship
+
+from app.database import GUID, Base
 
 
 class DocumentStatus(enum.StrEnum):

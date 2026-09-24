@@ -6,12 +6,13 @@ import secrets
 from datetime import UTC, datetime
 from email.header import decode_header
 
+from sqlalchemy.orm import Session
+
 from app.config import settings
 from app.database import SessionLocal
 from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.services.outbox_relay import record_outbox_event
 from app.services.queue import publish_document_event
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

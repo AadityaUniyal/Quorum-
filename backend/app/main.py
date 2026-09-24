@@ -15,17 +15,18 @@ import time
 from contextlib import asynccontextmanager
 from typing import Any
 
-import app.models  # Registers all models via app/models/__init__.py
-from app.config import settings
-from app.database import Base, engine
-from app.limiter import limiter
-from app.logging_config import generate_trace_id, get_logger, setup_logging, trace_id_var
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+
+import app.models  # Registers all models via app/models/__init__.py
+from app.config import settings
+from app.database import Base, engine
+from app.limiter import limiter
+from app.logging_config import generate_trace_id, get_logger, setup_logging, trace_id_var
 
 logger = get_logger(__name__)
 
@@ -388,6 +389,7 @@ from fastapi.responses import PlainTextResponse
 def get_queue_depth() -> int:
     try:
         import pika
+
         from app.config import settings
         credentials = pika.PlainCredentials(settings.RABBITMQ_USER, settings.RABBITMQ_PASS)
         parameters = pika.ConnectionParameters(

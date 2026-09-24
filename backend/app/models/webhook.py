@@ -1,8 +1,9 @@
 import uuid
 from datetime import UTC, datetime
 
-from app.database import GUID, Base
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
+
+from app.database import GUID, Base
 
 
 class WebhookConfig(Base):

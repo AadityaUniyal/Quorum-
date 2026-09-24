@@ -14,12 +14,13 @@ import json
 from collections.abc import AsyncGenerator
 from uuid import UUID
 
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
+
 from app.config import settings
 from app.logging_config import get_logger
 from app.models.auth import User
 from app.routes.auth import get_current_user
-from fastapi import APIRouter, Depends
-from fastapi.responses import StreamingResponse
 
 logger = get_logger(__name__)
 

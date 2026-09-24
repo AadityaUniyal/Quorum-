@@ -13,12 +13,14 @@ Verifies:
 import threading
 import uuid
 from unittest.mock import MagicMock, patch
+
 import pytest
 from sqlalchemy.exc import OperationalError
 
 from app.database import Base
-from app.models.document import Document, DocumentCategory, DocumentStatus
+from app.models.document import Document, DocumentStatus
 from app.worker import process_document
+
 try:
     from backend.tests.conftest import TestingSessionLocal, test_engine
 except ImportError:
@@ -56,7 +58,7 @@ def test_thread_name_exception_reraise_matrix(thread_name, should_reraise):
     session = TestingSessionLocal()
     doc = Document(
         filename=f"test_matrix_{thread_name[:10]}.pdf",
-        file_path="/tmp/test.pdf",
+        file_path="/tmp/test.pdf",  # noqa: S108
         file_type="pdf",
         status=DocumentStatus.INGESTED,
     )
@@ -249,7 +251,7 @@ def test_pipeline_step_failures_mark_status_failed(failing_step, patch_target, e
     session = TestingSessionLocal()
     doc = Document(
         filename=f"test_step_{failing_step}.pdf",
-        file_path="/tmp/test.pdf",
+        file_path="/tmp/test.pdf",  # noqa: S108
         file_type="pdf",
         status=DocumentStatus.INGESTED,
     )
@@ -299,7 +301,7 @@ def test_concurrent_fallback_and_consumer_threads_stress(mock_ocr):
     for i in range(4):
         doc = Document(
             filename=f"stress_doc_{i}.pdf",
-            file_path=f"/tmp/stress_{i}.pdf",
+            file_path=f"/tmp/stress_{i}.pdf",  # noqa: S108
             file_type="pdf",
             status=DocumentStatus.INGESTED,
         )

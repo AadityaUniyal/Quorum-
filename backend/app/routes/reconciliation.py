@@ -5,15 +5,16 @@ Reconciliation API routes for Enterprise 3-Way Cross-Document Matching.
 from typing import Any
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.document import Document
 from app.routes.auth import RoleChecker
 from app.services.auth_access import require_document_read
 from app.services.reconciliation_3way import ThreeWayReconciliationEngine
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/v1/reconciliation", tags=["reconciliation"])
 

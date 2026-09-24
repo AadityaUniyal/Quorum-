@@ -4,6 +4,8 @@ import threading
 import time
 
 import pika
+from sqlalchemy.orm import Session
+
 from app.agents.consensus import run_agent_consensus
 from app.config import settings
 from app.database import SessionLocal
@@ -12,7 +14,6 @@ from app.models.document import Document, DocumentCategory, DocumentStatus, Extr
 from app.services.ocr import perform_ocr
 from app.services.queue import register_local_crawl_worker_callback, register_local_worker_callback
 from app.services.vector_store import add_document_to_vector_store
-from sqlalchemy.orm import Session
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")

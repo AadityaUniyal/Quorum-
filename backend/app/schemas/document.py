@@ -1,8 +1,9 @@
 from datetime import datetime
 from uuid import UUID
 
-from app.models.document import DocumentCategory, DocumentStatus, FieldValidationStatus
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.models.document import DocumentCategory, DocumentStatus, FieldValidationStatus
 
 
 class ExtractedFieldResponse(BaseModel):

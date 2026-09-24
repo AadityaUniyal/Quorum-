@@ -12,6 +12,9 @@ Provides 1-click seeding of realistic enterprise documents:
 import uuid
 from typing import Any
 
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.document import (
@@ -22,8 +25,6 @@ from app.models.document import (
     FieldValidationStatus,
 )
 from app.routes.auth import RoleChecker
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/v1/demo", tags=["demo"])
 any_user = RoleChecker([UserRole.ADMIN, UserRole.OPERATOR, UserRole.REVIEWER, UserRole.VIEWER])

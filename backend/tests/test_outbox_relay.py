@@ -3,16 +3,14 @@ Tests for Transactional Outbox Relay Service, Loop Lifecycle, and Email Ingestio
 """
 
 import asyncio
-import email
-from email.message import EmailMessage
-import os
 import uuid
 from datetime import UTC, datetime
+from email.message import EmailMessage
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from app.config import settings
-from app.database import Base
 from app.main import app, lifespan
 from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.models.outbox import OutboxEvent
@@ -22,7 +20,6 @@ from app.services.outbox_relay import (
     relay_outbox_events,
     run_outbox_relay_loop,
 )
-
 
 # =========================================================================
 # 1. Outbox Event Record & Relay State Transitions

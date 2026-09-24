@@ -1,11 +1,12 @@
 import re
 import uuid
 
-from app.config import settings
 from sqlalchemy import create_engine
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.types import CHAR, TypeDecorator
+
+from app.config import settings
 
 
 class GUID(TypeDecorator):

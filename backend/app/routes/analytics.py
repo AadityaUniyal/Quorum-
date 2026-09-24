@@ -1,4 +1,9 @@
 from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from fastapi import APIRouter, Depends
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.audit import AuditLog
@@ -6,9 +11,6 @@ from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentStatus
 from app.routes.auth import RoleChecker
 from app.services.auth_access import filter_documents_for_user
-from fastapi import APIRouter, Depends
-from sqlalchemy import func
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 

@@ -1,8 +1,9 @@
 import os
 
-from app.config_validator import ConfigValidator
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.config_validator import ConfigValidator
 
 
 class Settings(BaseSettings):

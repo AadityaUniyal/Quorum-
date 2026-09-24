@@ -10,14 +10,10 @@ Empirically challenges:
 5. Email header edge cases (missing Subject, non-ASCII encoded subjects, mixed attachments, case-insensitive .PDF extensions)
 """
 
-import email
-from email.message import EmailMessage
 import os
-import uuid
-from datetime import UTC, datetime
+from email.message import EmailMessage
 from unittest.mock import MagicMock, patch
 
-import pytest
 from sqlalchemy.exc import OperationalError
 
 from app.config import settings
@@ -25,6 +21,7 @@ from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.models.outbox import OutboxEvent
 from app.services.email_ingest import _run_mock_ingestion, check_mailbox_and_ingest
 from app.services.outbox_relay import relay_outbox_events
+
 try:
     from backend.tests.conftest import TestingSessionLocal
 except ImportError:

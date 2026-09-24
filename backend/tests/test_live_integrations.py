@@ -7,14 +7,12 @@ Live Integration Smoke Test for Free-Tier Services:
 5. Queue & Worker Resilience
 """
 
-import asyncio
-import os
 import pytest
-from app.config import settings
-from app.database import SessionLocal
-from app.services.cache import acquire_redis_semaphore, release_redis_semaphore, cache_get, cache_set
-from app.services.llm import call_llm_with_fallback, call_groq
 from sqlalchemy import text
+
+from app.config import settings
+from app.services.cache import acquire_redis_semaphore, cache_get, cache_set, release_redis_semaphore
+from app.services.llm import call_groq, call_llm_with_fallback
 
 
 @pytest.mark.asyncio
@@ -56,8 +54,9 @@ async def test_live_upstash_redis():
 def test_live_neon_postgres_connectivity():
     """Verify Neon PostgreSQL can execute transactions and query schemas."""
     from dotenv import dotenv_values
-    from app.database import _resolve_db_url
     from sqlalchemy import create_engine
+
+    from app.database import _resolve_db_url
 
     vals = dotenv_values(".env") or dotenv_values("backend/.env")
     neon_url = vals.get("DATABASE_URL") or settings.DATABASE_URL

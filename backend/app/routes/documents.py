@@ -1,6 +1,11 @@
 import hashlib
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from sqlalchemy.orm import Session, joinedload
+
 from app.database import get_db
 from app.models.audit import AuditLog
 from app.models.auth import User, UserRole
@@ -10,10 +15,6 @@ from app.schemas.document import DocumentCreateSchema, DocumentResponse, Documen
 from app.services.auth_access import filter_documents_for_user, require_document_read, require_document_write
 from app.services.queue import publish_document_event
 from app.services.storage import delete_stored_file, save_uploaded_file
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -483,6 +484,7 @@ def inspect_dlq(
     import json
 
     import pika
+
     from app.config import settings
     credentials = pika.PlainCredentials(settings.RABBITMQ_USER, settings.RABBITMQ_PASS)
     parameters = pika.ConnectionParameters(
@@ -535,6 +537,7 @@ def requeue_dlq(
     import json
 
     import pika
+
     from app.config import settings
     credentials = pika.PlainCredentials(settings.RABBITMQ_USER, settings.RABBITMQ_PASS)
     parameters = pika.ConnectionParameters(

@@ -17,8 +17,9 @@ import re
 import uuid
 from typing import Any
 
-from app.config import settings
 from fastapi import HTTPException, UploadFile, status
+
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 

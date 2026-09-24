@@ -4,6 +4,10 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import redis
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from app.config import settings
 from app.database import get_db
 from app.models.audit import AuditLog
@@ -12,9 +16,6 @@ from app.models.document import Document, DocumentStatus, ExtractedField, FieldV
 from app.routes.auth import RoleChecker
 from app.schemas.document import DocumentResponse, DocumentReviewSubmit, DocumentSimpleResponse
 from app.services.auth_access import filter_documents_for_user, require_document_write
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/review", tags=["review"])
 

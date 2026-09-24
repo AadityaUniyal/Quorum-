@@ -11,7 +11,6 @@ try:
 except ImportError:  # pragma: no cover
     genai = None  # type: ignore
     types = None  # type: ignore
-from app.config import settings
 from tenacity import (
     before_sleep_log,
     retry,
@@ -19,6 +18,8 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
+
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 

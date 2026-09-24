@@ -3,6 +3,7 @@ import logging
 import threading
 
 import pika
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)
