@@ -14,13 +14,13 @@ def run_compliance_agent(ocr_text: str, category: DocumentCategory, extracted_fi
     """
     import asyncio
     local_result = run_local_compliance(ocr_text, category, extracted_fields)
-    if settings.LLM_PREFERRED_PROVIDER != "gemini":
+    if settings.LLM_PREFERRED_PROVIDER != "gemini" or not settings.GEMINI_API_KEY:
         return local_result
 
     try:
-        return asyncio.run(call_gemini_compliance(ocr_text, category, extracted_fields))
+        return asyncio.run(asyncio.wait_for(call_gemini_compliance(ocr_text, category, extracted_fields), timeout=8.0))
     except Exception as e:
-        logger.error(f"Centralized Compliance Agent failed: {str(e)}. Falling back to local compliance.")
+        logger.warning(f"Centralized Compliance Agent failed or timed out: {e}. Falling back to local compliance.")
         return local_result
 
 async def call_gemini_compliance(ocr_text: str, category: DocumentCategory, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:

@@ -2,9 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth';
 import { useUIStore } from '@/stores/ui';
+import { api } from '@/lib/api';
 import { SseStatusPill } from '@/components/layout/SseStatusPill';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import {
   Search, 
   Bell, 
@@ -13,16 +16,23 @@ import {
   ChevronRight, 
   LogOut, 
   Settings,
+  Key,
+  AlertCircle,
+  CheckCircle2,
+  Inbox,
   Sparkles,
-  AlertCircle
+  BarChart3
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatDistanceToNow } from 'date-fns';
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { user, logout, isDemoMode } = useAuthStore();
   const { setCommandPaletteOpen } = useUIStore();
 
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -43,6 +53,30 @@ export const Header: React.FC = () => {
     localStorage.setItem('theme', newTheme);
   };
 
+  // Fetch real notifications from backend
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      if (isDemoMode) return [];
+      try {
+        return await api.getNotifications();
+      } catch {
+        return [];
+      }
+    },
+    refetchInterval: 30000,
+    staleTime: 10000,
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => api.markNotificationRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+
+  const unreadCount = notifications.filter((n: { is_read: boolean }) => !n.is_read).length;
+
   // Convert pathname to breadcrumbs
   const getBreadcrumbs = () => {
     const parts = pathname.split('/').filter(Boolean);
@@ -51,7 +85,7 @@ export const Header: React.FC = () => {
       const href = '/' + parts.slice(0, index + 1).join('/');
       const label = part.charAt(0).toUpperCase() + part.slice(1);
       return {
-        label: label === 'Crawl' ? 'Web Crawler' : label === 'Review' ? 'Review Queue' : label,
+        label: label === 'Crawl' ? 'Web Discovery' : label === 'Review' ? 'Review Queue' : label,
         href,
         active: index === parts.length - 1
       };
@@ -60,18 +94,21 @@ export const Header: React.FC = () => {
 
   const breadcrumbs = getBreadcrumbs();
 
-  // Notifications are currently derived from the app state and API payloads.
-  const notifications = [
-    { id: '1', title: 'Review Required', desc: 'Invoice #INV-2901 details validation discrepancy flagged.', type: 'error', time: '5m ago' },
-    { id: '2', title: 'Lock Released', desc: 'Agreement lock expired for Contract_Acme.pdf.', type: 'info', time: '1h ago' }
-  ];
+  const formatTime = (dateStr: string) => {
+    try {
+      return formatDistanceToNow(new Date(dateStr), { addSuffix: true });
+    } catch {
+      return '';
+    }
+  };
 
   return (
     <header className="h-16 border-b border-white/[0.06] bg-black/30 backdrop-blur-xl px-6 flex items-center justify-between select-none relative z-30 w-full shrink-0">
       {/* Left: Breadcrumbs */}
       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        <span className="hover:text-foreground cursor-pointer transition-colors" onClick={() => router.push('/dashboard')}>
-          DocIntel AI
+        <span className="hover:text-foreground cursor-pointer transition-colors flex items-center gap-1.5" onClick={() => router.push('/dashboard')}>
+          <BrandLogo size="sm" showWordmark={false} />
+          <span className="hidden sm:inline font-semibold text-foreground">Quorum</span>
         </span>
         {breadcrumbs.map((crumb, idx) => (
           <React.Fragment key={idx}>
@@ -96,10 +133,42 @@ export const Header: React.FC = () => {
         {/* Search Command Palette Trigger */}
         <button
           onClick={() => setCommandPaletteOpen(true)}
-          className="flex items-center gap-2 bg-white/5 hover:bg-white/8 border border-white/10 hover:border-white/15 text-muted-foreground hover:text-foreground transition-all duration-200 px-3.5 py-1.5 rounded-xl cursor-pointer shadow-inner shrink-0"
+          className="flex items-center gap-2 bg-white/5 hover:bg-white/8 border border-white/10 hover:border-white/15 text-muted-foreground hover:text-foreground transition-all duration-200 px-3.5 py-1.5 rounded-xl cursor-pointer shadow-inner shrink-0 touch-press"
         >
           <Search className="h-3.5 w-3.5 text-muted-foreground/80" />
           <span className="text-[10px] font-mono leading-none tracking-wider uppercase">Search / Cmd+K</span>
+        </button>
+
+        {/* Public Benchmarks Observatory Link */}
+        <button
+          onClick={() => router.push('/benchmarks')}
+          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-500/20 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-semibold transition-all cursor-pointer shadow-sm touch-press"
+          title="Inspect independent accuracy and verification benchmarks"
+        >
+          <BarChart3 className="h-3.5 w-3.5" />
+          <span>Benchmarks</span>
+        </button>
+
+        {/* 1-Click Sandbox Loader */}
+        <button
+          onClick={async () => {
+            try {
+              toast.loading('Seeding enterprise benchmark scenarios...', { id: 'seed-demo' });
+              const res = await api.seedDemoSandbox();
+              queryClient.invalidateQueries({ queryKey: ['documents'] });
+              queryClient.invalidateQueries({ queryKey: ['kpis'] });
+              queryClient.invalidateQueries({ queryKey: ['charts'] });
+              toast.success(res?.message || 'Demo dataset loaded!', { id: 'seed-demo' });
+              router.push('/documents');
+            } catch (e: any) {
+              toast.error(e?.message || 'Failed to seed sandbox', { id: 'seed-demo' });
+            }
+          }}
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold transition-all cursor-pointer shadow-sm"
+          title="Seed 5 realistic enterprise documents in 1-click for instant evaluation"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          <span>Try Demo Sandbox</span>
         </button>
 
         {/* Theme Toggle Button */}
@@ -126,10 +195,12 @@ export const Header: React.FC = () => {
             )}
           >
             <Bell className="h-4 w-4" />
-            <span className="absolute top-1 right-1 flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-450 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+              </span>
+            )}
           </button>
 
           {/* Notifications Drawer */}
@@ -142,31 +213,54 @@ export const Header: React.FC = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.98 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 mt-2.5 w-72 glass-card bg-black/60 border border-white/10 shadow-2xl rounded-2xl overflow-hidden z-50 p-1 flex flex-col gap-0.5"
+                  className="absolute right-0 mt-2.5 w-80 glass-card bg-black/60 border border-white/10 shadow-2xl rounded-2xl overflow-hidden z-50 p-1 flex flex-col gap-0.5"
                 >
                   <div className="p-3 border-b border-white/[0.04] bg-white/[0.01] flex items-center justify-between text-xs select-none">
-                    <span className="font-bold text-foreground font-sans">Active Notifications</span>
-                    <span className="text-[10px] font-mono text-primary font-bold px-1.5 py-0.5 rounded bg-primary/10">
-                      2 Unread
-                    </span>
+                    <span className="font-bold text-foreground font-sans">Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="text-[10px] font-mono text-primary font-bold px-1.5 py-0.5 rounded bg-primary/10">
+                        {unreadCount} Unread
+                      </span>
+                    )}
                   </div>
 
-                  <div className="flex flex-col gap-1 p-1 max-h-60 overflow-y-auto scrollbar">
-                    {notifications.map((notif) => (
-                      <div
-                        key={notif.id}
-                        className="flex gap-2.5 p-2.5 rounded-xl hover:bg-white/[0.02] border border-transparent transition-colors duration-150 text-[11px]"
-                      >
-                        <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                          <div className="flex items-center justify-between w-full font-semibold text-neutral-200">
-                            <span>{notif.title}</span>
-                            <span className="text-[9px] font-mono text-muted-foreground font-normal">{notif.time}</span>
-                          </div>
-                          <p className="text-muted-foreground leading-normal font-sans text-[10px]">{notif.desc}</p>
-                        </div>
+                  <div className="flex flex-col gap-0.5 p-1 max-h-72 overflow-y-auto scrollbar">
+                    {notifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
+                        <Inbox className="h-8 w-8 opacity-40" />
+                        <span className="text-[11px] font-medium">No notifications yet</span>
                       </div>
-                    ))}
+                    ) : (
+                      notifications.map((notif: { id: string; title: string; message: string; is_read: boolean; created_at: string }) => (
+                        <button
+                          key={notif.id}
+                          onClick={() => {
+                            if (!notif.is_read && !isDemoMode) {
+                              markReadMutation.mutate(notif.id);
+                            }
+                          }}
+                          className={clsx(
+                            "flex gap-2.5 p-2.5 rounded-xl hover:bg-white/[0.03] border transition-colors duration-150 text-[11px] text-left cursor-pointer w-full",
+                            notif.is_read ? "border-transparent opacity-60" : "border-white/[0.04] bg-white/[0.01]"
+                          )}
+                        >
+                          {notif.is_read ? (
+                            <CheckCircle2 className="h-4 w-4 text-muted-foreground/40 shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                            <div className="flex items-center justify-between w-full font-semibold text-neutral-200">
+                              <span className="truncate">{notif.title}</span>
+                              <span className="text-[9px] font-mono text-muted-foreground font-normal shrink-0 ml-2">
+                                {formatTime(notif.created_at)}
+                              </span>
+                            </div>
+                            <p className="text-muted-foreground leading-normal font-sans text-[10px] line-clamp-2">{notif.message}</p>
+                          </div>
+                        </button>
+                      ))
+                    )}
                   </div>
                 </motion.div>
               </>
@@ -227,7 +321,7 @@ export const Header: React.FC = () => {
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] text-neutral-300 hover:text-foreground hover:bg-white/[0.02] cursor-pointer transition-colors text-left"
                   >
-                    <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+                    <Key className="h-3.5 w-3.5 text-muted-foreground" />
                     <span>Developer API Keys</span>
                   </button>
 
@@ -238,7 +332,7 @@ export const Header: React.FC = () => {
                       setShowProfileMenu(false);
                       logout();
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] text-rose-450 hover:text-rose-400 hover:bg-rose-500/5 border border-transparent cursor-pointer transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] text-rose-400 hover:text-rose-300 hover:bg-rose-500/5 border border-transparent cursor-pointer transition-colors text-left"
                   >
                     <LogOut className="h-3.5 w-3.5" />
                     <span>Sign Out</span>

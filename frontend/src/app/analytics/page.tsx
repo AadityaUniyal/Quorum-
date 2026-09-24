@@ -8,6 +8,8 @@ import * as Tabs from '@radix-ui/react-tabs';
 import { toast } from 'react-hot-toast';
 
 import clsx from 'clsx';
+import DateRangePicker, { TimeRangeOption } from '@/components/analytics/DateRangePicker';
+import VendorSpendChart from '@/components/analytics/VendorSpendChart';
 import { 
   BarChart3, 
   Clock, 
@@ -18,7 +20,10 @@ import {
   AlertCircle,
   Loader2,
   Download,
-  Flame
+  Flame,
+  FileSpreadsheet,
+  Building2,
+  ShieldAlert
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -36,15 +41,37 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const COLORS = ['#4F6EF7', '#7C3AED', '#22C55E', '#F59E0B', '#EF4444', '#6B7280'];
+const COLORS = ['#3B82F6', '#2563EB', '#10B981', '#F59E0B', '#EF4444', '#64748B'];
 
 export default function AnalyticsPage() {
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<TimeRangeOption>(30);
 
   // Fetch KPIs
   const { data: kpis, isLoading: kpisLoading } = useQuery({
     queryKey: ['kpis'],
     queryFn: api.getKpis,
+    refetchInterval: 15000,
+  });
+
+  // Fetch Quorum Vendor Spend
+  const { data: vendorSpend = [], isLoading: vendorSpendLoading } = useQuery({
+    queryKey: ['spendByVendor', timeRange],
+    queryFn: () => api.getSpendByVendor(timeRange),
+    refetchInterval: 15000,
+  });
+
+  // Fetch Quorum Dynamic Alerts
+  const { data: dynamicAlerts = [] } = useQuery({
+    queryKey: ['dynamicAlerts'],
+    queryFn: api.getDynamicAlerts,
+    refetchInterval: 15000,
+  });
+
+  // Fetch Quorum Reconciliation Variances
+  const { data: recVariances } = useQuery({
+    queryKey: ['reconciliationVariances'],
+    queryFn: api.getReconciliationVariances,
     refetchInterval: 15000,
   });
 
@@ -86,6 +113,31 @@ export default function AnalyticsPage() {
   const zeroResultQueries = searchStats?.zero_result_queries ?? [];
   const topPageRanks = crawlStats?.top_pages ?? [];
 
+  const handleExportCsv = () => {
+    if (!vendorSpend || vendorSpend.length === 0) {
+      toast.error('No vendor spend data available to export.');
+      return;
+    }
+    toast.success('Downloading Vendor Spend CSV report...');
+    const headers = ['Vendor Name', 'Invoice Count', 'Total Spend ($)', 'Avg Invoice Value ($)', 'AI Confidence (%)'];
+    const rows = vendorSpend.map(v => [
+      `"${v.vendor_name.replace(/"/g, '""')}"`,
+      v.invoice_count,
+      v.total_spend.toFixed(2),
+      v.avg_invoice_value.toFixed(2),
+      v.confidence
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `quorum_vendor_spend_${timeRange || 'all'}days.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleExportChart = (chartName: string) => {
     toast.success(`Preparing ${chartName} data export...`);
     const exportPayload = {
@@ -93,6 +145,7 @@ export default function AnalyticsPage() {
       exported_at: new Date().toISOString(),
       kpis: kpis || {},
       charts: charts || {},
+      vendor_spend: vendorSpend || [],
       agent_stats: agentStats || {},
       search_stats: searchStats || {},
       crawl_stats: crawlStats || {},
@@ -130,11 +183,24 @@ export default function AnalyticsPage() {
   return (
     <div className="flex flex-col gap-8 animate-fadeIn max-w-7xl mx-auto w-full pb-16">
       
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground font-sans">Analytics & Audit Trail</h1>
-        <p className="text-xs text-muted-foreground mt-1 font-sans">
-          Track processing system trends, consensus accuracy indicators, and explore cryptographic audit logs.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground font-sans">Quorum Analytics & Verification</h1>
+          <p className="text-xs text-muted-foreground mt-1 font-sans">
+            Real-time financial spend aggregations, AI consensus confidence metrics, and dynamic anomaly detection powered by Neon Postgres.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <DateRangePicker selectedRange={timeRange} onChange={setTimeRange} />
+          <button
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-sm"
+            title="Download vendor spend report as CSV"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            <span>Export CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* Analytics KPIs Grid */}
@@ -175,6 +241,83 @@ export default function AnalyticsPage() {
           accentColor="accent"
           isLoading={kpisLoading}
         />
+      </div>
+
+      {/* Quorum Financial Analytics: Vendor Spend & Anomaly Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Vendor Spend Breakdown */}
+        <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-4 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-primary" />
+              <div>
+                <h3 className="text-sm font-semibold text-foreground font-sans">Vendor Spend Breakdown (Neon Postgres)</h3>
+                <p className="text-[10px] text-muted-foreground font-sans">Aggregated procurement spend and invoice volumes by vendor.</p>
+              </div>
+            </div>
+            <button
+              onClick={handleExportCsv}
+              className="text-xs text-primary font-mono hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              Export CSV
+            </button>
+          </div>
+
+          {vendorSpendLoading ? (
+            <div className="h-64 flex items-center justify-center">
+              <Loader2 className="h-6 w-6 text-primary animate-spin" />
+            </div>
+          ) : (
+            <VendorSpendChart data={vendorSpend} />
+          )}
+        </div>
+
+        {/* Real-time Neon Anomaly Alerts */}
+        <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-amber-400" />
+              <div>
+                <h3 className="text-sm font-semibold text-foreground font-sans">Real-time Anomaly Alerts</h3>
+                <p className="text-[10px] text-muted-foreground font-sans">Live financial & variance flags.</p>
+              </div>
+            </div>
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              {dynamicAlerts.length} Active
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2 overflow-y-auto max-h-64 scrollbar pr-1">
+            {dynamicAlerts.length === 0 ? (
+              <div className="py-8 text-center text-xs text-muted-foreground font-sans flex flex-col items-center justify-center gap-1.5">
+                <AlertCircle className="h-5 w-5 opacity-30" />
+                <span>No active alerts detected.</span>
+              </div>
+            ) : (
+              dynamicAlerts.map((alert) => (
+                <div
+                  key={alert.id}
+                  className={clsx(
+                    'p-3 rounded-xl border text-xs flex flex-col gap-1',
+                    alert.severity === 'danger'
+                      ? 'bg-rose-500/5 border-rose-500/20 text-rose-300'
+                      : alert.severity === 'warning'
+                      ? 'bg-amber-500/5 border-amber-500/20 text-amber-300'
+                      : 'bg-blue-500/5 border-blue-500/20 text-blue-300'
+                  )}
+                >
+                  <div className="flex items-center justify-between font-semibold">
+                    <span>{alert.title}</span>
+                    <span className="text-[9px] font-mono opacity-60">
+                      {new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="text-[10px] opacity-80 leading-normal font-sans">{alert.message}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Tabs System for Visual Charts */}
@@ -218,8 +361,12 @@ export default function AnalyticsPage() {
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Ingestion Volume Trend</h3>
                 <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">Historical daily document counts.</p>
               </div>
-              <button onClick={() => handleExportChart('Ingestion_Volume')} className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer">
-                <Download className="h-3.5 w-3.5" />
+              <button 
+                onClick={() => handleExportChart('Ingestion_Volume')} 
+                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                aria-label="Export ingestion volume chart"
+              >
+                <Download className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
 
@@ -238,14 +385,14 @@ export default function AnalyticsPage() {
                   <AreaChart data={dailyTrends} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorAnalyticsVolume" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#7C3AED" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <XAxis dataKey="date" stroke="rgba(255,255,255,0.15)" tick={{ fill: '#6B7280', fontSize: 10, fontFamily: 'monospace' }} />
                     <YAxis stroke="rgba(255,255,255,0.15)" tick={{ fill: '#6B7280', fontSize: 10, fontFamily: 'monospace' }} />
                     <Tooltip contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }} />
-                    <Area type="monotone" dataKey="count" stroke="#7C3AED" strokeWidth={2} fillOpacity={1} fill="url(#colorAnalyticsVolume)" />
+                    <Area type="monotone" dataKey="count" stroke="#3B82F6" strokeWidth={2} fillOpacity={1} fill="url(#colorAnalyticsVolume)" />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
@@ -259,8 +406,12 @@ export default function AnalyticsPage() {
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Pipeline Status Distribution</h3>
                 <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">Current status of documents in storage.</p>
               </div>
-              <button onClick={() => handleExportChart('Pipeline_Status')} className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer">
-                <Download className="h-3.5 w-3.5" />
+              <button 
+                onClick={() => handleExportChart('Pipeline_Status')} 
+                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                aria-label="Export pipeline status chart"
+              >
+                <Download className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
 
@@ -299,8 +450,12 @@ export default function AnalyticsPage() {
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Critic vs Auditor Consensus Correlation</h3>
                 <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">Distribution of confidence verification matching scores.</p>
               </div>
-              <button onClick={() => handleExportChart('Consensus_Correlation')} className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer">
-                <Download className="h-3.5 w-3.5" />
+              <button 
+                onClick={() => handleExportChart('Consensus_Correlation')} 
+                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                aria-label="Export consensus correlation chart"
+              >
+                <Download className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
 
@@ -311,9 +466,9 @@ export default function AnalyticsPage() {
                   <YAxis type="number" dataKey="auditor_score" name="Auditor" unit="" min={0.4} max={1.0} stroke="rgba(255,255,255,0.15)" tick={{ fill: '#6B7280', fontSize: 10, fontFamily: 'monospace' }} />
                   <ZAxis type="number" dataKey="confidence" range={[40, 400]} />
                   <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }} />
-                  <Scatter name="Documents" data={consensusScatterData} fill="#4F6EF7">
+                  <Scatter name="Documents" data={consensusScatterData} fill="#3B82F6">
                     {consensusScatterData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.confidence > 80 ? '#22C55E' : '#7C3AED'} />
+                      <Cell key={`cell-${index}`} fill={entry.confidence > 80 ? '#10B981' : '#F59E0B'} />
                     ))}
                   </Scatter>
                 </ScatterChart>
@@ -328,8 +483,12 @@ export default function AnalyticsPage() {
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Agent Processing Latency</h3>
                 <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">Average time spent per engine block.</p>
               </div>
-              <button onClick={() => handleExportChart('Agent_Latency')} className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer">
-                <Download className="h-3.5 w-3.5" />
+              <button 
+                onClick={() => handleExportChart('Agent_Latency')} 
+                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                aria-label="Export agent latency chart"
+              >
+                <Download className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
 
@@ -339,7 +498,7 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="name" stroke="rgba(255,255,255,0.1)" tick={{ fill: '#888', fontSize: 9 }} />
                   <YAxis unit="s" stroke="rgba(255,255,255,0.1)" tick={{ fill: '#6B7280', fontSize: 10, fontFamily: 'monospace' }} />
                   <Tooltip contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }} />
-                  <Bar dataKey="latency" fill="#7C3AED" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="latency" fill="#3B82F6" radius={[4, 4, 0, 0]}>
                     {agentLatencies.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
@@ -405,8 +564,12 @@ export default function AnalyticsPage() {
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">PageRank Distribution Graph</h3>
                 <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">Authority ranking weights of indexing domains.</p>
               </div>
-              <button onClick={() => handleExportChart('PageRank')} className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer">
-                <Download className="h-3.5 w-3.5" />
+              <button 
+                onClick={() => handleExportChart('PageRank')} 
+                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                aria-label="Export PageRank chart"
+              >
+                <Download className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
 
@@ -416,7 +579,7 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="name" stroke="rgba(255,255,255,0.1)" tick={{ fill: '#888', fontSize: 9 }} />
                   <YAxis stroke="rgba(255,255,255,0.1)" tick={{ fill: '#6B7280', fontSize: 10, fontFamily: 'monospace' }} />
                   <Tooltip contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }} />
-                  <Bar dataKey="rank" fill="#4F6EF7" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="rank" fill="#3B82F6" radius={[4, 4, 0, 0]}>
                     {topPageRanks.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
                     ))}
@@ -433,8 +596,12 @@ export default function AnalyticsPage() {
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Domain Crawl Latency</h3>
                 <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">Page parsing durations (milliseconds).</p>
               </div>
-              <button onClick={() => handleExportChart('Crawl_Duration')} className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer">
-                <Download className="h-3.5 w-3.5" />
+              <button 
+                onClick={() => handleExportChart('Crawl_Duration')} 
+                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                aria-label="Export crawl duration chart"
+              >
+                <Download className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
 

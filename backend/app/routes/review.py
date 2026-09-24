@@ -4,10 +4,6 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import redis
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-
 from app.config import settings
 from app.database import get_db
 from app.models.audit import AuditLog
@@ -16,6 +12,9 @@ from app.models.document import Document, DocumentStatus, ExtractedField, FieldV
 from app.routes.auth import RoleChecker
 from app.schemas.document import DocumentResponse, DocumentReviewSubmit, DocumentSimpleResponse
 from app.services.auth_access import filter_documents_for_user, require_document_write
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/review", tags=["review"])
 
@@ -332,6 +331,40 @@ def submit_review(
                     "before": before_val,
                     "after": after_val
                 }
+        else:
+            # Create newly added custom field
+            new_field = ExtractedField(
+                id=uuid.uuid4(),
+                document_id=document_id,
+                field_key=update.field_key,
+                extracted_value=update.consensus_value,
+                consensus_value=update.consensus_value,
+                critic_score=1.0,
+                auditor_score=1.0,
+                confidence_score=1.0,
+                is_modified=True,
+                validation_status=FieldValidationStatus.MANUAL_CORRECTION,
+                verification_source="HUMAN",
+                verified_by=current_user.id,
+                verified_at=datetime.now(UTC)
+            )
+            db.add(new_field)
+            diffs[update.field_key] = {
+                "before": None,
+                "after": update.consensus_value,
+                "action": "ADDED"
+            }
+
+    # Process deletions
+    if getattr(review_data, "deleted_field_keys", None):
+        for del_key in review_data.deleted_field_keys:
+            del_field = db.query(ExtractedField).filter(
+                ExtractedField.document_id == document_id,
+                ExtractedField.field_key == del_key
+            ).first()
+            if del_field:
+                db.delete(del_field)
+                diffs[del_key] = {"action": "DELETED"}
 
     # Update document status to PROCESSED
     doc.status = DocumentStatus.PROCESSED

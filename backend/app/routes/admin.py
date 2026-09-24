@@ -1,15 +1,22 @@
 import logging
+import re
+from collections import deque
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
-
+from app.config import settings
 from app.database import get_db
 from app.limiter import limiter
 from app.models.auth import User
 from app.routes.auth import get_current_user
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 logger = logging.getLogger(__name__)
+
+BASE_LOGS_DIR = Path(getattr(settings, "LOG_DIR", Path(__file__).resolve().parent.parent / "logs")).resolve()
+BASE_LOGS_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILENAME_REGEX = re.compile(r"^[a-zA-Z0-9_\-][a-zA-Z0-9_\-\.]*\.log$")
 
 # Admin role check dependency
 def admin_user(current_user: User = Depends(get_current_user)):
@@ -39,10 +46,42 @@ def delete_user(request: Request, user_id: str, db: Session = Depends(get_db), _
 
 @router.get("/logs")
 @limiter.limit("10/minute")
-def get_logs(request: Request):
+def get_logs(
+    request: Request,
+    file: str = Query("app.log", description="Log filename to view"),
+    lines: int = Query(500, ge=1, le=5000, description="Number of tail lines to retrieve"),
+    _: User = Depends(admin_user),
+):
+    if not LOG_FILENAME_REGEX.match(file):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid log filename. Must be alphanumeric, end with .log, and cannot contain path separators.",
+        )
+
     try:
-        with open('backend/app/logs/app.log') as f:
-            lines = f.readlines()[-500:]
-        return {"logs": lines}
+        target_path = (BASE_LOGS_DIR / file).resolve()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid path specified.",
+        )
+
+    if not target_path.is_relative_to(BASE_LOGS_DIR) or target_path == BASE_LOGS_DIR:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Path traversal detected.",
+        )
+
+    if not target_path.is_file():
+        return {"logs": []}
+
+    try:
+        with open(target_path, encoding="utf-8", errors="replace") as f:
+            log_lines = [line.rstrip("\r\n") for line in deque(f, maxlen=lines)]
+        return {"logs": log_lines}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception(f"Error reading log file {target_path}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to read log file.",
+        )

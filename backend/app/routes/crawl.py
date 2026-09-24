@@ -1,14 +1,13 @@
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.models.auth import UserRole
 from app.models.search import CrawledPage
 from app.routes.auth import RoleChecker
 from app.services.crawler import compute_pagerank
 from app.services.queue import publish_crawl_task
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/crawl", tags=["crawl"])
 

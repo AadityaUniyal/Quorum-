@@ -1,14 +1,38 @@
 import type { NextConfig } from "next";
 
+const isVercel = Boolean(process.env.VERCEL);
+
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Use standalone output for Docker containers; Vercel handles its own serverless packaging
+  ...(isVercel ? {} : { output: "standalone" }),
   experimental: {
-    webpackBuildWorker: false,
     staticGenerationMaxConcurrency: 1,
   },
-  webpack: (config) => config,
+  turbopack: {},
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+        ],
+      },
+    ];
+  },
   async rewrites() {
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
+    const defaultBackendUrl = isVercel ? "https://docintel-api.onrender.com" : "http://localhost:8000";
+    const backendUrl = (process.env.BACKEND_URL || defaultBackendUrl).replace(/\/$/, "");
     return [
       {
         source: "/api/:path*",

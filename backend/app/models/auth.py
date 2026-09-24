@@ -2,10 +2,9 @@ import enum
 import uuid
 from datetime import UTC, datetime
 
+from app.database import GUID, Base
 from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
-
-from app.database import GUID, Base
 
 
 class UserRole(enum.StrEnum):

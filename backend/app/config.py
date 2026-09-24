@@ -1,14 +1,13 @@
 import os
 
+from app.config_validator import ConfigValidator
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from app.config_validator import ConfigValidator
 
 
 class Settings(BaseSettings):
     # App General Config
-    APP_NAME: str = "DocIntel AI Platform"
+    APP_NAME: str = "Quorum AI Platform"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() in ("true", "1", "t")
 
@@ -47,40 +46,57 @@ class Settings(BaseSettings):
     GOOGLE_CLOUD_LOCATION: str = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
     GOOGLE_GENAI_USE_ENTERPRISE: bool = os.getenv("GOOGLE_GENAI_USE_ENTERPRISE", "true").lower() in ("true", "1", "t")
     EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "local")  # "local" or "gemini"
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.0-flash")
     LLM_OFFLINE_MOCK_FALLBACK: bool = os.getenv("LLM_OFFLINE_MOCK_FALLBACK", "false").lower() in ("true", "1", "t")
+
+    # Groq High-Speed Secondary Inference
+    GROQ_API_KEY: str | None = os.getenv("GROQ_API_KEY")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
     # LLM Fallback & Ollama Configuration
     LLM_FALLBACK_ENABLED: bool = True
-    LLM_PREFERRED_PROVIDER: str = os.getenv("LLM_PREFERRED_PROVIDER", "local")  # "local" (Ollama) or "gemini"
-    LLM_SECONDARY_PROVIDER: str | None = os.getenv("LLM_SECONDARY_PROVIDER")
+    LLM_PREFERRED_PROVIDER: str = os.getenv("LLM_PREFERRED_PROVIDER", "gemini")  # "gemini", "groq", or "local"
+    LLM_SECONDARY_PROVIDER: str | None = os.getenv("LLM_SECONDARY_PROVIDER", "groq")
     LLM_SECONDARY_API_KEY: str | None = os.getenv("LLM_SECONDARY_API_KEY")
     LLM_SECONDARY_MODEL: str | None = os.getenv("LLM_SECONDARY_MODEL")
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL") or os.getenv("LLM_TERTIARY_OLLAMA_URL", "http://localhost:11434")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL") or os.getenv("LLM_TERTIARY_MODEL", "llama3.1:8b")
 
     # LLM Retry Configuration
-    LLM_MAX_RETRIES: int = 3
-    LLM_RETRY_DELAY_SECONDS: float = 2.0
-    LLM_TIMEOUT_SECONDS: int = 60
+    LLM_MAX_RETRIES: int = 2
+    LLM_RETRY_DELAY_SECONDS: float = 1.0
+    LLM_TIMEOUT_SECONDS: int = 10
 
     # Broker & Cache Config
+    CLOUDAMQP_URL: str | None = os.getenv("CLOUDAMQP_URL") or os.getenv("RABBITMQ_URL")
     RABBITMQ_HOST: str = os.getenv("RABBITMQ_HOST", "localhost")
     RABBITMQ_PORT: int = int(os.getenv("RABBITMQ_PORT", "5672"))
     RABBITMQ_USER: str = os.getenv("RABBITMQ_USER", "guest")
     RABBITMQ_PASS: str = os.getenv("RABBITMQ_PASS", "guest")
     RABBITMQ_VHOST: str = os.getenv("RABBITMQ_VHOST", "/")
 
+    # Transactional Outbox Relay Config
+    OUTBOX_RELAY_ENABLED: bool = os.getenv("OUTBOX_RELAY_ENABLED", "true").lower() in ("true", "1", "t")
+    OUTBOX_RELAY_INTERVAL_SECONDS: float = float(os.getenv("OUTBOX_RELAY_INTERVAL_SECONDS", "2.0"))
+
+    # Upstash Redis & Local Redis
+    UPSTASH_REDIS_REST_URL: str | None = os.getenv("UPSTASH_REDIS_REST_URL")
+    UPSTASH_REDIS_REST_TOKEN: str | None = os.getenv("UPSTASH_REDIS_REST_TOKEN")
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_PASSWORD: str | None = os.getenv("REDIS_PASSWORD") or None
-    REDIS_URL: str = ""
+    REDIS_URL: str = os.getenv("REDIS_URL", "")
 
     @model_validator(mode="after")
     def _compute_redis_url(self) -> "Settings":
         if not self.REDIS_URL:
-            password_part = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
-            self.REDIS_URL = f"redis://{password_part}{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+            # Auto-synthesize Redis TLS URL from Upstash REST credentials if provided
+            if self.UPSTASH_REDIS_REST_TOKEN and self.UPSTASH_REDIS_REST_URL:
+                clean_host = self.UPSTASH_REDIS_REST_URL.replace("https://", "").replace("http://", "").strip("/")
+                self.REDIS_URL = f"rediss://default:{self.UPSTASH_REDIS_REST_TOKEN}@{clean_host}:6379"
+            else:
+                password_part = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
+                self.REDIS_URL = f"redis://{password_part}{self.REDIS_HOST}:{self.REDIS_PORT}/0"
         return self
 
     def get_redis_url(self) -> str:
@@ -103,6 +119,7 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+    CORS_ORIGIN_REGEX: str = os.getenv("CORS_ORIGIN_REGEX", r"https://.*\.vercel\.app")
     APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:3000")
 
     def get_cors_origins(self) -> list[str]:

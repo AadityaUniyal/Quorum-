@@ -1,9 +1,8 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
-
 from app.models.document import DocumentCategory, DocumentStatus, FieldValidationStatus
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ExtractedFieldResponse(BaseModel):
@@ -68,3 +67,4 @@ class FieldUpdate(BaseModel):
 
 class DocumentReviewSubmit(BaseModel):
     updates: list[FieldUpdate]
+    deleted_field_keys: list[str] = []

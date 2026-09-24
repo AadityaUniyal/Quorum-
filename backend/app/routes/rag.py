@@ -20,17 +20,16 @@ import uuid
 from collections.abc import AsyncGenerator
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-
 from app.config import settings
 from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.document import Document
 from app.routes.auth import RoleChecker
 from app.services.auth_access import require_document_read
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -180,12 +179,26 @@ def _parse_llm_json(raw: str) -> tuple[str, list[dict]]:
 
 
 def _verify_citation(quote: str, doc_text: str) -> bool:
-    """Verify if cited quote exists in document text."""
+    """Verify cited text using exact or consecutive token n-gram matching."""
     if not quote or not doc_text:
         return False
     clean_quote = " ".join(quote.lower().split())
     clean_text = " ".join(doc_text.lower().split())
-    return clean_quote in clean_text or len([w for w in clean_quote.split() if w in clean_text]) >= max(2, len(clean_quote.split()) // 2)
+    if clean_quote in clean_text:
+        return True
+
+    quote_tokens = re.findall(r"[a-z0-9]+", clean_quote)
+    text_tokens = re.findall(r"[a-z0-9]+", clean_text)
+    if len(quote_tokens) < 3 or len(text_tokens) < 3:
+        return False
+
+    text_ngrams = {" ".join(text_tokens[i:i + 3]) for i in range(len(text_tokens) - 2)}
+    quote_ngrams = [" ".join(quote_tokens[i:i + 3]) for i in range(len(quote_tokens) - 2)]
+    if not quote_ngrams:
+        return False
+
+    matches = sum(1 for gram in quote_ngrams if gram in text_ngrams)
+    return matches / len(quote_ngrams) >= 0.60
 
 
 # ── Main Q&A Endpoint ─────────────────────────────────────────────────────────
@@ -240,9 +253,8 @@ def ask_rag(
         answer_text, raw_citations = local_extractive_rag(req.question, docs)
     else:
         try:
-            from google.genai import types
-
             from app.services.llm import _create_gemini_client
+            from google.genai import types
             client = _create_gemini_client()
             response = client.models.generate_content(
                 model=settings.LLM_MODEL,
@@ -376,9 +388,8 @@ def stream_rag(
                     await asyncio.sleep(0.01)
             else:
                 try:
-                    from google.genai import types
-
                     from app.services.llm import _create_gemini_client
+                    from google.genai import types
                     client = _create_gemini_client()
                     response_stream = client.models.generate_content_stream(
                         model=settings.LLM_MODEL,

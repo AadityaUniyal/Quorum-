@@ -5,10 +5,6 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
-
 from app.config import settings
 from app.core.security import (
     blacklist_token,
@@ -40,6 +36,9 @@ from app.schemas.auth import (
     UserLogin,
     UserResponse,
 )
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -184,8 +183,7 @@ def register_user(request: Request, user_data: UserCreate, db: Session = Depends
     db.refresh(db_user)
 
     if not is_verified_status:
-        verification_link = f"{settings.APP_BASE_URL.rstrip('/')}/api/auth/verify-email?token={v_token}"
-        logger.info(f"Verification Email Link Sent to {db_user.email}: {verification_link}")
+        logger.info(f"Verification email dispatched to user {db_user.email} (token generated securely)")
 
     return db_user
 

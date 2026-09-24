@@ -10,3 +10,9 @@ if str(repo_root) not in sys.path:
 tests_path = repo_root / "tests"
 if str(tests_path) not in sys.path:
     sys.path.insert(0, str(tests_path))
+
+# Expose backend fixtures if available for cross-directory imports
+try:
+    from backend.tests.conftest import TestingSessionLocal, test_engine
+except ImportError:
+    pass

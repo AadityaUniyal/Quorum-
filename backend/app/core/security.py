@@ -5,9 +5,8 @@ from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
-from zxcvbn import zxcvbn
-
 from app.config import settings
+from zxcvbn import zxcvbn
 
 logger = logging.getLogger(__name__)
 

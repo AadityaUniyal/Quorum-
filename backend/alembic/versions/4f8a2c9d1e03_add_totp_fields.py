@@ -4,10 +4,10 @@ Revision ID: 4f8a2c9d1e03
 Revises: 3a9f1d2e4b87
 Create Date: 2026-06-26 12:00:00.000000
 """
-from typing import Union
 from collections.abc import Sequence
-from alembic import op
+
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = '4f8a2c9d1e03'
 down_revision: str | None = '3a9f1d2e4b87'

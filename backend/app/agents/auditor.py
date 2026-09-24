@@ -51,19 +51,27 @@ def run_auditor_agent(category: DocumentCategory, extracted_fields: dict[str, An
             subtotal = _parse_decimal(extracted_fields.get("subtotal", 0))
             tax = _parse_decimal(extracted_fields.get("tax", 0))
             shipping = _parse_decimal(extracted_fields.get("shipping", 0))
+            discount = Decimal("0")
+            if "discount" in extracted_fields and extracted_fields["discount"]:
+                try:
+                    discount = _parse_decimal(extracted_fields["discount"])
+                except (InvalidOperation, ValueError):
+                    discount = Decimal("0")
+
             total = _parse_decimal(extracted_fields.get("total_amount", 0))
 
-            calculated_total = subtotal + tax + shipping
+            calculated_total = subtotal + tax + shipping - discount
             difference = abs(calculated_total - total)
 
             # Calculate the percentage delta relative to the stated total
             pct_delta = (difference / total) if total != Decimal("0") else Decimal("999.0")
 
-            math_fields = ["subtotal", "tax", "shipping", "total_amount"]
+            math_fields = ["subtotal", "tax", "shipping", "discount", "total_amount"]
 
             if difference <= Decimal("0.05"):
                 # Perfect match (within penny rounding)
-                success_msg = f"Audit Verified: {subtotal} + {tax} + {shipping} matches total of {total}"
+                disc_str = f" - {discount}" if discount > Decimal("0") else ""
+                success_msg = f"Audit Verified: {subtotal} + {tax} + {shipping}{disc_str} matches total of {total}"
                 for f in math_fields:
                     if f in audits:
                         audits[f]["notes"] = success_msg
@@ -99,12 +107,47 @@ def run_auditor_agent(category: DocumentCategory, extracted_fields: dict[str, An
                         audits[f] = {"score": 0.0, "notes": crit_msg}
         except (InvalidOperation, ValueError) as e:
             err_msg = f"Invalid numeric format for calculation: {str(e)}"
-            for f in ["subtotal", "tax", "shipping", "total_amount"]:
+            for f in ["subtotal", "tax", "shipping", "discount", "total_amount"]:
                 if f in audits:
                     audits[f] = {
                         "score": 0.0,
                         "notes": err_msg
                     }
+
+    elif category == DocumentCategory.PURCHASE_ORDER:
+        try:
+            total = _parse_decimal(extracted_fields.get("total_amount", 0))
+            subtotal = _parse_decimal(extracted_fields.get("subtotal", total))
+            tax = _parse_decimal(extracted_fields.get("tax", 0)) if "tax" in extracted_fields else Decimal("0")
+            shipping = _parse_decimal(extracted_fields.get("shipping", 0)) if "shipping" in extracted_fields else Decimal("0")
+            discount = Decimal("0")
+            if "discount" in extracted_fields and extracted_fields["discount"]:
+                try:
+                    discount = _parse_decimal(extracted_fields["discount"])
+                except (InvalidOperation, ValueError):
+                    discount = Decimal("0")
+
+            calculated_total = subtotal + tax + shipping - discount
+            difference = abs(calculated_total - total)
+            pct_delta = (difference / total) if total != Decimal("0") else Decimal("0")
+            po_math_fields = [f for f in ["subtotal", "tax", "shipping", "discount", "total_amount"] if f in audits]
+
+            if difference <= Decimal("0.05"):
+                for f in po_math_fields:
+                    audits[f]["notes"] = f"PO arithmetic verified: {calculated_total} matches total of {total}"
+            elif pct_delta < TOLERANCE_THRESHOLD:
+                for f in po_math_fields:
+                    audits[f] = {"score": 0.95, "notes": f"PO minor rounding variance: {float(pct_delta):.2%}"}
+            elif pct_delta < Decimal("0.05"):
+                for f in po_math_fields:
+                    audits[f] = {"score": 0.50, "notes": f"PO arithmetic discrepancy: {float(pct_delta):.2%}"}
+            else:
+                for f in po_math_fields:
+                    audits[f] = {"score": 0.0, "notes": f"PO arithmetic failure: {float(pct_delta):.2%}"}
+        except (InvalidOperation, ValueError) as e:
+            for f in ["subtotal", "total_amount"]:
+                if f in audits:
+                    audits[f] = {"score": 0.50, "notes": f"PO calculation note: {e}"}
 
     elif category == DocumentCategory.RFQ:
         # Verify quantity is a valid positive integer
@@ -130,6 +173,30 @@ def run_auditor_agent(category: DocumentCategory, extracted_fields: dict[str, An
             audits["quantity"] = {
                 "score": 0.0,
                 "notes": f"Failed to parse quantity as integer: {qty_str}"
+            }
+
+    # Audit line items table if present
+    if "line_items" in extracted_fields and isinstance(extracted_fields["line_items"], list):
+        items = extracted_fields["line_items"]
+        if items:
+            from app.services.local_engine import LocalTableReconstructor
+            line_audits = LocalTableReconstructor.audit_line_items(items)
+            all_valid = all(a.get("is_valid", False) for a in line_audits)
+            if all_valid:
+                audits["line_items"] = {
+                    "score": 1.0,
+                    "notes": f"All {len(items)} line item calculations verified (Qty x Unit Price == Total)."
+                }
+            else:
+                invalid_cnt = sum(1 for a in line_audits if not a.get("is_valid", False))
+                audits["line_items"] = {
+                    "score": 0.50,
+                    "notes": f"Line item arithmetic discrepancy detected in {invalid_cnt}/{len(items)} items."
+                }
+        else:
+            audits["line_items"] = {
+                "score": 1.0,
+                "notes": "Passed general logical audit (no line items to calculate)."
             }
 
     return audits

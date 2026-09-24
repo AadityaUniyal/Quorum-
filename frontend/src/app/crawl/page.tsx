@@ -29,7 +29,7 @@ import {
   Cell
 } from 'recharts';
 
-const COLORS = ['#4F6EF7', '#7C3AED', '#22C55E', '#F59E0B', '#EF4444', '#6B7280'];
+const COLORS = ['#3B82F6', '#2563EB', '#10B981', '#F59E0B', '#EF4444', '#64748B'];
 
 interface CrawlStatus {
   status: 'idle' | 'crawling' | 'paused' | 'finished';
@@ -143,9 +143,9 @@ export default function CrawlConsolePage() {
     <div className="flex flex-col gap-8 animate-fadeIn max-w-7xl mx-auto w-full pb-16">
       
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground font-sans">Web Crawler Console</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground font-sans">Web Discovery &amp; Ingestion Console</h1>
         <p className="text-xs text-muted-foreground mt-1 font-sans">
-          Discover, index, and analyze web content with PageRank authority scoring.
+          Discover, index, and extract web knowledge with PageRank domain authority scoring.
         </p>
       </div>
 
@@ -155,10 +155,10 @@ export default function CrawlConsolePage() {
           <div>
             <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans flex items-center gap-2">
               <Globe className="h-4 w-4 text-primary" />
-              Crawl Configuration
+              Ingestion Parameters
             </h3>
             <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">
-              Configure crawler parameters and start indexing operation.
+              Configure web domain target, recursion depth, and launch discovery indexing.
             </p>
           </div>
           
@@ -364,7 +364,7 @@ export default function CrawlConsolePage() {
                   <XAxis dataKey="bucket" stroke="rgba(255,255,255,0.1)" tick={{ fill: '#888', fontSize: 9 }} />
                   <YAxis stroke="rgba(255,255,255,0.1)" tick={{ fill: '#6B7280', fontSize: 10, fontFamily: 'monospace' }} />
                   <Tooltip contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }} />
-                  <Bar dataKey="count" fill="#4F6EF7" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]}>
                     {distribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}

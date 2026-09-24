@@ -14,8 +14,9 @@ backend_path = repo_root / 'backend' / 'app'
 if str(backend_path) not in sys.path:
     sys.path.insert(0, str(backend_path))
 
-if str(backend_path) not in sys.path:
-    sys.path.insert(0, str(backend_path))
+backend_dir = repo_root / 'backend'
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
 
 # Alias backend.app as top-level app module for imports
 # Deferred import – pytest conftest will set env vars and import backend.app as needed.

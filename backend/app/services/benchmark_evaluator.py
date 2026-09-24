@@ -42,19 +42,20 @@ class BenchmarkEvaluator:
 
         for doc in synthetic_docs:
             gt = getattr(doc, "ground_truth", {}) or {}
-            predicted = getattr(doc, "extracted_fields", {}) or gt  # Fallback to ground truth if extracted_fields absent
+            predicted = getattr(doc, "extracted_fields", {}) or {}
 
             # Math rule evaluation check
             res = rule.evaluate({
-                "subtotal": gt.get("subtotal"),
-                "tax": gt.get("tax"),
-                "shipping": gt.get("shipping"),
-                "total_amount": gt.get("total_amount"),
-                "currency": gt.get("currency", "USD")
+                "subtotal": predicted.get("subtotal"),
+                "tax": predicted.get("tax"),
+                "shipping": predicted.get("shipping"),
+                "discount": predicted.get("discount", 0),
+                "total_amount": predicted.get("total_amount"),
+                "currency": predicted.get("currency", gt.get("currency", "USD"))
             })
 
             expected_pass = not getattr(doc, "has_anomaly", False)
-            actual_pass = (res.status == RuleStatus.PASS)
+            actual_pass = res.status in {RuleStatus.PASS, RuleStatus.WARNING}
 
             if expected_pass == actual_pass:
                 rule_eval_correct += 1

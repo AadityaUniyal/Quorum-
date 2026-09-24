@@ -13,13 +13,14 @@ def run_critic_agent(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[st
     """
     import asyncio
     local_result = run_local_critic(ocr_text, extracted_fields)
-    if settings.LLM_PREFERRED_PROVIDER != "gemini":
+    if settings.LLM_PREFERRED_PROVIDER != "gemini" or not settings.GEMINI_API_KEY:
         return local_result
 
     try:
-        return asyncio.run(call_gemini_critic(ocr_text, extracted_fields))
+        # Enforce an 8-second internal budget so we fall back to local before the 15s thread timeout
+        return asyncio.run(asyncio.wait_for(call_gemini_critic(ocr_text, extracted_fields), timeout=8.0))
     except Exception as e:
-        logger.error(f"Centralized Critic Agent failed: {str(e)}. Falling back to local critic.")
+        logger.warning(f"Centralized Critic Agent failed or timed out: {e}. Falling back to local critic.")
         return local_result
 
 async def call_gemini_critic(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -67,6 +68,31 @@ def run_local_critic(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[st
     ocr_lower = ocr_text.lower()
 
     for key, val in extracted_fields.items():
+        # Handle list/tabular fields such as line_items
+        if isinstance(val, list):
+            if not val:
+                evaluations[key] = {
+                    "score": 0.95,
+                    "notes": "No tabular items detected; empty item list consistent with document."
+                }
+                continue
+            matched_items = 0
+            for item in val:
+                if isinstance(item, dict):
+                    desc = str(item.get("description") or item.get("name") or "").lower().strip()
+                    tot = str(item.get("total") or "").replace("$", "").replace(",", "").strip()
+                    if (desc and desc in ocr_lower) or (tot and tot in ocr_lower):
+                        matched_items += 1
+                elif str(item).lower() in ocr_lower:
+                    matched_items += 1
+            ratio = matched_items / len(val) if val else 1.0
+            eval_score = 0.95 if ratio >= 0.5 else 0.70
+            evaluations[key] = {
+                "score": eval_score,
+                "notes": f"Table line items verified against OCR text ({matched_items}/{len(val)} items matched)."
+            }
+            continue
+
         val_str = str(val).strip()
 
         if not val_str or val_str == "N/A":
@@ -80,16 +106,14 @@ def run_local_critic(ocr_text: str, extracted_fields: dict[str, Any]) -> dict[st
         clean_val = val_str.replace("$", "").replace(",", "").strip()
 
         # Check if the value is contained inside the OCR text
-        # If yes, high score. If no, flag it.
         if clean_val.lower() in ocr_lower or val_str.lower() in ocr_lower:
             evaluations[key] = {
                 "score": 0.98,
                 "notes": f"Verified: '{val_str}' matches text segment."
             }
         else:
-            # Let's perform a float/int conversion check
+            # Numeric conversion check
             try:
-                # E.g. 1250 instead of 1250.00
                 float_val = float(clean_val)
                 found = False
                 for token in ocr_lower.split():

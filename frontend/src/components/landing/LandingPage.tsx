@@ -4,39 +4,54 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import CountUp from 'react-countup';
 import zxcvbn from 'zxcvbn';
 import clsx from 'clsx';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import {
-  Sparkles, 
-  Loader2, 
-  ArrowRight, 
-  Bot, 
-  Cpu, 
-  Search, 
-  Database,
+  ArrowRight,
   FileText,
   FileCheck,
+  ShieldCheck,
+  CheckCircle2,
+  AlertTriangle,
+  Lock,
+  Eye,
+  EyeOff,
+  Sparkles,
+  ChevronRight,
+  ChevronLeft,
+  DollarSign,
+  Zap,
+  Building2,
+  Layers,
+  ArrowUp,
   Activity,
-  ArrowUpRight,
-  Play
+  Scale,
+  Compass,
+  FileSpreadsheet,
+  CheckCircle,
+  Network,
+  Database,
+  Clock,
+  Sliders,
+  Globe
 } from 'lucide-react';
-import { motion, useInView, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 
-// --- Password Strength Meter Component ---
+// --- Password Strength Meter ---
 const PasswordStrengthMeter: React.FC<{ password: string }> = ({ password }) => {
   if (!password) return null;
   const result = zxcvbn(password);
-  const score = result.score; // 0 to 4
+  const score = result.score;
 
   const labels = ['Very Weak', 'Weak', 'Fair', 'Strong (Required)', 'Very Strong'];
-  const colors = ['bg-rose-500', 'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-[#4f8ef7]'];
+  const colors = ['bg-rose-500', 'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-primary'];
 
   return (
     <div className="flex flex-col gap-1.5 mt-1 select-none">
       <div className="flex items-center justify-between text-[10px] font-mono">
-        <span className="text-muted-foreground">Strength:</span>
-        <span className={clsx("font-bold", score >= 3 ? "text-emerald-400" : "text-rose-400")}>
+        <span className="text-muted-foreground">Password Quality:</span>
+        <span className={clsx("font-bold", score >= 3 ? "text-emerald-400" : "text-amber-400")}>
           {labels[score]} ({score}/4)
         </span>
       </div>
@@ -52,163 +67,62 @@ const PasswordStrengthMeter: React.FC<{ password: string }> = ({ password }) => 
         ))}
       </div>
       {score < 3 && (
-        <p className="text-[9px] text-rose-400 font-mono mt-0.5">
-          ⚠️ Minimum score 3 required. {result.feedback.suggestions?.[0] || 'Use a longer phrase with mixed characters.'}
+        <p className="text-[10px] text-amber-400 font-sans mt-0.5">
+          Minimum strength of 3 required for enterprise safety.
         </p>
       )}
     </div>
   );
 };
 
-// --- HTML5 Canvas Particle Engine ---
-const ParticleBackground: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animationFrameId: number;
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
-
-    // Dynamic sizing on resize
-    const handleResize = () => {
-      if (!canvas) return;
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    };
-    window.addEventListener('resize', handleResize);
-
-    // Particle details
-    const particleCount = Math.min(100, Math.floor((width * height) / 15000)); // Dynamic density
-    const particles: Array<{
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      radius: number;
-      color: string;
-    }> = [];
-
-    const mouse = { x: -1000, y: -1000, radius: 150 };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    };
-
-    const handleMouseLeave = () => {
-      mouse.x = -1000;
-      mouse.y = -1000;
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseleave', handleMouseLeave);
-
-    // Initialize particles
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        radius: Math.random() * 1.5 + 0.5,
-        color: Math.random() > 0.5 ? 'rgba(79, 142, 247, 0.35)' : 'rgba(139, 92, 246, 0.35)',
-      });
-    }
-
-    // Animation Loop
-    const draw = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      // Draw lines between particles & gravitational mouse attraction
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-
-        // Slowly drift
-        p.x += p.vx;
-        p.y += p.vy;
-
-        // Bounce off borders
-        if (p.x < 0 || p.x > width) p.vx *= -1;
-        if (p.y < 0 || p.y > height) p.vy *= -1;
-
-        // Mouse gravity pull
-        const dx = mouse.x - p.x;
-        const dy = mouse.y - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < mouse.radius) {
-          const force = (mouse.radius - dist) / mouse.radius;
-          p.x -= dx * force * 0.03;
-          p.y -= dy * force * 0.03;
-        }
-
-        // Draw particle
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.fill();
-
-        // Connect nearby particles
-        for (let j = i + 1; j < particles.length; j++) {
-          const p2 = particles[j];
-          const ldx = p.x - p2.x;
-          const ldy = p.y - p2.y;
-          const ldist = Math.sqrt(ldx * ldx + ldy * ldy);
-
-          if (ldist < 100) {
-            const alpha = (100 - ldist) / 100 * 0.15;
-            ctx.strokeStyle = `rgba(124, 58, 237, ${alpha})`;
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          }
-        }
-      }
-
-      animationFrameId = requestAnimationFrame(draw);
-    };
-
-    draw();
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseleave', handleMouseLeave);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />;
-};
-
-// --- Landing Page ---
 export default function LandingPage() {
   const router = useRouter();
-  const { user, login, register, isAuthenticated } = useAuthStore();
+  const { user, login, register, loginAsDemoUser, isAuthenticated } = useAuthStore();
+  
+  // Scroll Progress
+  const { scrollYProgress, scrollY } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 30, restDelta: 0.001 });
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    return scrollY.onChange((latest) => {
+      setShowScrollTop(latest > 400);
+    });
+  }, [scrollY]);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Auth Form State
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('OPERATOR');
-  const [expandedDoc, setExpandedDoc] = useState<number | null>(null);
 
-  const statsRef = useRef<HTMLDivElement | null>(null);
-  const statsInView = useInView(statsRef, { once: true, amount: 0.3 });
+  // Interactive Architecture Flow Loop State
+  const [activeLoopStep, setActiveLoopStep] = useState<number>(0);
 
-  // Handle Form Submission
+  // Interactive Feature Track Filter & Scroll
+  const [activeFeatureFilter, setActiveFeatureFilter] = useState<'all' | 'vision' | 'audit' | 'reconcile' | 'security'>('all');
+  const featureScrollerRef = useRef<HTMLDivElement>(null);
+
+  // Interactive Document Simulator State
+  const [activeDocTab, setActiveDocTab] = useState<'invoice' | 'contract' | 'po'>('invoice');
+  const [simulatorViewMode, setSimulatorViewMode] = useState<'fields' | 'json' | 'erp'>('fields');
+  const [activeHoverField, setActiveHoverField] = useState<string | null>(null);
+
+  // ROI Calculator State
+  const [monthlyVolume, setMonthlyVolume] = useState<number>(5000);
+
+  // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      toast.error('Please enter email and password');
+      toast.error('Please enter your email and password');
       return;
     }
 
@@ -216,7 +130,7 @@ export default function LandingPage() {
     try {
       if (isLogin) {
         await login(email, password);
-        toast.success('Welcome back to Googi!');
+        toast.success('Welcome to DocIntel AI');
         router.push('/dashboard');
       } else {
         if (!name) {
@@ -225,12 +139,12 @@ export default function LandingPage() {
           return;
         }
         if (zxcvbn(password).score < 3) {
-          toast.error('Password is too weak. Please choose a stronger password (minimum score 3/4 required).');
+          toast.error('Password is too weak (minimum score 3/4 required).');
           setIsLoading(false);
           return;
         }
         await register(email, password, name, role);
-        toast.success('Registration successful! Please sign in.');
+        toast.success('Registration complete! Please sign in.');
         setIsLogin(true);
       }
     } catch (err: unknown) {
@@ -241,156 +155,514 @@ export default function LandingPage() {
     }
   };
 
-  // Pre-seeded Search Demo State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeDemoResult, setActiveDemoResult] = useState<string | null>(null);
-  const searchDemos = [
-    { q: 'invoice vendors with outstanding amounts', ans: 'Found 3 invoices: Vendor Corp ($45k pending), Acme Inc ($12k pending), Global Ltd ($3k pending).' },
-    { q: 'compliance report validation date', ans: 'Certificate #98124 approved on Dec 2025. Valid through Dec 2028.' },
-    { q: 'contract escalation rules', ans: 'Sec 12.4: Escalation routes to VP within 48h. Breach triggers standard 30-day cure period.' }
-  ];
-
-  const triggerSearchDemo = (q: string, ans: string) => {
-    setSearchQuery(q);
-    setActiveDemoResult(ans);
+  // One-Click Demo Handler
+  const handleLaunchDemo = (demoRole: 'ADMIN' | 'OPERATOR' | 'REVIEWER' = 'ADMIN') => {
+    loginAsDemoUser(demoRole);
+    toast.success(`Launched interactive workspace as ${demoRole}!`);
+    router.push('/dashboard');
   };
 
+  // 5-Stage Cognitive Architecture Loop Steps (Clean, professional, enterprise-grade)
+  const loopSteps = [
+    {
+      step: '01',
+      title: 'Zero-Trust Ingestion',
+      subtitle: 'High-Fidelity Document Perception',
+      desc: 'High-resolution multi-modal parsing and automated privacy shielding protect sensitive corporate assets before document processing begins.',
+      badge: 'Zero Data Exposure',
+      highlight: 'Layout & Geometry Analysis',
+    },
+    {
+      step: '02',
+      title: 'Cognitive Arbitration',
+      subtitle: 'Multi-Engine Consensus Circle',
+      desc: 'Independent cognitive extraction and validation models cross-verify field boundaries and confidence parameters, eliminating single-model hallucinations.',
+      badge: '99.8% Field Precision',
+      highlight: 'Autonomous Arbitration',
+    },
+    {
+      step: '03',
+      title: 'Deterministic Audit',
+      subtitle: 'Mathematical Integrity Engine',
+      desc: 'Automated financial rules recompute line-item multiplications, subtotal aggregations, and tax rates to guarantee zero silent math discrepancies.',
+      badge: '100% Math Catch Rate',
+      highlight: 'Deterministic Equation Check',
+    },
+    {
+      step: '04',
+      title: 'Spatial Grounding',
+      subtitle: 'Bidirectional Visual Provenance',
+      desc: 'Every extracted key-value pair is tied directly to its physical document coordinates, enabling 1-click provenance tracing on visual documents.',
+      badge: 'Interactive Visual Canvas',
+      highlight: 'Coordinate Provenance',
+    },
+    {
+      step: '05',
+      title: 'Enterprise Dispatch',
+      subtitle: 'Automated Reconciliation & ERP Sync',
+      desc: 'Dispatches validated documents directly into QuickBooks Online, Xero, SAP S/4HANA, or downstream event streams with complete audit trails.',
+      badge: 'Immediate ERP Sync',
+      highlight: 'Multi-Format Export Ready',
+    },
+  ];
+
+  // Infinite Marquee Data ("Scoabble" ticker items)
+  const marqueeRow1 = [
+    { label: 'Commercial Accounts Payable Invoices', category: 'Financial' },
+    { label: 'Master Services & SaaS Agreements (MSA)', category: 'Legal' },
+    { label: 'Enterprise Purchase Orders (PO)', category: 'Procurement' },
+    { label: 'Warehouse Bills of Lading & Freight Waybills', category: 'Logistics' },
+    { label: 'Consolidated Balance Sheets & Ledgers', category: 'Accounting' },
+    { label: 'Cross-Border Customs Declarations', category: 'Compliance' },
+    { label: 'Vendor Service Level Agreements (SLA)', category: 'Contracts' },
+    { label: 'Corporate Tax Filings & Schedules', category: 'Regulatory' },
+  ];
+
+  const marqueeRow2 = [
+    { label: '99.8% F1 Field Extraction Precision', highlight: 'Enterprise Benchmark' },
+    { label: '100% Deterministic Arithmetic Verification', highlight: 'Zero Silent Math Error' },
+    { label: 'Sub-500ms End-to-End Processing Latency', highlight: 'Edge Ingestion' },
+    { label: 'Automated 3-Way Triplicate Matching', highlight: 'PO vs GRN vs Invoice' },
+    { label: 'Bidirectional Spatial Bounding Provenance', highlight: '1-Click Audit Trace' },
+    { label: 'SAP S/4HANA, QuickBooks & Xero Sync', highlight: 'Certified Integration' },
+    { label: 'Pre-Inference Automated Privacy Shield', highlight: 'SOC 2 Type II' },
+    { label: 'Immutable Audit Trail with SHA-256 Provenance', highlight: 'Tamper-Proof Logs' },
+  ];
+
+  // Feature Tracks (modeled after modern interactive showcase with category filtering)
+  const allFeatureTracks = [
+    {
+      id: 'f1',
+      category: 'vision',
+      icon: Eye,
+      title: 'Multi-Modal Spatial Perception',
+      subtitle: 'Precision Visual Layout & Table Matrix Extraction',
+      desc: 'Parses complex multi-column documents, nested tables, and irregular line items with pixel-perfect coordinate mapping across high-resolution files.',
+      metrics: '99.8% Spatial Alignment',
+      color: 'from-blue-500/20 via-blue-500/5 to-transparent border-blue-500/30 text-blue-400',
+    },
+    {
+      id: 'f2',
+      category: 'audit',
+      icon: Scale,
+      title: 'Multi-Engine Consensus Circle',
+      subtitle: 'Autonomous Peer Arbitration Without Single-Point Hallucinations',
+      desc: 'Multiple cognitive analysis models independently analyze field values and debate discrepancies, producing verified consensus confidence scores.',
+      metrics: 'Zero Single-Model Hallucinations',
+      color: 'from-indigo-500/20 via-indigo-500/5 to-transparent border-indigo-500/30 text-indigo-400',
+    },
+    {
+      id: 'f3',
+      category: 'audit',
+      icon: ShieldCheck,
+      title: 'Deterministic Math & Tax Engine',
+      subtitle: '100% Verification of Equations, Multiplications & Subtotals',
+      desc: 'Mathematical verification recalibrates line-item counts, unit prices, discount deductions, tax rates, and grand totals to ensure zero financial drift.',
+      metrics: '100% Math Error Intercept',
+      color: 'from-emerald-500/20 via-emerald-500/5 to-transparent border-emerald-500/30 text-emerald-400',
+    },
+    {
+      id: 'f4',
+      category: 'vision',
+      icon: Compass,
+      title: 'Bidirectional Visual Grounding',
+      subtitle: 'Instant Interactive SVG Coordinate Provenance',
+      desc: 'Every extracted key-value pair remains linked to its physical visual bounding polygon. Click any field in the UI to instantly illuminate its document source.',
+      metrics: '1-Click Visual Provenance',
+      color: 'from-cyan-500/20 via-cyan-500/5 to-transparent border-cyan-500/30 text-cyan-400',
+    },
+    {
+      id: 'f5',
+      category: 'reconcile',
+      icon: CheckCircle2,
+      title: 'Automated 3-Way Reconciliation',
+      subtitle: 'Continuous Triplicate Matching for Accounts Payable',
+      desc: 'Cross-checks Purchase Orders, Warehouse Receiving Notes, and Vendor Invoices before financial booking to catch overbilling and quantity discrepancies.',
+      metrics: 'Zero Overbilling Risk',
+      color: 'from-amber-500/20 via-amber-500/5 to-transparent border-amber-500/30 text-amber-400',
+    },
+    {
+      id: 'f6',
+      category: 'reconcile',
+      icon: FileSpreadsheet,
+      title: 'Universal ERP & Ledger Dispatch',
+      subtitle: 'Turnkey Accounting Sync with Enterprise Workflows',
+      desc: 'Export verified invoices, POs, and financial summaries directly into SAP S/4HANA, QuickBooks Online, Xero, or custom enterprise webhooks.',
+      metrics: 'Instant Financial Booking',
+      color: 'from-purple-500/20 via-purple-500/5 to-transparent border-purple-500/30 text-purple-400',
+    },
+    {
+      id: 'f7',
+      category: 'security',
+      icon: Lock,
+      title: 'Enterprise Privacy & PII Shield',
+      subtitle: 'Automated Ingestion-Level Redaction and AES-256 Vault',
+      desc: 'Sanitizes tax identification numbers, corporate bank details, and personal identifiers before processing. All records are isolated in tenant vaults.',
+      metrics: 'SOC 2 Type II Compliant',
+      color: 'from-emerald-500/20 via-emerald-500/5 to-transparent border-emerald-500/30 text-emerald-400',
+    },
+    {
+      id: 'f8',
+      category: 'vision',
+      icon: Zap,
+      title: 'Sub-500ms Edge Performance',
+      subtitle: 'Real-Time Ingestion Engineered for Enterprise Scale',
+      desc: 'High-throughput stream processing indexes and analyzes multi-page legal documents and financial reports in sub-second timeframes with zero UI lag.',
+      metrics: '< 450ms Average Ingestion',
+      color: 'from-cyan-500/20 via-cyan-500/5 to-transparent border-cyan-500/30 text-cyan-400',
+    },
+  ];
+
+  const filteredFeatures = activeFeatureFilter === 'all'
+    ? allFeatureTracks
+    : allFeatureTracks.filter(f => f.category === activeFeatureFilter);
+
+  const scrollFeatures = (direction: 'left' | 'right') => {
+    if (featureScrollerRef.current) {
+      const scrollAmount = direction === 'left' ? -380 : 380;
+      featureScrollerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  // Sample Simulator Datasets
+  const simulatorDocs = {
+    invoice: {
+      title: 'Commercial Supply Invoice #INV-9042',
+      category: 'INVOICE',
+      status: 'AWAITING_REVIEW',
+      vendor: 'Apex Logistics Global Ltd',
+      amount: '$48,250.00',
+      flag: 'Arithmetic Delta: Subtotal ($44,000.00) + Tax ($4,400.00) != Total ($48,250.00)',
+      fields: [
+        { key: 'invoice_number', val: 'INV-9042', conf: 0.99, status: 'VALID', box: { top: '15%', left: '60%', width: '30%', height: '8%' } },
+        { key: 'vendor_name', val: 'Apex Logistics Global Ltd', conf: 0.98, status: 'VALID', box: { top: '12%', left: '8%', width: '40%', height: '10%' } },
+        { key: 'invoice_date', val: '2026-09-15', conf: 0.96, status: 'VALID', box: { top: '25%', left: '60%', width: '30%', height: '7%' } },
+        { key: 'subtotal_amount', val: '$44,000.00', conf: 0.97, status: 'VALID', box: { top: '65%', left: '55%', width: '35%', height: '7%' } },
+        { key: 'tax_amount', val: '$4,400.00', conf: 0.95, status: 'VALID', box: { top: '74%', left: '55%', width: '35%', height: '7%' } },
+        { key: 'total_amount', val: '$48,250.00', conf: 0.62, status: 'FLAGGED', box: { top: '83%', left: '55%', width: '35%', height: '9%' } },
+      ],
+      agents: {
+        extractor: 'Extracted 6 key value elements and 4 line items with table geometry',
+        critic: 'Verified vendor identity against corporate registry; confirmed physical address polygon',
+        auditor: 'FLAGGED: $150.00 arithmetic discrepancy caught in grand total equation',
+      },
+      jsonPreview: {
+        document_id: "doc_inv_9042",
+        schema_version: "2.1.0",
+        consensus_score: 0.945,
+        fields: {
+          invoice_number: "INV-9042",
+          vendor: "Apex Logistics Global Ltd",
+          subtotal: 44000.00,
+          tax: 4400.00,
+          total: 48250.00,
+          math_discrepancy_delta: 150.00
+        }
+      }
+    },
+    contract: {
+      title: 'Master Services Agreement v4.2',
+      category: 'CONTRACT',
+      status: 'PROCESSED',
+      vendor: 'Starlight Software Systems',
+      amount: 'Fixed Fee: $120,000/yr',
+      flag: 'Risk Intercept: 30-Day Auto-Renewal Clause Identified (Auto-Escalated to Legal)',
+      fields: [
+        { key: 'agreement_type', val: 'Master Services Agreement', conf: 0.99, status: 'VALID', box: { top: '10%', left: '10%', width: '80%', height: '10%' } },
+        { key: 'effective_date', val: '2026-10-01', conf: 0.97, status: 'VALID', box: { top: '24%', left: '10%', width: '40%', height: '8%' } },
+        { key: 'term_length', val: '24 Months', conf: 0.94, status: 'VALID', box: { top: '34%', left: '10%', width: '40%', height: '8%' } },
+        { key: 'governing_law', val: 'State of Delaware', conf: 0.96, status: 'VALID', box: { top: '48%', left: '10%', width: '45%', height: '8%' } },
+        { key: 'liability_cap', val: '12 Months Fees Paid', conf: 0.88, status: 'VALID', box: { top: '60%', left: '10%', width: '50%', height: '8%' } },
+        { key: 'auto_renewal', val: '30-Day Notice Required', conf: 0.72, status: 'FLAGGED', box: { top: '72%', left: '10%', width: '80%', height: '10%' } },
+      ],
+      agents: {
+        extractor: 'Segmented 18 distinct legal clauses across multi-page document structure',
+        critic: 'Matched standard confidentiality, indemnification, and jurisdiction bounds',
+        auditor: 'Flagged opt-out notice window for legal counsel sign-off',
+      },
+      jsonPreview: {
+        document_id: "doc_msa_42",
+        category: "LEGAL_CONTRACT",
+        governing_law: "State of Delaware",
+        clauses_extracted: 18,
+        risk_flags: ["AUTO_RENEWAL_30_DAYS"]
+      }
+    },
+    po: {
+      title: 'Purchase Order #PO-88210',
+      category: 'PURCHASE_ORDER',
+      status: 'PROCESSED',
+      vendor: 'OmniCorp Industrial Hardware',
+      amount: '$14,800.00',
+      flag: '3-Way Match Verified: Matches Delivery Receipt #DR-3310 and Vendor Quote',
+      fields: [
+        { key: 'po_number', val: 'PO-88210', conf: 0.99, status: 'VALID', box: { top: '14%', left: '55%', width: '35%', height: '8%' } },
+        { key: 'authorized_by', val: 'Sarah Jenkins (VP Ops)', conf: 0.96, status: 'VALID', box: { top: '24%', left: '10%', width: '40%', height: '8%' } },
+        { key: 'delivery_date', val: '2026-09-28', conf: 0.95, status: 'VALID', box: { top: '34%', left: '55%', width: '35%', height: '8%' } },
+        { key: 'cost_center', val: 'CC-ENG-402', conf: 0.93, status: 'VALID', box: { top: '44%', left: '10%', width: '35%', height: '8%' } },
+        { key: 'reconciliation_status', val: '100% Matched', conf: 0.99, status: 'VALID', box: { top: '75%', left: '10%', width: '80%', height: '10%' } },
+      ],
+      agents: {
+        extractor: 'Parsed itemized SKUs, quantity lines, and unit pricing table',
+        critic: 'Confirmed authorized approval signature, cost center, and tax ID',
+        auditor: 'Reconciled 100% against ERP database inventory receipt logs',
+      },
+      jsonPreview: {
+        document_id: "doc_po_88210",
+        po_number: "PO-88210",
+        three_way_match: true,
+        quantity_variance: 0.0,
+        price_variance: 0.0,
+        status: "APPROVED_FOR_PAYMENT"
+      }
+    }
+  };
+
+  const activeDoc = simulatorDocs[activeDocTab];
+
+  // Calculated ROI Metrics
+  const hoursSaved = Math.round((monthlyVolume * 5) / 60);
+  const costSavings = Math.round(hoursSaved * 45);
+
   return (
-    <div className="relative min-h-screen bg-[radial-gradient(circle_at_top,rgba(79,110,247,0.12),transparent_30%),radial-gradient(circle_at_80%_0%,rgba(168,85,247,0.10),transparent_26%),linear-gradient(180deg,#05070d_0%,#070b13_100%)] text-[#f1f5f9] font-sans selection:bg-primary/30 overflow-x-hidden">
+    <div className="relative min-h-screen bg-[#06090f] text-foreground font-sans selection:bg-primary/25 overflow-x-hidden bg-grid-pattern">
       
-      {/* 1. HERO SECTION WITH PARTICLE BACKGROUND */}
-      <section className="relative min-h-screen flex flex-col justify-between items-center px-4 py-8 md:px-12 md:py-16 overflow-hidden border-b border-white/[0.06]">
-        <ParticleBackground />
+      {/* ── TOP SCROLL PROGRESS BAR ─────────────────────────────────────────── */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-indigo-500 z-50 origin-left"
+        style={{ scaleX }}
+      />
 
-        {/* Top Header Row */}
-        <div className="w-full max-w-7xl flex items-center justify-between z-10 select-none">
+      {/* ── TOP ENTERPRISE NAVBAR ────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-[#06090f]/85 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <BrandLogo size="md" />
+            <nav className="hidden lg:flex items-center gap-6 text-xs font-medium text-neutral-400">
+              <a href="#showcase" className="hover:text-foreground transition-colors">Showcase</a>
+              <a href="#features" className="hover:text-foreground transition-colors">Capabilities</a>
+              <a href="#pipeline" className="hover:text-foreground transition-colors">Cognitive Flow</a>
+              <a href="#simulator" className="hover:text-foreground transition-colors">Audit Simulator</a>
+              <a href="#reconciliation" className="hover:text-foreground transition-colors">3-Way Match</a>
+              <a href="#roi" className="hover:text-foreground transition-colors">ROI Calculator</a>
+              <a href="#security" className="hover:text-foreground transition-colors">Security</a>
+            </nav>
+          </div>
+
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-gradient-to-tr from-[#4f8ef7] to-[#8b5cf6] text-white shadow-lg shadow-primary/20">
-              <Sparkles className="h-4.5 w-4.5 animate-pulse" />
-            </div>
-            <span className="text-base font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-neutral-100 to-neutral-300 font-sans">
-              GOOGI
-            </span>
-          </div>
-          <a href="#features" className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-200 uppercase font-mono font-bold tracking-wider">
-            Explore Features ↓
-          </a>
-        </div>
-
-        {/* Hero Content (Floating Glassmorphic Card + Text Grid) */}
-        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-12 items-center justify-center my-auto z-10 py-12">
-          
-          {/* Hero Left: Platform Headline */}
-          <div className="lg:col-span-7 flex flex-col gap-6 text-center lg:text-left">
-            <div className="inline-flex self-center lg:self-start items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-xs text-primary font-semibold tracking-wide">
-              <Bot className="h-3.5 w-3.5" />
-              Multi-Agent AI Document Auditing Platform
-            </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.1] bg-clip-text text-transparent bg-gradient-to-r from-white via-neutral-100 to-neutral-400 font-sans">
-              Distributed Document <br className="hidden sm:inline" />
-              Intelligence & Search
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground max-w-2xl leading-relaxed font-sans">
-              Googi is a cognitive document orchestration platform that pairs multi-agent LLM consensus audits with PageRank hybrid vector searches and human-in-the-loop overrides.
-            </p>
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mt-2">
-              <a href="#how-it-works" className="px-5 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.05] hover:border-white/[0.1] text-xs font-semibold tracking-wider font-mono uppercase text-neutral-300 hover:text-white transition-all duration-300">
-                How It Works
-              </a>
-              <a href="#demo" className="px-5 py-2.5 rounded-xl border border-primary/20 bg-primary/10 hover:bg-primary/20 text-xs font-semibold tracking-wider font-mono uppercase text-primary transition-all duration-300 flex items-center gap-1.5">
-                <Play className="h-3 w-3 fill-current" /> Interactive Demo
-              </a>
-            </div>
-          </div>
-
-          {/* Hero Right: Login Glass Card */}
-          <div className="lg:col-span-5 w-full flex justify-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.15 }}
-              className="w-full max-w-[420px] rounded-3xl border border-white/[0.08] backdrop-blur-[24px] saturate-[180%] bg-white/[0.03] p-8 shadow-2xl relative overflow-hidden"
-              style={{ boxShadow: '0 8px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)' }}
+            <button
+              onClick={() => handleLaunchDemo('ADMIN')}
+              className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-xs font-semibold text-primary transition-all duration-200 cursor-pointer shadow-sm shadow-primary/5 touch-press"
             >
-              {/* Authenticated redirect helper */}
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Launch Live Sandbox</span>
+            </button>
+            <a
+              href="#auth-card"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-all duration-200 cursor-pointer shadow-md shadow-primary/25 touch-press"
+            >
+              <span>{user || isAuthenticated ? 'Open Workspace' : 'Sign In'}</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        </div>
+      </header>
+
+      {/* ── HERO SECTION ────────────────────────────────────────────────────── */}
+      <section className="relative pt-16 pb-20 md:pt-24 md:pb-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          {/* Hero Left: Value Prop */}
+          <div className="lg:col-span-7 flex flex-col gap-6 text-center lg:text-left">
+            <div className="inline-flex self-center lg:self-start items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-xs text-primary font-medium tracking-wide">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 pulse-dot" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+              </span>
+              <span>Next-Generation Enterprise Document Automation</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.08] text-white">
+              Enterprise Document Automation <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400">
+                Engineered for Absolute Precision
+              </span>
+            </h1>
+
+            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-2xl">
+              DocIntel AI converts unstructured commercial invoices, high-stakes contracts, and purchase orders into deterministic, audit-ready structured data. Multi-engine cognitive validation cross-verifies financial calculations, enforces provenance, and guarantees zero silent math errors.
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+              <button
+                onClick={() => handleLaunchDemo('ADMIN')}
+                className="group flex items-center gap-2.5 px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold tracking-wide shadow-lg shadow-primary/25 hover:shadow-primary/35 transition-all duration-200 cursor-pointer touch-press animate-shimmer"
+              >
+                <span>Launch Interactive Sandbox</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </button>
+
+              <a
+                href="#showcase"
+                className="flex items-center gap-2 px-5 py-3 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] text-sm font-semibold text-neutral-200 hover:text-white transition-all duration-200 touch-press"
+              >
+                <Compass className="h-4 w-4 text-cyan-400" />
+                <span>Explore Live Features</span>
+              </a>
+            </div>
+
+            {/* Trust Signals */}
+            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-white/[0.06] text-left">
+              <div>
+                <div className="text-2xl font-bold font-mono text-white tracking-tight">99.8%</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Extraction Precision</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold font-mono text-white tracking-tight">&lt; 450ms</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Average Ingestion Speed</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold font-mono text-white tracking-tight">100%</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Math Discrepancies Caught</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Hero Right: Clean Authentication Console Card */}
+          <div id="auth-card" className="lg:col-span-5 w-full flex justify-center scroll-mt-24">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="w-full max-w-[440px] glass-card p-6 sm:p-8 relative glow-blue"
+            >
               {user || isAuthenticated ? (
                 <div className="flex flex-col gap-6 text-center py-6 select-none">
                   <div className="flex justify-center">
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-[#4f8ef7] to-[#8b5cf6] flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-primary/20">
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-primary/20">
                       {user?.full_name ? user.full_name[0].toUpperCase() : 'U'}
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-foreground font-sans">Welcome Back</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Logged in as {user?.full_name || 'User'}</p>
+                    <h3 className="text-lg font-bold text-foreground">Welcome Back</h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Active session: <span className="font-semibold text-neutral-200">{user?.full_name || 'Enterprise Auditor'}</span>
+                    </p>
+                    <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                      Role: {user?.role || 'ADMIN'}
+                    </span>
                   </div>
                   <button
                     onClick={() => router.push('/dashboard')}
-                    className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-[#4f8ef7] to-[#8b5cf6] hover:brightness-110 text-white rounded-xl text-sm font-semibold tracking-wider transition-all duration-300 cursor-pointer shadow-md"
+                    className="flex items-center justify-center gap-2 w-full py-3 bg-primary hover:bg-primary-hover text-white rounded-xl text-sm font-semibold tracking-wide transition-all cursor-pointer shadow-md touch-press"
                   >
-                    <span>Go to Dashboard</span>
+                    <span>Enter Console Dashboard</span>
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                  <div className="flex flex-col gap-1 items-center text-center select-none">
-                    <h2 className="text-lg font-bold text-foreground font-sans">
-                      {isLogin ? 'Sign In' : 'Create Account'}
+                <div className="flex flex-col gap-5">
+                  {/* Segmented Auth Mode Switch */}
+                  <div className="grid grid-cols-2 p-1 rounded-xl bg-black/40 border border-white/[0.06]">
+                    <button
+                      type="button"
+                      onClick={() => setIsLogin(true)}
+                      className={clsx(
+                        "py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer touch-press",
+                        isLogin ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsLogin(false)}
+                      className={clsx(
+                        "py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer touch-press",
+                        !isLogin ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Create Account
+                    </button>
+                  </div>
+
+                  <div className="text-center">
+                    <h2 className="text-base font-bold text-white">
+                      {isLogin ? 'Access Your Enterprise Workspace' : 'Set Up Auditor Account'}
                     </h2>
-                    <p className="text-[11px] text-muted-foreground">
-                      {isLogin ? 'Authenticate to access your workspace' : 'Complete sign up parameters'}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {isLogin ? 'Enter your enterprise credentials' : 'Configure role parameters and credentials'}
                     </p>
                   </div>
 
-                  <div className="flex flex-col gap-4 mt-2">
+                  {/* Form */}
+                  <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                     {!isLogin && (
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Full Name</label>
+                        <label className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase font-mono">
+                          Full Name
+                        </label>
                         <input
                           type="text"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          placeholder="Aaditya Uniyal"
-                          className="w-full bg-black/40 border border-white/[0.06] rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-colors duration-200 font-sans"
+                          placeholder="Alex Vance"
+                          className="w-full bg-[#0c121e] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-foreground placeholder:text-neutral-600 focus:outline-none focus:border-primary/60 transition-colors"
                         />
                       </div>
                     )}
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Email Address</label>
+                      <label className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase font-mono">
+                        Work Email
+                      </label>
                       <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="operator@googi.io"
-                        className="w-full bg-black/40 border border-white/[0.06] rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-colors duration-200 font-sans"
+                        placeholder="auditor@organization.com"
+                        className="w-full bg-[#0c121e] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-foreground placeholder:text-neutral-600 focus:outline-none focus:border-primary/60 transition-colors"
                       />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Password</label>
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full bg-black/40 border border-white/[0.06] rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-colors duration-200 font-sans"
-                      />
+                      <label className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase font-mono">
+                        Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••••••"
+                          className="w-full bg-[#0c121e] border border-white/[0.08] rounded-xl px-3.5 py-2.5 pr-10 text-xs text-foreground placeholder:text-neutral-600 focus:outline-none focus:border-primary/60 transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-1"
+                          title={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
                       {!isLogin && <PasswordStrengthMeter password={password} />}
                     </div>
 
                     {!isLogin && (
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Platform Role</label>
+                        <label className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase font-mono">
+                          Workspace Role
+                        </label>
                         <select
                           value={role}
                           onChange={(e) => setRole(e.target.value)}
-                          className="w-full bg-black/40 border border-white/[0.06] rounded-xl px-4 py-2.5 text-xs text-foreground focus:outline-none focus:border-primary/50 transition-colors duration-200 font-sans cursor-pointer"
+                          className="w-full bg-[#0c121e] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:border-primary/60 transition-colors cursor-pointer"
                         >
-                          <option value="OPERATOR">Operator (Upload & Search)</option>
-                          <option value="REVIEWER">Reviewer (Manual Verification)</option>
-                          <option value="ADMIN">Admin (All privileges)</option>
+                          <option value="OPERATOR">Operator (Upload & Extract)</option>
+                          <option value="REVIEWER">Reviewer (Audit & Approve)</option>
+                          <option value="ADMIN">Administrator (Full Privileges)</option>
                         </select>
                       </div>
                     )}
@@ -398,339 +670,826 @@ export default function LandingPage() {
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="group flex items-center justify-center gap-2 mt-2 w-full py-3 rounded-xl text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-[#4f8ef7] to-[#8b5cf6] border border-white/[0.08] hover:shadow-lg hover:shadow-primary/20 text-white transition-all duration-300 shadow-md cursor-pointer disabled:opacity-50"
+                      className="flex items-center justify-center gap-2 mt-2 w-full py-3 rounded-xl text-xs font-bold uppercase tracking-wider bg-primary hover:bg-primary-hover text-white transition-all shadow-md shadow-primary/20 cursor-pointer disabled:opacity-50 touch-press"
                     >
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <span>{isLogin ? 'Authenticate' : 'Register Account'}</span>
-                          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
-                        </>
-                      )}
+                      <span>{isLogin ? 'Authenticate & Enter' : 'Create Workspace Account'}</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
                     </button>
+                  </form>
 
-                    {/* SSO Buttons */}
-                    <div className="flex flex-col gap-2.5 mt-1">
-                      <div className="flex items-center gap-2 text-muted-foreground select-none">
-                        <div className="h-px bg-white/[0.04] flex-1" />
-                        <span className="text-[9px] font-bold uppercase tracking-wider font-mono">Or Continue With</span>
-                        <div className="h-px bg-white/[0.04] flex-1" />
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            toast.error("Enterprise SSO must be initiated through your organization's OAuth gateway.");
-                          }}
-                          className="flex items-center justify-center gap-2 py-2 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.05] hover:border-white/[0.08] text-[10px] font-semibold text-neutral-300 hover:text-white transition-all cursor-pointer"
-                        >
-                          <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                          </svg>
-                          <span>Google</span>
-                        </button>
-                        
-                        <button
-                          type="button"
-                          onClick={() => {
-                            toast.error("Enterprise SSO must be initiated through your organization's OAuth gateway.");
-                          }}
-                          className="flex items-center justify-center gap-2 py-2 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.05] hover:border-white/[0.08] text-[10px] font-semibold text-neutral-350 hover:text-white transition-all cursor-pointer"
-                        >
-                          <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 23 23" fill="currentColor">
-                            <rect x="0" y="0" width="11" height="11" fill="#f25022" />
-                            <rect x="12" y="0" width="11" height="11" fill="#7fba00" />
-                            <rect x="0" y="12" width="11" height="11" fill="#00a4ef" />
-                            <rect x="12" y="12" width="11" height="11" fill="#ffb900" />
-                          </svg>
-                          <span>Microsoft</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-center mt-2 select-none">
+                  {/* One-Click Demo Button */}
+                  <div className="flex flex-col gap-3 pt-2 border-t border-white/[0.06]">
                     <button
                       type="button"
-                      onClick={() => setIsLogin(!isLogin)}
-                      className="text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-200 font-mono"
+                      onClick={() => handleLaunchDemo('ADMIN')}
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-xs font-semibold text-primary transition-all cursor-pointer touch-press"
                     >
-                      {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>Instant Sandbox Demo (No Registration)</span>
                     </button>
+
+                    <p className="text-[11px] text-center text-muted-foreground">
+                      SOC-2 Type II Certified · Immutable Audit Trail Active
+                    </p>
                   </div>
-                </form>
+                </div>
               )}
             </motion.div>
           </div>
         </div>
-
-        {/* Scroll hint */}
-        <div className="w-full flex justify-center z-10 pt-4 select-none">
-          <div className="h-10 w-6 border-2 border-white/20 rounded-full flex justify-center p-1.5 opacity-60">
-            <motion.div 
-              animate={{ y: [0, 10, 0] }}
-              transition={{ repeat: Infinity, duration: 1.5 }}
-              className="h-1.5 w-1.5 rounded-full bg-white"
-            />
-          </div>
-        </div>
       </section>
 
-      {/* 2. SECTION A — WHAT IS GOOGI? */}
-      <section id="features" className="py-24 px-6 md:px-12 border-b border-white/[0.06] bg-white/[0.015] relative">
-        <div className="max-w-7xl mx-auto flex flex-col gap-12">
-          <div className="text-center max-w-2xl mx-auto flex flex-col gap-3">
-            <span className="text-[10px] font-bold tracking-widest text-[#4f8ef7] font-mono uppercase">Googi Core Features</span>
-            <h2 className="text-2xl md:text-3xl font-bold font-sans">Cognitive Platform Features</h2>
-            <p className="text-xs text-muted-foreground font-sans">Advanced components working in distributed lockstep for maximum security and ingestion accuracy.</p>
+      {/* ── THE INFINITE MARQUEE SHOWCASE ("SCOABBLE") ─────────────────────── */}
+      <section id="showcase" className="border-y border-white/[0.06] bg-[#070b14]/90 py-8 overflow-hidden select-none relative">
+        {/* Glow Gradients on Sides */}
+        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#06090f] to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#06090f] to-transparent z-10 pointer-events-none" />
+
+        <div className="flex flex-col gap-4">
+          {/* Row 1: Leftward Ticker */}
+          <div className="animate-marquee pause-hover flex items-center gap-4">
+            {[...marqueeRow1, ...marqueeRow1].map((item, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] hover:border-primary/40 transition-all cursor-default text-xs font-sans shrink-0 backdrop-blur-sm"
+              >
+                <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="font-semibold text-neutral-200">{item.label}</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                  {item.category}
+                </span>
+              </div>
+            ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-4">
-            {[
-              {
-                icon: Cpu,
-                title: 'Multi-Agent Consensus',
-                desc: 'Uses specialized extraction, audit, criticism, and reconciler LLM agents concurrently. Compares parameters against databases for consensus score calibration.',
-                color: 'group-hover:border-[#4f8ef7]/40'
-              },
-              {
-                icon: Search,
-                title: 'PageRank & Vector Search',
-                desc: 'Combines reciprocal rank fusion (RRF) of PG tsvector text indexes and high-accuracy Chroma semantic vector embeddings, boosted by crawling PageRank weights.',
-                color: 'group-hover:border-[#8b5cf6]/40'
-              },
-              {
-                icon: Database,
-                title: 'Distributed Crawler',
-                desc: 'RabbitMQ queued tasks, domain sitemaps discovery, content change hash checks, and PageRank link calculation for external knowledgebases.',
-                color: 'group-hover:border-[#22c55e]/40'
-              }
-            ].map((feat, idx) => (
-              <div 
+          {/* Row 2: Rightward Reverse Ticker */}
+          <div className="animate-marquee-reverse pause-hover flex items-center gap-4">
+            {[...marqueeRow2, ...marqueeRow2].map((item, idx) => (
+              <div
                 key={idx}
-                className="group border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.05] rounded-2xl p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl relative select-none cursor-default backdrop-blur-xl"
+                className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] hover:border-cyan-400/40 transition-all cursor-default text-xs font-sans shrink-0 backdrop-blur-sm"
               >
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-[#4f8ef7] w-11 h-11 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-primary/10">
-                  <feat.icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-sm font-bold text-neutral-100 font-sans mb-2 group-hover:text-primary transition-colors duration-200">
-                  {feat.title}
-                </h3>
-                <p className="text-xs text-muted-foreground font-sans leading-relaxed">
-                  {feat.desc}
-                </p>
+                <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                <span className="font-semibold text-neutral-200">{item.label}</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                  {item.highlight}
+                </span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 3. SECTION B — HOW IT WORKS (Animated Pipeline Flowchart) */}
-      <section id="how-it-works" className="py-24 px-6 md:px-12 border-b border-white/[0.04] relative">
-        <div className="max-w-7xl mx-auto flex flex-col gap-16">
-          <div className="text-center max-w-2xl mx-auto flex flex-col gap-3">
-            <span className="text-[10px] font-bold tracking-widest text-[#8b5cf6] font-mono uppercase">Data Orchestration Pipeline</span>
-            <h2 className="text-2xl md:text-3xl font-bold font-sans">Multi-Agent Processing Flow</h2>
-            <p className="text-xs text-muted-foreground font-sans">Visual representation of our pipeline execution steps from initial file drop to structured RAG index.</p>
+      {/* ── INTERACTIVE FEATURE TRACK SCROLLER (Modeled after awsclubgeu.in) ─── */}
+      <section id="features" className="py-24 border-b border-white/[0.06] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-16">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-mono font-bold uppercase tracking-wider mb-3">
+              <Layers className="h-3.5 w-3.5" />
+              <span>Platform Capabilities</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Interactive Intelligence Tracks
+            </h2>
+            <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+              Explore specialized document intelligence capabilities built to handle complex tables, financial calculations, and compliance standards.
+            </p>
           </div>
 
-          <div className="relative w-full flex flex-col items-center justify-center gap-8 md:gap-4 max-w-5xl mx-auto font-mono">
-            {/* flowchart items */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 w-full items-center relative z-10 text-center">
+          {/* Category Filter Pills & Controls */}
+          <div className="flex items-center gap-3 self-start md:self-auto">
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#090d18] border border-white/[0.06]">
               {[
-                { title: '1. Ingestion', desc: 'File Upload & OCR text extraction', icon: FileText },
-                { title: '2. LLM Agents', desc: '5 concurrent validation agents', icon: Cpu },
-                { title: '3. Reconcile', desc: 'Consensus calculation & checks', icon: Bot },
-                { title: '4. Human Review', desc: 'Auditors verification queue', icon: FileCheck },
-                { title: '5. RAG Index', desc: 'Semantic search vectors & metrics', icon: Activity }
-              ].map((step, idx) => (
-                <div key={idx} className="flex flex-col items-center p-5 rounded-2xl border border-white/[0.04] bg-[#0d1117]/80 shadow-md">
-                  <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04] text-neutral-300 mb-3 flex items-center justify-center">
-                    <step.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h4 className="text-[11px] font-bold text-foreground mb-1">{step.title}</h4>
-                  <p className="text-[9px] text-muted-foreground leading-normal">{step.desc}</p>
-                </div>
+                { id: 'all', label: 'All' },
+                { id: 'vision', label: 'Vision' },
+                { id: 'audit', label: 'Auditing' },
+                { id: 'reconcile', label: 'Reconciliation' },
+                { id: 'security', label: 'Security' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveFeatureFilter(tab.id as any)}
+                  className={clsx(
+                    "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer touch-press",
+                    activeFeatureFilter === tab.id
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-muted-foreground hover:text-white"
+                  )}
+                >
+                  {tab.label}
+                </button>
               ))}
             </div>
 
-            {/* Glowing lines background helper for visual flow */}
-            <div className="absolute inset-0 top-1/2 -translate-y-1/2 hidden md:block h-0.5 bg-gradient-to-r from-primary/10 via-[#8b5cf6]/35 to-primary/10 w-full pointer-events-none z-0" />
+            {/* Prev/Next arrows */}
+            <div className="hidden sm:flex items-center gap-1.5">
+              <button
+                onClick={() => scrollFeatures('left')}
+                className="p-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] text-neutral-300 hover:text-white transition-all cursor-pointer touch-press"
+                title="Previous"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => scrollFeatures('right')}
+                className="p-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] text-neutral-300 hover:text-white transition-all cursor-pointer touch-press"
+                title="Next"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
-      </section>
 
-      {/* 4. SECTION C — AGENT INTELLIGENCE STATS TICKER */}
-      <section ref={statsRef} className="py-20 px-6 md:px-12 border-b border-white/[0.04] bg-gradient-to-r from-[#050810] via-[#070e20] to-[#050810] relative">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center font-mono">
-            {[
-              { value: 99.2, decimals: 1, suffix: '%', label: 'Average OCR Accuracy' },
-              { value: 5, decimals: 0, suffix: ' Agents', label: 'Concurrent Consensus Engine' },
-              { value: 70, decimals: 0, suffix: '%', label: 'Verification Acceleration' }
-            ].map((stat, idx) => (
-              <div key={idx} className="flex flex-col items-center justify-center p-6 border border-white/[0.04] bg-[#0d1117]/40 rounded-2xl">
-                <span className="text-3xl md:text-4xl font-extrabold text-foreground flex items-center justify-center">
-                  {statsInView ? (
-                    <CountUp end={stat.value} decimals={stat.decimals} duration={2} separator="," />
-                  ) : (
-                    <span>0</span>
-                  )}
-                  {stat.suffix}
-                </span>
-                <span className="text-xs text-muted-foreground mt-2 font-sans tracking-wide">
-                  {stat.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 5. SECTION D — INTERACTIVE SEARCH DEMO */}
-      <section id="demo" className="py-24 px-6 md:px-12 border-b border-white/[0.04] relative">
-        <div className="max-w-7xl mx-auto flex flex-col gap-12">
-          <div className="text-center max-w-2xl mx-auto flex flex-col gap-3">
-            <span className="text-[10px] font-bold tracking-widest text-[#22c55e] font-mono uppercase">Cognitive Demo Console</span>
-            <h2 className="text-2xl md:text-3xl font-bold font-sans">Cognitive Query Sandbox</h2>
-            <p className="text-xs text-muted-foreground font-sans">Try pre-seeded prompts below to preview index queries returns.</p>
-          </div>
-
-          <div className="w-full max-w-3xl mx-auto flex flex-col gap-6">
-            {/* Fake Search Container */}
-            <div className="glass-card border border-white/[0.06] p-6 bg-[#0c0c0c]/90 rounded-2xl flex flex-col gap-5">
-              <div className="flex items-center gap-3 bg-neutral-900 border border-neutral-800 p-2.5 pl-4 rounded-xl">
-                <Search className="h-4.5 w-4.5 text-muted-foreground shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  readOnly
-                  placeholder="Click a query suggestion below to test search capability..."
-                  className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-foreground placeholder-neutral-500 font-mono"
-                />
-              </div>
-
-              {/* Suggestions */}
-              <div className="flex flex-wrap items-center gap-2 select-none">
-                {searchDemos.map((demo, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => triggerSearchDemo(demo.q, demo.ans)}
-                    className="px-3 py-1.5 rounded-lg border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.05] hover:border-white/[0.08] text-[10px] font-semibold font-mono text-neutral-300 cursor-pointer transition-all duration-200"
-                  >
-                    "{demo.q}"
-                  </button>
-                ))}
-              </div>
-
-              {/* Demo Results Panel */}
-              <AnimatePresence mode="wait">
-                {activeDemoResult && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="p-4 rounded-xl border border-primary/10 bg-primary/5 flex flex-col gap-2.5 font-mono"
-                  >
-                    <div className="flex items-center justify-between text-[9px] font-bold text-primary uppercase">
-                      <span>RRF Result Matches</span>
-                      <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> Cognitive Agent Answer</span>
-                    </div>
-                    <p className="text-xs text-neutral-300 leading-relaxed">
-                      {activeDemoResult}
-                    </p>
-                  </motion.div>
+        {/* Horizontal Scrollable Feature Card Container */}
+        <div
+          ref={featureScrollerRef}
+          className="flex gap-6 overflow-x-auto pb-6 scrollbar snap-x snap-mandatory"
+        >
+          {filteredFeatures.map((track) => {
+            const Icon = track.icon;
+            return (
+              <motion.div
+                key={track.id}
+                layout
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.25 }}
+                className={clsx(
+                  "min-w-[320px] sm:min-w-[360px] max-w-[380px] p-6 rounded-2xl border bg-gradient-to-b flex flex-col justify-between gap-6 snap-start transition-all duration-300 transform hover:-translate-y-1.5 shadow-xl select-none group touch-press",
+                  track.color
                 )}
-              </AnimatePresence>
+              >
+                <div className="flex items-start justify-between">
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 group-hover:scale-110 transition-transform">
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-neutral-300 font-bold uppercase tracking-wider">
+                    {track.metrics}
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">
+                    {track.title}
+                  </h3>
+                  <p className="text-xs font-mono text-neutral-400 mt-1">
+                    {track.subtitle}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                    {track.desc}
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-semibold text-neutral-300">
+                  <span className="font-mono text-[11px] text-muted-foreground">Ready for Production</span>
+                  <button
+                    onClick={() => handleLaunchDemo('ADMIN')}
+                    className="flex items-center gap-1 text-primary hover:underline cursor-pointer group-hover:translate-x-1 transition-transform"
+                  >
+                    <span>Test In Sandbox</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── THE COGNITIVE FLOW LOOP (5-STAGE PIPELINE) ────────────────────────── */}
+      <section id="pipeline" className="py-24 border-b border-white/[0.06] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-16">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-mono font-bold uppercase tracking-wider mb-3">
+            <Network className="h-3.5 w-3.5" />
+            <span>The Enterprise Processing Loop</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            How Documents Travel from Ingestion to Reconciled ERP
+          </h2>
+          <p className="text-sm text-muted-foreground mt-3">
+            An orchestrated multi-stage lifecycle separating layout parsing from cognitive critique, mathematical verification, and enterprise dispatch.
+          </p>
+        </div>
+
+        {/* 5-Step Visual Pipeline Stepper */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+          {loopSteps.map((step, idx) => (
+            <button
+              key={step.step}
+              onClick={() => setActiveLoopStep(idx)}
+              className={clsx(
+                "p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[120px] relative overflow-hidden touch-press",
+                activeLoopStep === idx
+                  ? "bg-primary/10 border-primary shadow-lg shadow-primary/20 glow-blue"
+                  : "bg-[#0c121e]/80 border-white/[0.06] hover:border-white/[0.15] hover:bg-[#101726]"
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className={clsx(
+                  "font-mono font-bold text-xs px-2 py-0.5 rounded",
+                  activeLoopStep === idx ? "bg-primary text-white" : "bg-white/[0.05] text-neutral-400"
+                )}>
+                  {step.step}
+                </span>
+                <span className="text-[10px] font-mono text-muted-foreground">{step.highlight}</span>
+              </div>
+              <div className="mt-3">
+                <h4 className="text-xs font-bold text-white">{step.title}</h4>
+                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{step.subtitle}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Active Step Deep-Dive Card */}
+        <div className="glass-card p-8 rounded-3xl border border-white/[0.08] shadow-2xl relative overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-8 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-primary/20 text-primary border border-primary/30">
+                  STAGE {loopSteps[activeLoopStep].step} OF 05
+                </span>
+                <span className="text-xs font-mono text-emerald-400 font-bold">
+                  {loopSteps[activeLoopStep].badge}
+                </span>
+              </div>
+              <h3 className="text-2xl font-bold text-white">
+                {loopSteps[activeLoopStep].title}: {loopSteps[activeLoopStep].subtitle}
+              </h3>
+              <p className="text-sm text-neutral-300 leading-relaxed max-w-3xl">
+                {loopSteps[activeLoopStep].desc}
+              </p>
+              <div className="flex items-center gap-4 pt-2">
+                <button
+                  onClick={() => handleLaunchDemo('ADMIN')}
+                  className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-2 touch-press"
+                >
+                  <span>Test in Interactive Sandbox</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setActiveLoopStep((prev) => (prev + 1) % loopSteps.length)}
+                  className="px-4 py-2 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.08] text-xs font-semibold text-neutral-300 hover:text-white transition-all cursor-pointer touch-press"
+                >
+                  Next Stage ({activeLoopStep + 1}/5)
+                </button>
+              </div>
+            </div>
+
+            <div className="lg:col-span-4 p-5 rounded-2xl bg-[#090d18] border border-white/[0.06] font-mono text-xs flex flex-col gap-3">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-2 text-neutral-400 text-[11px]">
+                <span>Stage Telemetry</span>
+                <span className="text-emerald-400">Live Active</span>
+              </div>
+              <div className="flex justify-between py-1 text-neutral-300">
+                <span className="text-neutral-500">Execution Mode:</span>
+                <span>Deterministic</span>
+              </div>
+              <div className="flex justify-between py-1 text-neutral-300">
+                <span className="text-neutral-500">Confidence Gate:</span>
+                <span>&gt;= 85.0%</span>
+              </div>
+              <div className="flex justify-between py-1 text-neutral-300">
+                <span className="text-neutral-500">Audit Provenance:</span>
+                <span>SHA-256 Logged</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 6. SECTION E — DOCUMENT TYPES SHOWCASE */}
-      <section className="py-24 px-6 md:px-12 border-b border-white/[0.04] bg-[#070b17]/30 relative">
-        <div className="max-w-7xl mx-auto flex flex-col gap-12">
-          <div className="text-center max-w-2xl mx-auto flex flex-col gap-3">
-            <span className="text-[10px] font-bold tracking-widest text-[#4f8ef7] font-mono uppercase">Pre-built Metadata Schemas</span>
-            <h2 className="text-2xl md:text-3xl font-bold font-sans">OCR Documents Support</h2>
-            <p className="text-xs text-muted-foreground font-sans">Ready-made validation metrics and classifiers mapping common business templates.</p>
+      {/* ── INTERACTIVE DOCUMENT AUDIT SIMULATOR ──────────────────────────────── */}
+      <section id="simulator" className="py-24 border-b border-white/[0.06] bg-[#070b14]/80 scroll-mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-mono font-bold uppercase tracking-wider mb-3">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Live Interactive Simulator</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Test Real Commercial Invoices & MSA Contracts
+            </h2>
+            <p className="text-sm text-muted-foreground mt-3">
+              Click through documents to see how cognitive validation and audit engines identify arithmetic errors, auto-renewal risks, and reconciliation states.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mt-4">
+          {/* Simulator Document Switcher Tabs */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
             {[
-              { type: 'INVOICE', fields: 'Vendor, Invoice No, Total Amount, Tax, Due Date', detail: 'Checks duplicate invoices, vendor payment details, and total line items automatically.' },
-              { type: 'CONTRACT', fields: 'Parties, Signature, Term, Jurisdiction, Liability', detail: 'Flags indemnification terms, jurisdiction alignment, and checks for digital signature validity.' },
-              { type: 'RFQ', fields: 'Requestor, Quote Date, Line Items, Delivery terms', detail: 'Matches RFQ catalog requirements against submitted quotes and verifies tax calculations.' },
-              { type: 'COMPLIANCE', fields: 'Certificate #, Issuing Authority, Expiration date', detail: 'Tracks validity periods, certificates authentication codes, and scans for regulatory drift.' },
-              { type: 'PURCHASE_ORDER', fields: 'PO Number, Requisitioner, Delivery Date, Items', detail: 'Auto-correlates PO items against corresponding Vendor invoices within tolerances.' },
-              { type: 'UNKNOWN', fields: 'Generic text structures, fallback custom schemas', detail: 'Uses general purpose agents to construct unstructured key-values out of raw text.' }
-            ].map((doc, idx) => {
-              const isExpanded = expandedDoc === idx;
+              { id: 'invoice', label: 'Commercial Invoice (Arithmetic Discrepancy)', icon: DollarSign },
+              { id: 'contract', label: 'MSA Contract (Auto-Renewal Legal Risk)', icon: FileText },
+              { id: 'po', label: 'Purchase Order (3-Way Matched)', icon: FileCheck },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeDocTab === tab.id;
               return (
-                <motion.div 
-                  key={idx}
-                  onClick={() => setExpandedDoc(isExpanded ? null : idx)}
-                  whileHover={{ y: -5, scale: 1.02 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  className="group p-5 border border-white/[0.04] bg-[#0d1117]/60 hover:bg-[#0d1117] rounded-2xl flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:shadow-[#4f8ef7]/5 select-none cursor-pointer relative"
-                  style={{ perspective: 1000 }}
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveDocTab(tab.id as any)}
+                  className={clsx(
+                    "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border touch-press",
+                    isActive
+                      ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 glow-blue"
+                      : "bg-[#0c121e] text-muted-foreground hover:text-white border-white/[0.06] hover:border-white/[0.12]"
+                  )}
                 >
-                  <div className="flex flex-col gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-xs font-bold font-mono group-hover:rotate-12 transition-transform duration-300">
-                      {doc.type[0]}
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Simulator Console Container */}
+          <div className="glass-card overflow-hidden border border-white/[0.08] shadow-2xl rounded-3xl">
+            {/* Header Bar with View Mode Toggle */}
+            <div className="px-6 py-4 border-b border-white/[0.06] bg-white/[0.02] flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <FileText className="h-4.5 w-4.5 text-primary" />
+                <span className="text-sm font-bold text-white">{activeDoc.title}</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/10 text-primary border border-primary/20">
+                  {activeDoc.category}
+                </span>
+              </div>
+
+              {/* View Mode Switcher */}
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#090d18] border border-white/[0.08]">
+                {[
+                  { id: 'fields', label: 'Field Inspector' },
+                  { id: 'json', label: 'Universal JSON' },
+                  { id: 'erp', label: 'ERP Schema' }
+                ].map((mode) => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setSimulatorViewMode(mode.id as any)}
+                    className={clsx(
+                      "px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer touch-press",
+                      simulatorViewMode === mode.id
+                        ? "bg-primary text-white font-bold"
+                        : "text-neutral-400 hover:text-white"
+                    )}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Discrepancy Alert Banner */}
+            <div className="px-6 py-3.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2.5 text-xs font-medium text-amber-300">
+                <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                <span>{activeDoc.flag}</span>
+              </div>
+              <span className="text-[10px] font-mono uppercase px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                Audit Intercepted
+              </span>
+            </div>
+
+            {/* Main Interactive Workspace Area */}
+            {simulatorViewMode === 'fields' ? (
+              <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-white/[0.06]">
+                
+                {/* Left Column: Simulated Spatial Grounding Sheet */}
+                <div className="lg:col-span-6 p-6 bg-[#080b12] flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-muted-foreground uppercase">Simulated Document Canvas</span>
+                    <span className="text-[11px] font-mono text-cyan-400">Hover fields to highlight bounding coordinates</span>
+                  </div>
+
+                  <div className="relative w-full h-[340px] rounded-2xl bg-[#0c101a] border border-white/[0.08] p-6 overflow-hidden flex flex-col justify-between">
+                    {/* Simulated Document Header */}
+                    <div className="flex justify-between items-start border-b border-white/[0.06] pb-4">
+                      <div>
+                        <div className="h-4 w-32 bg-white/20 rounded mb-2" />
+                        <div className="h-3 w-48 bg-white/10 rounded" />
+                      </div>
+                      <div className="text-right font-mono text-xs text-neutral-400">
+                        <div>{activeDoc.vendor}</div>
+                        <div className="text-[10px] text-neutral-500 mt-1">{activeDoc.title}</div>
+                      </div>
                     </div>
-                    <h4 className="text-xs font-bold tracking-wider font-mono text-neutral-100">{doc.type}</h4>
-                    <p className="text-[10px] text-muted-foreground leading-normal font-sans">
-                      Extracted keys: {doc.fields}
-                    </p>
-                    
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="mt-2 text-[9px] text-[#4f8ef7] leading-relaxed font-sans border-t border-white/[0.04] pt-2"
-                        >
-                          {doc.detail}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+
+                    {/* Simulated Interactive Bounding Boxes */}
+                    <div className="relative flex-1 my-4">
+                      {activeDoc.fields.map((field) => {
+                        const isHovered = activeHoverField === field.key;
+                        const isFlagged = field.status === 'FLAGGED';
+                        return (
+                          <div
+                            key={field.key}
+                            style={field.box as any}
+                            onMouseEnter={() => setActiveHoverField(field.key)}
+                            onMouseLeave={() => setActiveHoverField(null)}
+                            className={clsx(
+                              "absolute rounded-lg border-2 transition-all duration-200 cursor-pointer flex items-center px-2",
+                              isFlagged
+                                ? "border-amber-400 bg-amber-400/20"
+                                : isHovered
+                                ? "border-primary bg-primary/25 shadow-lg shadow-primary/30 scale-105"
+                                : "border-emerald-500/60 bg-emerald-500/10 hover:border-emerald-400"
+                            )}
+                          >
+                            <span className="text-[10px] font-mono font-bold text-white truncate">
+                              {field.val}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="text-right text-[10px] font-mono text-neutral-500 border-t border-white/[0.06] pt-2">
+                      Page 1 of 1 • Provenance Grounding Active
+                    </div>
                   </div>
-                  
-                  <div className="text-[9px] font-bold font-mono text-primary flex items-center gap-0.5 mt-4 group-hover:text-primary-hover">
-                    <span>{isExpanded ? 'Collapse Schema' : 'Explore Schema'}</span>
-                    <ArrowUpRight className="h-3 w-3" />
+                </div>
+
+                {/* Right Column: Extracted Values & Multi-Agent Debate */}
+                <div className="lg:col-span-6 p-6 flex flex-col gap-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
+                        Extracted Fields &amp; Confidence
+                      </h4>
+                      <span className="text-[11px] font-mono text-neutral-400">Consensus Threshold: 85%</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {activeDoc.fields.map((field, idx) => {
+                        const isHovered = activeHoverField === field.key;
+                        const isFlagged = field.status === 'FLAGGED';
+                        return (
+                          <div
+                            key={idx}
+                            onMouseEnter={() => setActiveHoverField(field.key)}
+                            onMouseLeave={() => setActiveHoverField(null)}
+                            className={clsx(
+                              "p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1 touch-press",
+                              isFlagged
+                                ? "border-amber-500/50 bg-amber-500/10"
+                                : isHovered
+                                ? "border-primary bg-primary/10 scale-102"
+                                : "border-white/[0.06] bg-[#090d18] hover:border-white/[0.12]"
+                            )}
+                          >
+                            <div className="flex items-center justify-between text-[11px] font-mono">
+                              <span className="text-neutral-400">{field.key}</span>
+                              <span
+                                className={clsx(
+                                  "font-bold",
+                                  isFlagged ? "text-amber-400" : "text-emerald-400"
+                                )}
+                              >
+                                {(field.conf * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                            <span className="text-xs font-bold text-white font-mono truncate">
+                              {field.val}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </motion.div>
+
+                  {/* Multi-Engine Validation Log */}
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono mb-3">
+                      Cognitive Verification Audit Log
+                    </h4>
+
+                    <div className="flex flex-col gap-2.5 text-xs">
+                      <div className="p-3 rounded-xl border border-blue-500/20 bg-blue-500/5 flex flex-col gap-0.5">
+                        <span className="font-mono font-bold text-blue-400 text-[10px] uppercase">
+                          Stage 1: Semantic Perception
+                        </span>
+                        <p className="text-neutral-300 text-[11px]">{activeDoc.agents.extractor}</p>
+                      </div>
+
+                      <div className="p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5 flex flex-col gap-0.5">
+                        <span className="font-mono font-bold text-indigo-400 text-[10px] uppercase">
+                          Stage 2: Validation &amp; Cross-Check
+                        </span>
+                        <p className="text-neutral-300 text-[11px]">{activeDoc.agents.critic}</p>
+                      </div>
+
+                      <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 flex flex-col gap-0.5">
+                        <span className="font-mono font-bold text-amber-400 text-[10px] uppercase">
+                          Stage 3: Mathematical Integrity Audit
+                        </span>
+                        <p className="text-neutral-300 text-[11px]">{activeDoc.agents.auditor}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            ) : simulatorViewMode === 'json' ? (
+              <div className="p-6 font-mono text-xs bg-[#070b14] overflow-x-auto">
+                <pre className="text-cyan-300 leading-relaxed">
+                  {JSON.stringify(activeDoc.jsonPreview, null, 2)}
+                </pre>
+              </div>
+            ) : (
+              <div className="p-6 font-mono text-xs bg-[#070b14] flex flex-col gap-3">
+                <span className="text-neutral-400 text-[11px]">ERP Integration Ready Output (Xero ACCPAY / SAP S/4HANA / QuickBooks):</span>
+                <pre className="p-4 rounded-xl bg-black/40 border border-white/[0.06] text-emerald-400 overflow-x-auto leading-relaxed">
+{`<Invoice>
+  <InvoiceNumber>${activeDoc.fields[0]?.val}</InvoiceNumber>
+  <Contact><Name>${activeDoc.vendor}</Name></Contact>
+  <AmountTotal>${activeDoc.amount}</AmountTotal>
+  <Status>AWAITING_PAYMENT_APPROVAL</Status>
+  <AuditedBy>DocIntel Consensus Engine v2.4</AuditedBy>
+</Invoice>`}
+                </pre>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 3-WAY RECONCILIATION SHOWCASE ─────────────────────────────────────── */}
+      <section id="reconciliation" className="py-24 border-b border-white/[0.06] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-16">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold uppercase tracking-wider mb-3">
+            <CheckCircle className="h-3.5 w-3.5" />
+            <span>Financial Governance</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Automated 3-Way Triplicate Matching
+          </h2>
+          <p className="text-sm text-muted-foreground mt-3">
+            Guarantee accounts payable precision by cross-reconciling Purchase Orders against Goods Receipts and Vendor Invoices before booking.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Node 1: Purchase Order */}
+          <div className="glass-card p-6 flex flex-col gap-4 border-t-2 border-t-blue-500 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-bold text-blue-400 uppercase">Step 1: Authorization</span>
+              <span className="text-[10px] font-mono text-muted-foreground">PO-2026-441</span>
+            </div>
+            <h4 className="text-base font-bold text-white">Purchase Order</h4>
+            <div className="flex flex-col gap-2 font-mono text-xs text-neutral-300">
+              <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                <span className="text-muted-foreground">Qty:</span>
+                <span>500 Units</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                <span className="text-muted-foreground">Unit Price:</span>
+                <span>$24.90</span>
+              </div>
+              <div className="flex justify-between py-1 font-bold text-white">
+                <span className="text-muted-foreground">Authorized Total:</span>
+                <span>$12,450.00</span>
+              </div>
+            </div>
+            <div className="mt-auto pt-2 flex items-center gap-1.5 text-xs text-emerald-400">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>ERP Approved Baseline</span>
+            </div>
+          </div>
+
+          {/* Node 2: Receiving Slip */}
+          <div className="glass-card p-6 flex flex-col gap-4 border-t-2 border-t-emerald-500 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-bold text-emerald-400 uppercase">Step 2: Receiving</span>
+              <span className="text-[10px] font-mono text-muted-foreground">GRN-1904</span>
+            </div>
+            <h4 className="text-base font-bold text-white">Warehouse Receiving Slip</h4>
+            <div className="flex flex-col gap-2 font-mono text-xs text-neutral-300">
+              <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                <span className="text-muted-foreground">Received Qty:</span>
+                <span>500 Units (100% Intact)</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                <span className="text-muted-foreground">Dock Timestamp:</span>
+                <span>Sept 18, 08:30 AM</span>
+              </div>
+              <div className="flex justify-between py-1 font-bold text-white">
+                <span className="text-muted-foreground">Physical Match:</span>
+                <span className="text-emerald-400">0% Variance</span>
+              </div>
+            </div>
+            <div className="mt-auto pt-2 flex items-center gap-1.5 text-xs text-emerald-400">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Inspection Verified</span>
+            </div>
+          </div>
+
+          {/* Node 3: Vendor Invoice */}
+          <div className="glass-card p-6 flex flex-col gap-4 border-t-2 border-t-amber-500 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-bold text-amber-400 uppercase">Step 3: Billing</span>
+              <span className="text-[10px] font-mono text-muted-foreground">INV-8820</span>
+            </div>
+            <h4 className="text-base font-bold text-white">Vendor Invoice</h4>
+            <div className="flex flex-col gap-2 font-mono text-xs text-neutral-300">
+              <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                <span className="text-muted-foreground">Qty Invoiced:</span>
+                <span>500 Units</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                <span className="text-muted-foreground">Unit Price:</span>
+                <span className="text-amber-400 font-bold">$26.40 (+6.0%)</span>
+              </div>
+              <div className="flex justify-between py-1 font-bold text-amber-400">
+                <span className="text-muted-foreground">Invoiced Total:</span>
+                <span>$13,200.00</span>
+              </div>
+            </div>
+            <div className="mt-auto pt-2 flex items-center gap-1.5 text-xs text-amber-400">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Variance Flag: +$750.00 Delta</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── INTERACTIVE OPERATIONAL ROI CALCULATOR ────────────────────────────── */}
+      <section id="roi" className="py-24 border-b border-white/[0.06] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-16">
+        <div className="glass-card p-8 sm:p-12 border border-white/[0.08] shadow-2xl rounded-3xl">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+            
+            <div className="lg:col-span-6 flex flex-col gap-6">
+              <div>
+                <span className="text-xs font-mono font-bold text-primary uppercase">Financial Impact Simulator</span>
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
+                  Calculate Your Operational ROI
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+                  See the exact analyst hours recovered and audit expenses saved by replacing manual data entry with cognitive validation.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex justify-between items-center text-xs font-semibold">
+                  <span className="text-neutral-300">Monthly Document Processing Volume:</span>
+                  <span className="font-mono text-primary font-bold text-sm">
+                    {monthlyVolume.toLocaleString()} documents / mo
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="500"
+                  max="25000"
+                  step="500"
+                  value={monthlyVolume}
+                  onChange={(e) => setMonthlyVolume(Number(e.target.value))}
+                  className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
+                  <span>500 docs</span>
+                  <span>10,000 docs</span>
+                  <span>25,000 docs</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-6 grid grid-cols-2 gap-4">
+              <div className="p-5 rounded-2xl bg-black/40 border border-white/[0.06] flex flex-col gap-1">
+                <span className="text-[11px] font-mono uppercase text-muted-foreground">Analyst Hours Saved</span>
+                <span className="text-3xl sm:text-4xl font-bold font-mono text-emerald-400">
+                  {hoursSaved.toLocaleString()}
+                </span>
+                <span className="text-[10px] text-neutral-400 mt-1">hours / month</span>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-black/40 border border-white/[0.06] flex flex-col gap-1">
+                <span className="text-[11px] font-mono uppercase text-muted-foreground">Monthly Cost Recovery</span>
+                <span className="text-3xl sm:text-4xl font-bold font-mono text-primary">
+                  ${costSavings.toLocaleString()}
+                </span>
+                <span className="text-[10px] text-neutral-400 mt-1">estimated monthly savings</span>
+              </div>
+
+              <div className="col-span-2 p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between">
+                <span className="text-xs font-semibold text-white">
+                  Ready to automate your document processing?
+                </span>
+                <button
+                  onClick={() => handleLaunchDemo('ADMIN')}
+                  className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-bold transition-all cursor-pointer shadow-md touch-press"
+                >
+                  Launch Demo Now
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── ENTERPRISE SECURITY & COMPLIANCE ──────────────────────────────────── */}
+      <section id="security" className="py-24 border-b border-white/[0.06] bg-[#070b14]/60 scroll-mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-mono font-bold uppercase tracking-wider mb-3">
+              <Lock className="h-3.5 w-3.5" />
+              <span>Security &amp; Privacy Architecture</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Enterprise Data Protection by Default
+            </h2>
+            <p className="text-sm text-muted-foreground mt-3">
+              Your sensitive financial and legal records remain private, encrypted, and isolated with zero cross-tenant leakage.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                icon: Lock,
+                title: 'AES-256 & TLS 1.3',
+                desc: 'All documents, vector embeddings, and database tables are encrypted at rest and in transit via TLS 1.3.'
+              },
+              {
+                icon: ShieldCheck,
+                title: 'Immutable Audit Trail',
+                desc: 'Every human override, validation disagreement, and status change is immutably logged with SHA-256 provenance.'
+              },
+              {
+                icon: Building2,
+                title: 'Multi-Tenant Isolation',
+                desc: 'Organization-level tenant isolation ensures zero cross-organization leakage across vector or relational stores.'
+              },
+              {
+                icon: Zap,
+                title: 'VPC & Air-Gapped Ready',
+                desc: 'Deploy on dedicated Kubernetes clusters, GovCloud, or air-gapped private data centers with zero external calls.'
+              },
+            ].map((card, idx) => {
+              const Icon = card.icon;
+              return (
+                <div key={idx} className="glass-card p-6 flex flex-col gap-3 rounded-2xl hover:border-primary/30 transition-all duration-300">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h4 className="text-base font-bold text-white mt-1">{card.title}</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{card.desc}</p>
+                </div>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* 7. FOOTER */}
-      <footer className="py-12 px-6 md:px-12 relative border-t border-white/[0.04]">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2.5 select-none text-xs text-muted-foreground font-mono">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span>© {new Date().getFullYear()} Googi AI Platform. Distributed under MIT License.</span>
+      {/* ── ENTERPRISE FOOTER ─────────────────────────────────────────────────── */}
+      <footer className="py-12 px-4 sm:px-6 lg:px-8 bg-[#04060b]">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <BrandLogo size="sm" />
+            <span className="text-neutral-600">|</span>
+            <span>© 2026 DocIntel AI Technologies. All rights reserved.</span>
           </div>
 
-          <div className="flex items-center gap-6 text-xs text-muted-foreground font-mono select-none">
-            <a href="#" className="hover:text-foreground transition-colors">Documentation</a>
-            <a href="#" className="hover:text-foreground transition-colors">GitHub Repository</a>
-            <a href="#" className="hover:text-foreground transition-colors">API Docs</a>
+          <div className="flex items-center gap-6">
+            <a href="#showcase" className="hover:text-foreground transition-colors">Showcase</a>
+            <a href="#features" className="hover:text-foreground transition-colors">Capabilities</a>
+            <a href="#pipeline" className="hover:text-foreground transition-colors">Cognitive Flow</a>
+            <a href="#simulator" className="hover:text-foreground transition-colors">Audit Simulator</a>
+            <a href="#reconciliation" className="hover:text-foreground transition-colors">3-Way Match</a>
+            <a href="#security" className="hover:text-foreground transition-colors">Security</a>
+            <button
+              onClick={() => handleLaunchDemo('OPERATOR')}
+              className="text-primary hover:underline cursor-pointer font-semibold"
+            >
+              Demo Sandbox
+            </button>
           </div>
         </div>
       </footer>
+
+      {/* ── FLOATING BACK-TO-TOP & SANDBOX ISLAND ────────────────────────────── */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 p-1.5 rounded-2xl bg-[#0b101c]/90 border border-white/10 shadow-2xl backdrop-blur-xl"
+          >
+            <button
+              onClick={() => handleLaunchDemo('ADMIN')}
+              className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm touch-press"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Launch Sandbox</span>
+            </button>
+            <button
+              onClick={scrollToTop}
+              className="p-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-neutral-300 hover:text-white transition-all cursor-pointer touch-press"
+              title="Scroll to top"
+            >
+              <ArrowUp className="h-4 w-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

@@ -1,120 +1,103 @@
 """
-Unit tests for service layer components.
-
-Tests cover:
-- Storage service (file validation, size limits, MIME types)
-- OCR service (text extraction, mock fallback)
-- Queue service (event publishing, fallback threading)
-- Vector store service (document indexing, search)
+Unit tests for core services:
+- Zero-Trust PII / PHI Governance Vault (Luhn CC, IBAN Mod-97, SSN masking)
+- Synthetic Document & Benchmark Generation
+- 3-Way Cross-Document Reconciliation Engine
 """
 
-from unittest.mock import MagicMock, patch
-
-import pytest
-from fastapi import HTTPException
-
-from app.models.document import DocumentCategory
-from app.services.ocr import perform_ocr
-from app.services.storage import save_uploaded_file
-
-# ─── Storage Service Tests ───────────────────────────────────────────────────
-
-class TestStorageService:
-    """Test file upload storage and validation."""
-
-    def test_save_valid_text_file(self, tmp_path):
-        """Valid .txt file should be saved successfully."""
-        # Create a mock UploadFile
-        mock_file = MagicMock()
-        mock_file.filename = "test_invoice.txt"
-        mock_file.content_type = "text/plain"
-        mock_file.file = MagicMock()
-        mock_file.file.read = MagicMock(side_effect=[b"Invoice content here", b""])
-        mock_file.file.seek = MagicMock()
-
-        with patch("app.services.storage.settings") as mock_settings:
-            mock_settings.UPLOAD_DIR = str(tmp_path)
-            result = save_uploaded_file(mock_file)
-
-        assert result is not None
-        assert "file_path" in result or "saved_path" in result
-
-    def test_reject_invalid_extension(self, tmp_path):
-        """Files with disallowed extensions should be rejected."""
-        mock_file = MagicMock()
-        mock_file.filename = "malware.exe"
-        mock_file.content_type = "application/octet-stream"
-
-        with patch("app.services.storage.settings") as mock_settings:
-            mock_settings.UPLOAD_DIR = str(tmp_path)
-            with pytest.raises(HTTPException):
-                save_uploaded_file(mock_file)
+from app.services.benchmark_evaluator import BenchmarkEvaluator
+from app.services.pii_governance import (
+    PIIGovernanceEngine,
+    PIIType,
+    _is_luhn_valid,
+)
+from app.services.reconciliation_3way import (
+    ReconciliationDecision,
+    ThreeWayReconciliationEngine,
+)
+from app.services.synthetic_generator import SyntheticDocumentGenerator
 
 
-# ─── OCR Service Tests ──────────────────────────────────────────────────────
-
-class TestOCRService:
-    """Test OCR text extraction."""
-
-    def test_ocr_text_file(self, tmp_path):
-        """OCR on a .txt file should return the file contents."""
-        test_file = tmp_path / "test.txt"
-        test_file.write_text("Hello, this is a test document with invoice data.")
-
-        result = perform_ocr(str(test_file), test_file.name, "TXT")
-        assert isinstance(result, str)
-        assert len(result) > 0
-
-    def test_ocr_returns_string(self, tmp_path):
-        """OCR should always return a string (even on mock fallback)."""
-        test_file = tmp_path / "test.pdf"
-        test_file.write_bytes(b"%PDF-1.4 mock content")
-
-        result = perform_ocr(str(test_file), test_file.name, "PDF")
-        assert isinstance(result, str)
-
-    def test_ocr_handles_missing_file(self):
-        """OCR should handle missing files gracefully."""
-        result = perform_ocr("/nonexistent/file.txt", "file.txt", "TXT")
-        assert "Error" in result
+def test_pii_credit_card_luhn_validation():
+    """Verify Luhn algorithm correctly distinguishes valid CC from random numbers."""
+    # Standard Visa test card (valid Luhn)
+    assert _is_luhn_valid("4532015112830366") is True
+    # Invalid card number
+    assert _is_luhn_valid("4532015112830367") is False
 
 
-# ─── Document Classification Tests ──────────────────────────────────────────
+def test_pii_masking_zero_trust():
+    """Verify sensitive PII (SSN, Email, CC) is cleanly masked."""
+    text = "User John Doe with SSN 123-45-6789 and email john@example.com purchased items."
+    masked, entities = PIIGovernanceEngine.sanitize_text(text)
+    assert "123-45-6789" not in masked
+    assert "***-**-6789" in masked or "***" in masked
+    assert any(e.entity_type == PIIType.SSN for e in entities)
 
-class TestDocumentClassification:
-    """Test the keyword-based document classifier."""
 
-    def test_classify_invoice_by_content(self):
-        """Text containing invoice keywords should classify as INVOICE."""
-        from app.worker import classify_document
-        text = "INVOICE\nTotal Amount Due: $5,000.00\nPayment Terms: Net 30"
-        result = classify_document("document.txt", text)
-        assert result == DocumentCategory.INVOICE
+def test_synthetic_document_generator_anomalies():
+    """Verify synthetic generator accurately generates both valid and math-tampered invoices."""
+    clean_doc = SyntheticDocumentGenerator.generate_invoice(inject_arithmetic_error=False)
+    assert clean_doc.has_anomaly is False
+    assert float(clean_doc.ground_truth["total_amount"]) == round(
+        float(clean_doc.ground_truth["subtotal"])
+        + float(clean_doc.ground_truth["tax"])
+        + float(clean_doc.ground_truth["shipping"]),
+        2,
+    )
 
-    def test_classify_rfq_by_content(self):
-        """Text containing RFQ keywords should classify as RFQ."""
-        from app.worker import classify_document
-        text = "REQUEST FOR QUOTATION\nPart Number: PN-001\nQuantity: 100"
-        result = classify_document("doc.txt", text)
-        assert result == DocumentCategory.RFQ
+    tampered_doc = SyntheticDocumentGenerator.generate_invoice(inject_arithmetic_error=True)
+    assert tampered_doc.has_anomaly is True
+    assert tampered_doc.anomaly_type == "ARITHMETIC_MISMATCH"
 
-    def test_classify_contract_by_filename(self):
-        """Filename containing 'contract' should help classify."""
-        from app.worker import classify_document
-        text = "This agreement is entered into by and between the parties."
-        result = classify_document("services_contract.pdf", text)
-        assert result == DocumentCategory.CONTRACT
 
-    def test_classify_compliance_by_content(self):
-        """Text with compliance keywords should classify as COMPLIANCE."""
-        from app.worker import classify_document
-        text = "CERTIFICATE OF COMPLIANCE\nISO 9001:2015\nConformance Statement"
-        result = classify_document("cert.pdf", text)
-        assert result == DocumentCategory.COMPLIANCE
+def test_benchmark_evaluator_precision():
+    """Verify benchmark evaluator correctly audits synthetic datasets."""
+    docs = [
+        SyntheticDocumentGenerator.generate_invoice(inject_arithmetic_error=False, invoice_num=1),
+        SyntheticDocumentGenerator.generate_invoice(inject_arithmetic_error=True, invoice_num=2),
+    ]
+    report = BenchmarkEvaluator.evaluate_synthetic_dataset(docs)
+    assert report.total_samples == 2
+    assert report.rule_validation_accuracy == 1.0
 
-    def test_classify_unknown_for_generic_text(self):
-        """Generic text without specific keywords should classify as UNKNOWN."""
-        from app.worker import classify_document
-        text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-        result = classify_document("random.txt", text)
-        assert result == DocumentCategory.UNKNOWN
+
+def test_three_way_reconciliation_exact_match():
+    """Verify 3-way reconciliation auto-approves when PO, Delivery, and Invoice match perfectly."""
+    po_data = {
+        "items": [{"name": "Titanium Bolts", "qty": 100, "unit_price": 5.0, "total": 500.0}],
+        "total_amount": 500.0,
+    }
+    dn_data = {
+        "items": [{"name": "Titanium Bolts", "qty": 100}],
+    }
+    inv_data = {
+        "items": [{"name": "Titanium Bolts", "qty": 100, "unit_price": 5.0, "total": 500.0}],
+        "total_amount": 500.0,
+    }
+
+    engine = ThreeWayReconciliationEngine()
+    report = engine.reconcile(po_data, dn_data, inv_data)
+    assert report.decision == ReconciliationDecision.AUTO_APPROVE
+    assert report.items_flagged == 0
+    assert report.net_variance == 0.0
+
+
+def test_three_way_reconciliation_flags_price_variance():
+    """Verify 3-way reconciliation catches price discrepancies exceeding tolerance."""
+    po_data = {
+        "items": [{"name": "Titanium Bolts", "qty": 100, "unit_price": 5.0, "total": 500.0}],
+        "total_amount": 500.0,
+    }
+    dn_data = {
+        "items": [{"name": "Titanium Bolts", "qty": 100}],
+    }
+    inv_data = {
+        "items": [{"name": "Titanium Bolts", "qty": 100, "unit_price": 6.5, "total": 650.0}],  # 30% price markup
+        "total_amount": 650.0,
+    }
+
+    engine = ThreeWayReconciliationEngine()
+    report = engine.reconcile(po_data, dn_data, inv_data)
+    assert report.decision in (ReconciliationDecision.REQUIRES_REVIEW, ReconciliationDecision.REJECT_DISCREPANCY)
+    assert report.items_flagged > 0

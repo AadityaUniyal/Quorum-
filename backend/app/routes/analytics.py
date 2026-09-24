@@ -1,15 +1,14 @@
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import func
-from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.models.audit import AuditLog
 from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentStatus
 from app.routes.auth import RoleChecker
 from app.services.auth_access import filter_documents_for_user
+from fastapi import APIRouter, Depends
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
@@ -37,17 +36,19 @@ def get_platform_kpis(
     # Human intervention rate
     review_rate = round((review_docs / total_docs) * 100, 2) if total_docs > 0 else 0.0
 
-    # Measure average processing speed from document lifecycle timestamps.
-    speed_query = filter_documents_for_user(
-        db.query(Document.created_at, Document.updated_at), current_user
-    ).filter(Document.status == DocumentStatus.PROCESSED).all()
+    # Measure average processing speed using SQL engine aggregates (0 memory allocation overhead)
+    if db.bind and db.bind.dialect.name == "sqlite":
+        speed_stmt = filter_documents_for_user(
+            db.query(func.avg((func.julianday(Document.updated_at) - func.julianday(Document.created_at)) * 86400)),
+            current_user,
+        ).filter(Document.status == DocumentStatus.PROCESSED).scalar()
+    else:
+        speed_stmt = filter_documents_for_user(
+            db.query(func.avg(func.extract("epoch", Document.updated_at) - func.extract("epoch", Document.created_at))),
+            current_user,
+        ).filter(Document.status == DocumentStatus.PROCESSED).scalar()
 
-    total_seconds = 0
-    count = len(speed_query)
-    for created, updated in speed_query:
-        total_seconds += max(0.1, (updated - created).total_seconds())
-
-    avg_speed = round(total_seconds / count, 1) if count > 0 else 0.0
+    avg_speed = round(float(speed_stmt), 1) if speed_stmt is not None else 0.0
 
     return {
         "total_documents": total_docs,
@@ -269,4 +270,121 @@ def get_finops_analytics(
     """
     from app.services.finops import get_finops_summary
     return get_finops_summary(db, current_user.organization_id)
+
+
+# ─── Quorum Neon Postgres Analytics Aggregations ────────────────────────────
+
+@router.get("/spend-by-vendor")
+def get_spend_by_vendor(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(any_user)
+):
+    """
+    Neon Postgres Aggregation: Group spend, document count, and agent confidence by vendor.
+    """
+    base_docs = filter_documents_for_user(db.query(Document), current_user)
+    if days > 0:
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+        base_docs = base_docs.filter(Document.created_at >= cutoff)
+
+    results = db.query(
+        Document.vendor_name,
+        func.count(Document.id).label("invoice_count"),
+        func.sum(Document.total_amount).label("total_spend"),
+        func.avg(Document.total_amount).label("avg_amount"),
+        func.avg(Document.consensus_score).label("avg_consensus")
+    ).filter(
+        Document.id.in_(base_docs.with_entities(Document.id)),
+        Document.vendor_name.isnot(None)
+    ).group_by(Document.vendor_name).order_by(func.sum(Document.total_amount).desc()).limit(20).all()
+
+    return [
+        {
+            "vendor_name": r.vendor_name or "Unknown Vendor",
+            "invoice_count": r.invoice_count,
+            "total_spend": round(float(r.total_spend or 0.0), 2),
+            "avg_invoice_value": round(float(r.avg_amount or 0.0), 2),
+            "confidence": round(float(r.avg_consensus or 1.0) * 100, 1)
+        }
+        for r in results
+    ]
+
+
+@router.get("/volume-trends")
+def get_volume_trends(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(any_user)
+):
+    """
+    Neon Postgres Time-Series Aggregation: Daily processed counts and dollar volume.
+    """
+    base_docs = filter_documents_for_user(db.query(Document), current_user)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
+    
+    # Query documents within cutoff window
+    recent_docs = base_docs.filter(Document.created_at >= cutoff).all()
+    
+    # Aggregate into daily buckets
+    buckets: dict[str, dict[str, Any]] = {}
+    for i in range(days - 1, -1, -1):
+        day_date = (datetime.now(UTC) - timedelta(days=i)).strftime("%Y-%m-%d")
+        day_label = (datetime.now(UTC) - timedelta(days=i)).strftime("%b %d")
+        buckets[day_date] = {"date": day_label, "count": 0, "spend": 0.0}
+
+    for doc in recent_docs:
+        if doc.created_at:
+            day_str = doc.created_at.strftime("%Y-%m-%d")
+            if day_str in buckets:
+                buckets[day_str]["count"] += 1
+                buckets[day_str]["spend"] += float(doc.total_amount or 0.0)
+
+    return list(buckets.values())
+
+
+@router.get("/reconciliation-variances")
+def get_reconciliation_variances(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(any_user)
+):
+    """
+    Neon Postgres Reconciliation Aggregations: Line item variances and match rates.
+    """
+    from app.models.document import ExtractedField, FieldValidationStatus
+    user_docs = filter_documents_for_user(db.query(Document), current_user).with_entities(Document.id)
+    
+    total_fields = db.query(ExtractedField).filter(ExtractedField.document_id.in_(user_docs)).count()
+    flagged_fields = db.query(ExtractedField).filter(
+        ExtractedField.document_id.in_(user_docs),
+        ExtractedField.validation_status == FieldValidationStatus.FLAGGED
+    ).count()
+
+    total_docs = filter_documents_for_user(db.query(Document), current_user).count()
+    matched_docs = filter_documents_for_user(db.query(Document), current_user).filter(
+        Document.status == DocumentStatus.PROCESSED,
+        Document.consensus_score >= 0.90
+    ).count()
+
+    return {
+        "total_documents": total_docs,
+        "matched_documents": matched_docs,
+        "match_rate_pct": round((matched_docs / total_docs * 100), 1) if total_docs > 0 else 100.0,
+        "total_line_items": total_fields,
+        "flagged_variances": flagged_fields,
+        "variance_rate_pct": round((flagged_fields / total_fields * 100), 1) if total_fields > 0 else 0.0
+    }
+
+
+@router.get("/alerts")
+def get_dynamic_alerts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(any_user)
+):
+    """
+    Returns real-time dynamic alerts computed live from Neon Postgres data.
+    """
+    from app.services.alerts import evaluate_dynamic_alerts
+    return evaluate_dynamic_alerts(db, current_user.organization_id)
+
 

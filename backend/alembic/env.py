@@ -6,19 +6,20 @@ and configures SQLAlchemy metadata for auto-generating migrations.
 """
 
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
-from alembic import context
 
+from alembic import context
 from app.config import settings
 from app.database import Base
 
 # Import all models so Alembic can detect them
-from app.models import auth, document, audit, search, comment, api_key  # noqa: F401
+from app.models import api_key, audit, auth, comment, document, search  # noqa: F401
+from sqlalchemy import engine_from_config, pool
 
 # Alembic Config object
 config = context.config
 
 import os
+
 # Override sqlalchemy.url with DIRECT_DATABASE_URL if set (specifically for direct migration connections on Neon), otherwise use DATABASE_URL.
 db_url = os.environ.get("DIRECT_DATABASE_URL") or settings.DATABASE_URL
 config.set_main_option("sqlalchemy.url", db_url)

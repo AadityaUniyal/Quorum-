@@ -5,12 +5,14 @@ interface ConfidenceBarProps {
   score: number; // 0.0 to 1.0
   className?: string;
   showText?: boolean;
+  label?: string;
 }
 
 export const ConfidenceBar: React.FC<ConfidenceBarProps> = ({
   score,
   className,
   showText = true,
+  label,
 }) => {
   const percent = Math.round(score * 100);
   const [animatedWidth, setAnimatedWidth] = useState(0);
@@ -38,7 +40,15 @@ export const ConfidenceBar: React.FC<ConfidenceBarProps> = ({
   }
 
   return (
-    <div className={clsx('flex items-center gap-3 w-full', className)}>
+    <div
+      role="progressbar"
+      aria-label={label || `Confidence score: ${percent}%`}
+      aria-valuenow={percent}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuetext={`${percent}% confidence`}
+      className={clsx('flex items-center gap-3 w-full', className)}
+    >
       <div className={clsx('relative h-2 w-full rounded-full border overflow-hidden', bgColor)}>
         <div
           className={clsx('h-full rounded-full transition-all duration-1000 ease-out shadow-sm', barColor)}
@@ -46,7 +56,7 @@ export const ConfidenceBar: React.FC<ConfidenceBarProps> = ({
         />
       </div>
       {showText && (
-        <span className={clsx('text-xs font-mono font-semibold min-w-[36px] text-right', textColor)}>
+        <span aria-hidden="true" className={clsx('text-xs font-mono font-semibold min-w-[36px] text-right', textColor)}>
           {percent}%
         </span>
       )}

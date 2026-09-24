@@ -1,15 +1,14 @@
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-
 from app.core.security_net import validate_safe_url
 from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.webhook import WebhookConfig
 from app.routes.auth import RoleChecker
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)

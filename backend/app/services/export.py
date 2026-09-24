@@ -257,12 +257,279 @@ def export_to_pdf(results: list[dict[str, Any]], query: str | None = None) -> by
             snippet_raw = item.get("snippet", "") or item.get("excerpt", "")
             if snippet_raw:
                 snippet_formatted = convert_mark_tags_to_reportlab(snippet_raw)
-                snippet_p = Paragraph(f"<i>Snippet:</i> {snippet_formatted}", snippet_style)
-                card_elements.append(snippet_p)
-
+                card_elements.append(Paragraph(snippet_formatted, snippet_style))
             story.append(KeepTogether(card_elements))
             story.append(Spacer(1, 8))
             story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#f1f5f9"), spaceAfter=8))
 
     doc.build(story, canvasmaker=NumberedCanvas)
     return buffer.getvalue()
+
+
+# ------------------------------------------------------------------------------
+# ERP & Accounting Integration Export Engine (Roadmap Phase 2.4)
+# Supports QuickBooks Online, Xero XML, SAP S/4HANA & NetSuite CSV, Universal JSON
+# ------------------------------------------------------------------------------
+
+import json
+
+
+def _extract_doc_payload(doc: Any) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Extracts field key-values and normalized line items from a Document ORM instance."""
+    fields_dict: dict[str, Any] = {}
+    if hasattr(doc, "fields") and doc.fields:
+        for f in doc.fields:
+            fields_dict[f.field_key] = f.consensus_value
+
+    line_items: list[dict[str, Any]] = []
+    items_raw = fields_dict.get("line_items") or fields_dict.get("items") or fields_dict.get("table")
+    if items_raw:
+        if isinstance(items_raw, str):
+            try:
+                parsed = json.loads(items_raw)
+                if isinstance(parsed, list):
+                    line_items = parsed
+            except Exception:
+                pass
+        elif isinstance(items_raw, list):
+            line_items = items_raw
+
+    if not line_items:
+        total = fields_dict.get("total_amount") or fields_dict.get("total") or "0.00"
+        clean_total = re.sub(r"[^\d.]", "", str(total)) or "0.00"
+        vendor = fields_dict.get("vendor_name") or fields_dict.get("vendor") or "Procurement Item"
+        line_items = [{
+            "description": f"Procurement Charges — {vendor}",
+            "quantity": 1,
+            "unit_price": float(clean_total),
+            "total": float(clean_total)
+        }]
+
+    return fields_dict, line_items
+
+
+def export_to_quickbooks(doc: Any) -> dict[str, Any]:
+    """
+    Exports extracted document data to standard QuickBooks Online / Desktop Bill JSON schema.
+    """
+    fields, items = _extract_doc_payload(doc)
+
+    vendor = fields.get("vendor_name") or fields.get("vendor") or "Generic Vendor"
+    inv_num = fields.get("invoice_number") or fields.get("invoice_id") or doc.filename
+    total_str = fields.get("total_amount") or fields.get("total") or "0.00"
+    total_clean = float(re.sub(r"[^\d.]", "", str(total_str)) or 0.0)
+    doc_date = fields.get("invoice_date") or fields.get("date") or datetime.now(UTC).strftime("%Y-%m-%d")
+    due_date = fields.get("due_date") or doc_date
+
+    lines = []
+    for idx, item in enumerate(items, 1):
+        line_qty = float(item.get("quantity") or item.get("qty") or 1)
+        line_unit = float(item.get("unit_price") or item.get("price") or 0.0)
+        line_total = float(item.get("total") or item.get("amount") or (line_qty * line_unit))
+        lines.append({
+            "Id": str(idx),
+            "LineNum": idx,
+            "Description": item.get("description") or item.get("name") or f"Item {idx}",
+            "Amount": line_total,
+            "DetailType": "SalesItemLineDetail",
+            "SalesItemLineDetail": {
+                "ItemRef": {
+                    "name": item.get("sku") or item.get("item_code") or "Services",
+                    "value": "1"
+                },
+                "UnitPrice": line_unit,
+                "Qty": line_qty
+            }
+        })
+
+    return {
+        "Bill": {
+            "VendorRef": {
+                "name": vendor,
+                "value": "VENDOR_AUTODETECT"
+            },
+            "TxnDate": doc_date,
+            "DueDate": due_date,
+            "DocNumber": inv_num,
+            "TotalAmt": total_clean,
+            "PrivateNote": f"Processed via DocIntel AI Multi-Agent Consensus (Score: {doc.consensus_score or 1.0:.2f})",
+            "Line": lines
+        },
+        "DocIntelMetadata": {
+            "document_id": str(doc.id),
+            "filename": doc.filename,
+            "consensus_score": doc.consensus_score,
+            "exported_at": datetime.now(UTC).isoformat()
+        }
+    }
+
+
+def export_to_xero(doc: Any) -> str:
+    """
+    Exports extracted document data to standardized Xero ACCPAY XML payload.
+    """
+    fields, items = _extract_doc_payload(doc)
+
+    vendor = html.escape(str(fields.get("vendor_name") or fields.get("vendor") or "Generic Vendor"))
+    inv_num = html.escape(str(fields.get("invoice_number") or fields.get("invoice_id") or doc.filename))
+    doc_date = html.escape(str(fields.get("invoice_date") or fields.get("date") or datetime.now(UTC).strftime("%Y-%m-%d")))
+    due_date = html.escape(str(fields.get("due_date") or doc_date))
+    total_str = fields.get("total_amount") or fields.get("total") or "0.00"
+    total_clean = float(re.sub(r"[^\d.]", "", str(total_str)) or 0.0)
+
+    line_items_xml = []
+    for item in items:
+        desc = html.escape(str(item.get("description") or item.get("name") or "Item"))
+        qty = float(item.get("quantity") or item.get("qty") or 1)
+        unit = float(item.get("unit_price") or item.get("price") or 0.0)
+        line_tot = float(item.get("total") or item.get("amount") or (qty * unit))
+        line_items_xml.append(f"""      <LineItem>
+        <Description>{desc}</Description>
+        <Quantity>{qty}</Quantity>
+        <UnitAmount>{unit:.2f}</UnitAmount>
+        <LineAmount>{line_tot:.2f}</LineAmount>
+        <AccountCode>200</AccountCode>
+      </LineItem>""")
+
+    xml_lines = "\n".join(line_items_xml)
+    return f"""<?xml version="1.0" encoding="utf-8"?>
+<Invoices>
+  <Invoice>
+    <Type>ACCPAY</Type>
+    <Contact>
+      <Name>{vendor}</Name>
+    </Contact>
+    <Date>{doc_date}</Date>
+    <DueDate>{due_date}</DueDate>
+    <InvoiceNumber>{inv_num}</InvoiceNumber>
+    <Status>AUTHORISED</Status>
+    <LineAmountTypes>Exclusive</LineAmountTypes>
+    <LineItems>
+{xml_lines}
+    </LineItems>
+    <Total>{total_clean:.2f}</Total>
+  </Invoice>
+</Invoices>"""
+
+
+def export_to_sap(doc: Any) -> str:
+    """
+    Exports extracted document data to standard SAP S/4HANA and NetSuite AP Journal CSV format.
+    """
+    fields, items = _extract_doc_payload(doc)
+
+    vendor = sanitize_csv_cell(fields.get("vendor_name") or fields.get("vendor") or "VEND_9001")
+    inv_num = sanitize_csv_cell(fields.get("invoice_number") or fields.get("invoice_id") or doc.filename)
+    doc_date = sanitize_csv_cell(fields.get("invoice_date") or fields.get("date") or datetime.now(UTC).strftime("%Y-%m-%d"))
+    total_str = fields.get("total_amount") or fields.get("total") or "0.00"
+    total_clean = float(re.sub(r"[^\d.]", "", str(total_str)) or 0.0)
+
+    output = io.StringIO()
+    writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
+
+    # Standard SAP FI-AP Header
+    writer.writerow([
+        "RecordType",
+        "CompanyCode",
+        "DocumentDate",
+        "PostingDate",
+        "Reference",
+        "Currency",
+        "VendorAccount",
+        "GLAccount",
+        "DebitCredit",
+        "Amount",
+        "TaxCode",
+        "ItemText"
+    ])
+
+    # Header Row
+    writer.writerow([
+        "HEADER",
+        "1000",
+        doc_date,
+        doc_date,
+        inv_num,
+        "USD",
+        vendor,
+        "",
+        "",
+        "",
+        "",
+        f"DocIntel AI Consensus {doc.consensus_score or 1.0:.2f}"
+    ])
+
+    # Debit Lines (Expense Items)
+    for idx, item in enumerate(items, 1):
+        desc = sanitize_csv_cell(item.get("description") or f"Line Item {idx}")
+        qty = float(item.get("quantity") or item.get("qty") or 1)
+        unit = float(item.get("unit_price") or item.get("price") or 0.0)
+        line_tot = float(item.get("total") or item.get("amount") or (qty * unit))
+        writer.writerow([
+            "ITEM",
+            "1000",
+            doc_date,
+            doc_date,
+            inv_num,
+            "USD",
+            "",
+            "600100",  # Default AP Operating Expense GL Account
+            "Debit",
+            f"{line_tot:.2f}",
+            "I0",
+            desc
+        ])
+
+    # Credit Line (Vendor Liability)
+    writer.writerow([
+        "ITEM",
+        "1000",
+        doc_date,
+        doc_date,
+        inv_num,
+        "USD",
+        vendor,
+        "200100",  # Accounts Payable GL Account
+        "Credit",
+        f"{total_clean:.2f}",
+        "I0",
+        f"Invoice {inv_num} Total Liability"
+    ])
+
+    return output.getvalue()
+
+
+def export_to_universal_json(doc: Any) -> dict[str, Any]:
+    """
+    Exports full document provenance, fields, table structures, and audit trail in Universal JSON.
+    """
+    fields_dict: dict[str, Any] = {}
+    if hasattr(doc, "fields") and doc.fields:
+        for f in doc.fields:
+            fields_dict[f.field_key] = {
+                "value": f.consensus_value,
+                "confidence": getattr(f, "confidence_score", getattr(f, "confidence", 1.0)),
+                "bounding_box": f.bounding_box,
+                "page_number": f.page_number,
+                "validation_status": f.validation_status.value if f.validation_status else "VALID"
+            }
+
+    _, line_items = _extract_doc_payload(doc)
+
+    return {
+        "schema_version": "2.0.0",
+        "universal_schema_version": "2.0.0",
+        "document_metadata": {
+            "document_id": str(doc.id),
+            "filename": doc.filename,
+            "file_type": doc.file_type,
+            "category": doc.category.value if doc.category else "UNKNOWN",
+            "status": doc.status.value if doc.status else "COMPLETED",
+            "consensus_score": doc.consensus_score,
+            "created_at": doc.created_at.isoformat() if doc.created_at else None,
+            "updated_at": doc.updated_at.isoformat() if doc.updated_at else None,
+        },
+        "extracted_fields": fields_dict,
+        "line_items": line_items,
+        "export_timestamp": datetime.now(UTC).isoformat()
+    }

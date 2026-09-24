@@ -79,6 +79,27 @@ def _fuzzy_match(key: str, candidates: list[str], cutoff: float = 0.6) -> str | 
     return None
 
 
+def _items_merchandise_total(items: list[dict[str, Any]]) -> float:
+    """Calculate merchandise value from line items, independent of tax/freight."""
+    return round(
+        sum(float(i.get("total", float(i.get("qty", 0)) * float(i.get("unit_price", 0)))) for i in items),
+        2,
+    )
+
+
+def _net_document_total(data: dict[str, Any], items: list[dict[str, Any]]) -> float:
+    """Return merchandise total, excluding tax and freight when gross total is supplied."""
+    if data.get("subtotal") is not None:
+        return float(data.get("subtotal") or 0.0)
+    if items:
+        return _items_merchandise_total(items)
+    gross = float(data.get("total_amount") or 0.0)
+    tax = float(data.get("tax") or 0.0)
+    freight = float(data.get("freight") or data.get("shipping") or 0.0)
+    discount = float(data.get("discount") or 0.0)
+    return round(gross - tax - freight + discount, 2)
+
+
 class ThreeWayReconciliationEngine:
     """
     Core algorithmic engine for enterprise 3-way invoice matching.
@@ -205,9 +226,9 @@ class ThreeWayReconciliationEngine:
                 "notes": note,
             })
 
-        # Calculate totals
-        total_po = float(po_data.get("total_amount") or sum(float(i.get("qty", 0)) * float(i.get("unit_price", 0)) for i in po_items))
-        total_inv = float(invoice_data.get("total_amount") or sum(float(i.get("qty", 0)) * float(i.get("unit_price", 0)) for i in inv_items))
+        # Calculate merchandise/net totals independently from tax and freight.
+        total_po = _net_document_total(po_data, po_items)
+        total_inv = _net_document_total(invoice_data, inv_items)
         net_var = round(total_inv - total_po, 2)
         net_var_pct = round((abs(net_var) / total_po * 100.0), 2) if total_po > 0 else 0.0
 

@@ -2,10 +2,9 @@ import logging
 from typing import Any
 from uuid import UUID
 
+from app.models.finops import TokenUsage
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-
-from app.models.finops import TokenUsage
 
 logger = logging.getLogger(__name__)
 

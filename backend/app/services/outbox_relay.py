@@ -6,14 +6,16 @@ Events are committed to the `outbox_events` table as part of the primary busines
 transaction, and then dispatched by the OutboxRelay to RabbitMQ.
 """
 
+import asyncio
 import logging
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 
-from sqlalchemy.orm import Session
-
+from app.database import SessionLocal
 from app.models.outbox import InboxEvent, OutboxEvent
 from app.services.queue import publish_document_event
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +79,58 @@ def relay_outbox_events(db: Session, limit: int = 50) -> int:
         db.commit()
 
     return published_count
+
+
+async def run_outbox_relay_loop(
+    interval_seconds: float = 2.0,
+    stop_event: asyncio.Event | None = None,
+    batch_limit: int = 50,
+    session_factory: Callable[[], Session] | None = None,
+) -> None:
+    """
+    Periodically executes relay_outbox_events in a background loop.
+    Uses asyncio.to_thread to execute synchronous DB/RabbitMQ operations off the event loop.
+    Accepts an optional stop_event (asyncio.Event) for clean graceful shutdown, and handles asyncio.CancelledError.
+    Short-lived sessions (SessionLocal()) are created and closed cleanly in a try...finally block.
+    """
+    factory = session_factory or SessionLocal
+
+    def _relay_step() -> int:
+        db = factory()
+        try:
+            return relay_outbox_events(db, limit=batch_limit)
+        finally:
+            db.close()
+
+    logger.info(f"Starting outbox relay periodic loop (interval={interval_seconds}s)")
+    while True:
+        if stop_event is not None and stop_event.is_set():
+            break
+        try:
+            count = await asyncio.to_thread(_relay_step)
+            if count > 0:
+                logger.info(f"Outbox relay processed and published {count} pending events")
+        except asyncio.CancelledError:
+            logger.info("Outbox relay loop received cancellation request")
+            break
+        except Exception as e:
+            logger.error(f"Error during outbox relay execution: {e}", exc_info=True)
+
+        try:
+            if stop_event is not None:
+                await asyncio.wait_for(stop_event.wait(), timeout=interval_seconds)
+                # If wait() returned, stop_event was signaled
+                break
+            else:
+                await asyncio.sleep(interval_seconds)
+        except TimeoutError:
+            # Normal timeout: proceed to next iteration
+            continue
+        except asyncio.CancelledError:
+            logger.info("Outbox relay loop cancelled during sleep")
+            break
+
+    logger.info("Outbox relay loop stopped")
 
 
 def is_inbox_message_processed(db: Session, event_id: str, consumer: str) -> bool:

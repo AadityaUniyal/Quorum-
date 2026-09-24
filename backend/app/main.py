@@ -10,22 +10,22 @@ Production-grade FastAPI application with:
 - CORS with configurable origins
 """
 
+import asyncio
 import time
 from contextlib import asynccontextmanager
 from typing import Any
-
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 
 import app.models  # Registers all models via app/models/__init__.py
 from app.config import settings
 from app.database import Base, engine
 from app.limiter import limiter
 from app.logging_config import generate_trace_id, get_logger, setup_logging, trace_id_var
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = get_logger(__name__)
 
@@ -110,7 +110,48 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Database table creation failed: {e}", extra={"trace_id": "startup"})
 
+    relay_task: asyncio.Task | None = None
+    stop_event: asyncio.Event | None = None
+
+    if settings.OUTBOX_RELAY_ENABLED and settings.ENVIRONMENT.lower() not in {"testing", "test"}:
+        from app.services.outbox_relay import run_outbox_relay_loop
+
+        stop_event = asyncio.Event()
+        app.state.outbox_relay_stop_event = stop_event
+        relay_task = asyncio.create_task(
+            run_outbox_relay_loop(
+                interval_seconds=settings.OUTBOX_RELAY_INTERVAL_SECONDS,
+                stop_event=stop_event,
+            ),
+            name="outbox_relay_task",
+        )
+        app.state.outbox_relay_task = relay_task
+        logger.info("Outbox relay background task started", extra={"trace_id": "startup"})
+    else:
+        app.state.outbox_relay_task = None
+        app.state.outbox_relay_stop_event = None
+
     yield
+
+    # Graceful shutdown: signal stop event, cancel task, and await completion
+    active_stop_event = getattr(app.state, "outbox_relay_stop_event", stop_event)
+    active_relay_task = getattr(app.state, "outbox_relay_task", relay_task)
+
+    if active_stop_event is not None:
+        active_stop_event.set()
+
+    if active_relay_task is not None and not active_relay_task.done():
+        logger.info("Stopping outbox relay background task...", extra={"trace_id": "shutdown"})
+        active_relay_task.cancel()
+        try:
+            await active_relay_task
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"Error while stopping outbox relay task: {e}", extra={"trace_id": "shutdown"})
+
+    app.state.outbox_relay_task = None
+    app.state.outbox_relay_stop_event = None
 
     logger.info("DocIntel AI shutting down", extra={"trace_id": "shutdown"})
 
@@ -192,6 +233,7 @@ app.add_middleware(TraceIDMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_cors_origins(),
+    allow_origin_regex=settings.CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -202,9 +244,11 @@ from app.routes import (  # noqa: E402
     admin,
     analytics,
     auth,
+    benchmarks,
     bookmarks,
     comments,
     crawl,
+    demo,
     documents,
     notifications,
     rag,
@@ -231,6 +275,8 @@ app.include_router(webhooks.router)
 app.include_router(bookmarks.router)
 app.include_router(admin.router)
 app.include_router(users.router)
+app.include_router(demo.router)
+app.include_router(benchmarks.router)
 
 # ─── Health & System Endpoints ───────────────────────────────────────────────
 
@@ -287,7 +333,8 @@ def health_readiness():
             host=settings.REDIS_HOST,
             port=settings.REDIS_PORT,
             password=settings.REDIS_PASSWORD,
-            socket_timeout=2
+            socket_connect_timeout=0.5,
+            socket_timeout=0.5,
         )
         r.ping()
         health["checks"]["redis"] = {"status": "connected"}
@@ -299,6 +346,9 @@ def health_readiness():
 
     # Check RabbitMQ
     try:
+        import socket
+        with socket.create_connection((settings.RABBITMQ_HOST, settings.RABBITMQ_PORT), timeout=0.5):
+            pass
         import pika
         connection = pika.BlockingConnection(
             pika.ConnectionParameters(
@@ -308,7 +358,7 @@ def health_readiness():
                     settings.RABBITMQ_USER, settings.RABBITMQ_PASS
                 ),
                 connection_attempts=1,
-                socket_timeout=2,
+                socket_timeout=1,
             )
         )
         connection.close()
@@ -338,7 +388,6 @@ from fastapi.responses import PlainTextResponse
 def get_queue_depth() -> int:
     try:
         import pika
-
         from app.config import settings
         credentials = pika.PlainCredentials(settings.RABBITMQ_USER, settings.RABBITMQ_PASS)
         parameters = pika.ConnectionParameters(

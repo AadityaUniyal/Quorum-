@@ -1,10 +1,9 @@
 import uuid
 from datetime import UTC, datetime
 
+from app.database import GUID, Base
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
-
-from app.database import GUID, Base
 
 
 class ApiKey(Base):

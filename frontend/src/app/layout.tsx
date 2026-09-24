@@ -3,8 +3,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DocIntel AI - Distributed Document Intelligence Platform",
-  description: "Automated multi-agent document auditing, structured text extraction, RAG search, and human-in-the-loop validation.",
+  title: "Quorum — Enterprise Document Analytics & Verification Platform",
+  description: "Real-time AI document analytics, multi-agent verification, spend analytics, and automated reconciliation powered by Neon Postgres.",
 };
 
 export default function RootLayout({

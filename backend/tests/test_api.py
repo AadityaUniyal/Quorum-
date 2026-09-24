@@ -1,205 +1,109 @@
 """
-API integration tests using FastAPI TestClient.
-
-Tests cover:
-- Authentication flow (register, login, token validation, refresh)
-- Document CRUD operations with RBAC enforcement
-- Upload idempotency (SHA-256 deduplication)
-- Review queue workflow (lock, submit, unlock)
-- Search endpoints (metadata, semantic)
-- Analytics endpoints (KPIs, charts, audit logs)
+Integration tests for FastAPI API routes:
+- Health check endpoints
+- Metrics endpoint
+- Authentication security gates
 """
 
+from fastapi import status
 
 
-# ─── Auth API Tests ──────────────────────────────────────────────────────────
-
-class TestAuthAPI:
-    """Test authentication endpoints."""
-
-    def test_register_new_user(self, client):
-        """Registration should create a user and return 200."""
-        response = client.post("/api/auth/register", json={
-            "email": "newuser@test.com",
-            "password": "SecurePass123!",
-            "full_name": "New User",
-            "role": "VIEWER"
-        })
-        assert response.status_code == 201
-        data = response.json()
-        assert data["email"] == "newuser@test.com"
-        assert "id" in data
-
-    def test_register_duplicate_email(self, client, registered_user):
-        """Duplicate email registration should fail."""
-        response = client.post("/api/auth/register", json={
-            "email": registered_user["email"],
-            "password": "AnotherPass123!",
-            "full_name": "Duplicate User",
-            "role": "VIEWER"
-        })
-        assert response.status_code in (400, 409)
-
-    def test_login_valid_credentials(self, client, registered_user):
-        """Login with valid credentials should return a token."""
-        response = client.post("/api/auth/login", json={
-            "email": registered_user["email"],
-            "password": registered_user["password"]
-        })
-        assert response.status_code == 200
-        data = response.json()
-        assert "access_token" in data
-
-    def test_login_invalid_password(self, client, registered_user):
-        """Login with wrong password should fail."""
-        response = client.post("/api/auth/login", json={
-            "email": registered_user["email"],
-            "password": "WrongPassword!"
-        })
-        assert response.status_code in (400, 401)
-
-    def test_login_nonexistent_user(self, client):
-        """Login with non-existent email should fail."""
-        response = client.post("/api/auth/login", json={
-            "email": "nonexistent@test.com",
-            "password": "SomePass123!"
-        })
-        assert response.status_code in (400, 401, 404)
-
-    def test_get_me_authenticated(self, client, auth_headers):
-        """GET /me with valid token should return user info."""
-        response = client.get("/api/auth/me", headers=auth_headers)
-        assert response.status_code == 200
-        data = response.json()
-        assert "email" in data
-
-    def test_get_me_unauthenticated(self, client):
-        """GET /me without token should fail."""
-        response = client.get("/api/auth/me")
-        assert response.status_code in (401, 403)
+def test_health_root(client):
+    """Verify root health endpoint returns 200 and healthy status."""
+    response = client.get("/")
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["status"] == "healthy"
 
 
-# ─── Document API Tests ─────────────────────────────────────────────────────
-
-class TestDocumentAPI:
-    """Test document CRUD endpoints."""
-
-    def test_upload_document(self, client, auth_headers, sample_upload_file):
-        """Uploading a valid file should succeed."""
-        with open(sample_upload_file, "rb") as f:
-            response = client.post(
-                "/api/documents/upload",
-                files={"file": ("test_invoice.txt", f, "text/plain")},
-                headers=auth_headers
-            )
-        assert response.status_code in (200, 201)
-        data = response.json()
-        assert "id" in data or "document_id" in data
-
-    def test_upload_without_auth(self, client, sample_upload_file):
-        """Upload without authentication should fail."""
-        with open(sample_upload_file, "rb") as f:
-            response = client.post(
-                "/api/documents/upload",
-                files={"file": ("test.txt", f, "text/plain")}
-            )
-        assert response.status_code in (401, 403)
-
-    def test_list_documents(self, client, auth_headers):
-        """List documents should return an array."""
-        response = client.get("/api/documents", headers=auth_headers)
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
-
-    def test_list_documents_with_category_filter(self, client, auth_headers):
-        """List documents with category filter should work."""
-        response = client.get(
-            "/api/documents?category=INVOICE",
-            headers=auth_headers
-        )
-        assert response.status_code == 200
-
-    def test_get_nonexistent_document(self, client, auth_headers):
-        """Getting a non-existent document should return 404."""
-        import uuid
-        fake_id = str(uuid.uuid4())
-        response = client.get(
-            f"/api/documents/{fake_id}",
-            headers=auth_headers
-        )
-        assert response.status_code == 404
+def test_health_liveness(client):
+    """Verify Kubernetes liveness probe returns 200 OK."""
+    response = client.get("/health/live")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["status"] == "alive"
 
 
-# ─── Search API Tests ────────────────────────────────────────────────────────
-
-class TestSearchAPI:
-    """Test search endpoints."""
-
-    def test_metadata_search(self, client, auth_headers):
-        """Metadata search should return results."""
-        response = client.get(
-            "/api/search?query=invoice",
-            headers=auth_headers
-        )
-        assert response.status_code == 200
-
-    def test_semantic_search(self, client, auth_headers):
-        """Semantic search should accept a query and return results."""
-        response = client.post(
-            "/api/search/semantic",
-            json={"query": "find invoices with high totals"},
-            headers=auth_headers
-        )
-        # May return 200 or 500 depending on ChromaDB availability
-        assert response.status_code in (200, 500)
+def test_metrics_endpoint(client):
+    """Verify Prometheus metrics collector endpoint returns system telemetry."""
+    response = client.get("/metrics")
+    assert response.status_code == status.HTTP_200_OK
+    assert "googi_http_requests_total" in response.text
 
 
-# ─── Analytics API Tests ─────────────────────────────────────────────────────
-
-class TestAnalyticsAPI:
-    """Test analytics endpoints."""
-
-    def test_get_kpis(self, client, auth_headers):
-        """KPI endpoint should return metrics."""
-        response = client.get("/api/analytics/kpis", headers=auth_headers)
-        assert response.status_code == 200
-        data = response.json()
-        assert "total_documents" in data
-
-    def test_get_charts(self, client, auth_headers):
-        """Charts endpoint should return chart data."""
-        response = client.get("/api/analytics/charts", headers=auth_headers)
-        assert response.status_code == 200
-        data = response.json()
-        assert "category_distribution" in data
-
-    def test_get_audit_logs(self, client, auth_headers):
-        """Audit logs endpoint should return log entries."""
-        response = client.get("/api/analytics/audit-logs", headers=auth_headers)
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
+def test_protected_route_requires_auth(client):
+    """Verify documents API blocks unauthenticated access with 401 Unauthorized."""
+    response = client.get("/api/documents")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-# ─── Health Check Tests ──────────────────────────────────────────────────────
+def test_authenticated_document_list(client, test_admin_user):
+    """Verify authenticated admin can list documents."""
+    response = client.get("/api/documents", headers=test_admin_user["headers"])
+    assert response.status_code == status.HTTP_200_OK
+    assert isinstance(response.json(), list)
 
-class TestHealthCheck:
-    """Test health and system endpoints."""
 
-    def test_root_health_check(self, client):
-        """Root endpoint should return healthy status."""
-        response = client.get("/")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "healthy"
+def test_seed_demo_sandbox(client, test_admin_user):
+    """Verify 1-click demo sandbox seeds enterprise benchmark documents."""
+    response = client.post("/api/v1/demo/seed", headers=test_admin_user["headers"])
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    assert "Successfully seeded" in data["message"]
+    assert len(data["documents"]) >= 4
 
-class TestHealthEndpoint:
-    """Test the /health endpoint returns detailed health status."""
 
-    def test_health_endpoint(self, client):
-        response = client.get("/health")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] in ("healthy", "degraded")
-        assert isinstance(data.get("checks"), dict)
+def test_benchmarks_endpoint(client):
+    """Verify public benchmark observatory returns empirical evaluation metrics."""
+    response = client.get("/api/v1/benchmarks/latest")
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert "metrics" in data
+    assert "competitor_comparison" in data
+    assert data["metrics"]["math_rule_accuracy"] == 100.0
+
+
+def test_batch_upload_documents(client, test_admin_user):
+    """Verify batch document upload processes multiple files in single payload."""
+    files = [
+        ("files", ("invoice_batch_1.txt", b"INVOICE #9988\nTotal: $120.00\nVendor: Acme Corp", "text/plain")),
+        ("files", ("po_batch_2.txt", b"PURCHASE ORDER #4433\nTotal: $450.00\nBuyer: Global Corp", "text/plain")),
+    ]
+    response = client.post("/api/documents/batch-upload", files=files, headers=test_admin_user["headers"])
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    assert data["total"] == 2
+    assert data["successful"] == 2
+    assert len(data["items"]) == 2
+    assert data["items"][0]["status"] in ["INGESTED", "PROCESSED", "AWAITING_REVIEW"]
+
+
+def test_document_export_formats(client, test_admin_user):
+    """Verify document ERP exports for QuickBooks, Xero, SAP, and Universal JSON."""
+    # Seed demo to ensure populated fields
+    seed_res = client.post("/api/v1/demo/seed", headers=test_admin_user["headers"])
+    assert seed_res.status_code == status.HTTP_201_CREATED
+    doc_id = seed_res.json()["documents"][0]["id"]
+
+    # Test QuickBooks JSON
+    qb_res = client.get(f"/api/documents/{doc_id}/export/quickbooks", headers=test_admin_user["headers"])
+    assert qb_res.status_code == status.HTTP_200_OK
+    qb_data = qb_res.json()
+    assert "Bill" in qb_data
+
+    # Test Xero XML
+    xero_res = client.get(f"/api/documents/{doc_id}/export/xero", headers=test_admin_user["headers"])
+    assert xero_res.status_code == status.HTTP_200_OK
+    assert "xml_payload" in xero_res.json()
+    assert "<Invoice>" in xero_res.json()["xml_payload"]
+
+    # Test SAP CSV
+    sap_res = client.get(f"/api/documents/{doc_id}/export/sap", headers=test_admin_user["headers"])
+    assert sap_res.status_code == status.HTTP_200_OK
+    assert "csv_payload" in sap_res.json()
+    assert "RecordType" in sap_res.json()["csv_payload"]
+
+    # Test Universal JSON
+    univ_res = client.get(f"/api/documents/{doc_id}/export/universal", headers=test_admin_user["headers"])
+    assert univ_res.status_code == status.HTTP_200_OK
+    assert "universal_schema_version" in univ_res.json()
+

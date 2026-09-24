@@ -27,9 +27,8 @@ async def run_agent_safe(agent_func, *args, timeout_seconds: float = 15.0) -> di
     import asyncio
     import time
 
-    from opentelemetry import trace
-
     from app.main import metrics
+    from opentelemetry import trace
 
     tracer = trace.get_tracer(__name__)
     func_name = getattr(agent_func, "__name__", getattr(type(agent_func), "__name__", "agent"))
@@ -139,59 +138,108 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
         logger.warning("Summary agent timed out. Skipping executive summary generation.")
         executive_summary = ""
 
-    # ── Weighted consensus calculation ───────────────────────────────────────
-    w_critic, w_auditor, w_compliance = WEIGHT_CONFIG.get(
+    # ── Field-aware and weighted consensus calculation ──────────────────────
+    cat_critic, cat_auditor, cat_compliance = WEIGHT_CONFIG.get(
         category, WEIGHT_CONFIG[DocumentCategory.UNKNOWN]
     )
 
+    financial_keys = {"total_amount", "subtotal", "tax", "shipping", "discount", "quantity"}
+    compliance_keys = {"governing_law", "standards", "compliance", "regulations"}
+
     field_reports = []
-    total_confidence = 0.0
+    weighted_confidence_sum = 0.0
+    total_field_weights = 0.0
+    has_anchor_arithmetic_failure = False
 
     for key, value in extracted_fields.items():
-        # Avoid treating failed/timeout agents as 1.0 (100% confidence)
+        # Determine agent weights for this specific field type
+        if key in ("total_amount", "subtotal"):
+            w_critic, w_auditor, w_compliance = 0.25, 0.65, 0.10
+            field_importance = 0.30
+        elif key in financial_keys or key == "line_items":
+            w_critic, w_auditor, w_compliance = 0.30, 0.55, 0.15
+            field_importance = 0.15
+        elif key in compliance_keys:
+            w_critic, w_auditor, w_compliance = 0.25, 0.00, 0.75
+            field_importance = 0.25
+        else:
+            # Metadata / text fields (vendor_name, invoice_number, dates, etc.)
+            w_critic, w_auditor, w_compliance = 0.85, 0.00, 0.15
+            field_importance = 0.05
+
+        # Check agent availability (avoid treating timeout / network failure as 0.0 score)
         critic_eval = critic_results.get(key)
-        if not critic_eval:
-            critic_eval = {"score": 0.0, "notes": "Critic check unavailable (failed/skipped)"}
-
         auditor_eval = auditor_results.get(key)
-        if not auditor_eval:
-            auditor_eval = {"score": 0.0, "notes": "Auditor check unavailable (failed/skipped)"}
-
         compliance_eval = compliance_results.get(key)
-        if not compliance_eval:
-            compliance_eval = {"score": 0.0, "notes": "Compliance check unavailable (failed/skipped)"}
 
-        critic_score     = critic_eval.get("score", 0.0)
-        auditor_score    = auditor_eval.get("score", 0.0)
-        compliance_score = compliance_eval.get("score", 0.0)
+        active_weights = 0.0
+        weighted_val = 0.0
+        missing_agent_penalty = 0.0
 
-        # If the Reconciler overrode this field, blend its score in (50/50 weight)
+        if critic_eval is not None and "score" in critic_eval:
+            critic_score = float(critic_eval["score"])
+            weighted_val += critic_score * w_critic
+            active_weights += w_critic
+        elif w_critic > 0:
+            critic_score = 0.70  # Conservative estimate
+            missing_agent_penalty += 0.05
+            critic_eval = {"score": critic_score, "notes": "Critic check unavailable (skipped/timed out)"}
+
+        if auditor_eval is not None and "score" in auditor_eval:
+            auditor_score = float(auditor_eval["score"])
+            weighted_val += auditor_score * w_auditor
+            active_weights += w_auditor
+        elif w_auditor > 0:
+            auditor_score = 0.70
+            missing_agent_penalty += 0.05
+            auditor_eval = {"score": auditor_score, "notes": "Auditor check unavailable (skipped/timed out)"}
+        else:
+            auditor_score = 1.0  # Inapplicable agent defaults to pass
+
+        if compliance_eval is not None and "score" in compliance_eval:
+            compliance_score = float(compliance_eval["score"])
+            weighted_val += compliance_score * w_compliance
+            active_weights += w_compliance
+        elif w_compliance > 0:
+            compliance_score = 0.70
+            missing_agent_penalty += 0.05
+            compliance_eval = {"score": compliance_score, "notes": "Compliance check unavailable (skipped/timed out)"}
+        else:
+            compliance_score = 1.0
+
+        # Compute normalized confidence among applicable active agents
+        if active_weights > 0:
+            confidence = (weighted_val / active_weights) - missing_agent_penalty
+        else:
+            confidence = 0.95
+
+        # If the Reconciler resolved this field, adopt its adjudicated score
         if key in reconciler_results:
             rec_score = reconciler_results[key]["reconciled_score"]
-            critic_score  = (critic_score  + rec_score) / 2
-            auditor_score = (auditor_score + rec_score) / 2
+            confidence = rec_score
+            critic_score = round((critic_score + rec_score) / 2, 2)
+            auditor_score = round((auditor_score + rec_score) / 2, 2)
 
-        # Weighted confidence
-        confidence = (
-            critic_score     * w_critic
-            + auditor_score  * w_auditor
-            + compliance_score * w_compliance
-        )
-
-        # Apply memory drift penalty
+        # Apply memory drift penalty if historical anomaly detected
         if key in drift_fields:
             drift_entry = next((d for d in drift_flags if d["field"] == key), None)
             if drift_entry:
-                penalty = 0.15 if drift_entry["severity"] == "CRITICAL" else 0.07
+                penalty = 0.15 if drift_entry.get("severity") == "CRITICAL" else 0.07
                 confidence = max(0.0, confidence - penalty)
+
+        confidence = max(0.0, min(1.0, confidence))
+
+        # Check for anchor failure
+        if key in ("total_amount", "subtotal") and auditor_score == 0.0:
+            has_anchor_arithmetic_failure = True
 
         # Build validation notes
         notes_list = []
-        if critic_eval.get("notes"):
+        if critic_eval and critic_eval.get("notes") and critic_score < 0.95:
             notes_list.append(f"Critic: {critic_eval['notes']}")
-        if auditor_eval.get("notes") and auditor_score < 1.0:
+        if auditor_eval and auditor_eval.get("notes") and auditor_score < 1.0:
             notes_list.append(f"Auditor: {auditor_eval['notes']}")
-        if compliance_eval.get("notes") and compliance_score < 1.0:
+        if compliance_eval and compliance_eval.get("notes") and compliance_score < 1.0:
             notes_list.append(f"Compliance: {compliance_eval['notes']}")
         if key in reconciler_results:
             notes_list.append(f"Reconciler: {reconciler_results[key]['notes']}")
@@ -200,13 +248,18 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
             if drift_entry:
                 notes_list.append(
                     f"Memory [{drift_entry['severity']}]: "
-                    f"{key} deviates {drift_entry['deviation_pct']}% from historical average."
+                    f"{key} deviates {drift_entry.get('deviation_pct', 0)}% from historical average."
                 )
 
         validation_notes = " | ".join(notes_list) if notes_list else "All checks passed."
         validation_status = FieldValidationStatus.VALID
 
-        if confidence < 0.85 or auditor_score == 0.0 or compliance_score == 0.0:
+        # Mark FLAGGED if confidence is below threshold or applicable anchor check explicitly failed
+        if confidence < 0.85:
+            validation_status = FieldValidationStatus.FLAGGED
+        elif key in financial_keys and auditor_score == 0.0:
+            validation_status = FieldValidationStatus.FLAGGED
+        elif key in compliance_keys and compliance_score == 0.0:
             validation_status = FieldValidationStatus.FLAGGED
 
         field_reports.append({
@@ -221,9 +274,19 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
             "validation_notes":  validation_notes,
         })
 
-        total_confidence += confidence
+        weighted_confidence_sum += confidence * field_importance
+        total_field_weights += field_importance
 
-    overall_score = round(total_confidence / len(field_reports), 4) if field_reports else 1.0
+    # Normalized overall score based on field importance
+    if total_field_weights > 0:
+        overall_score = round(weighted_confidence_sum / total_field_weights, 4)
+    else:
+        overall_score = 1.0
+
+    # If anchor financial calculation failed, cap overall score so it accurately reflects critical failure
+    if has_anchor_arithmetic_failure:
+        overall_score = min(overall_score, 0.55)
+
     logger.info(f"Consensus complete — score: {overall_score:.2%}, drift flags: {len(drift_flags)}")
 
     return {

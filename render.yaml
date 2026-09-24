@@ -1,0 +1,40 @@
+# Render Blueprint for DocIntel AI (100% Free Tier Compatible)
+# https://render.com/docs/blueprint-spec
+
+services:
+  # FastAPI Backend API & In-Process Async Worker
+  - type: web
+    name: docintel-api
+    runtime: python
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health/ready
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: DATABASE_URL
+        sync: false # Connect to free Neon Postgres: postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require
+      - key: REDIS_URL
+        sync: false # Connect to free Upstash Redis: rediss://default:token@xyz.upstash.io:6379
+      - key: GEMINI_API_KEY
+        sync: false # Free Google AI Studio key (15 RPM / 1M TPM free)
+      - key: LLM_PREFERRED_PROVIDER
+        value: gemini
+      - key: LLM_FALLBACK_ENABLED
+        value: "true"
+      - key: LLM_OFFLINE_MOCK_FALLBACK
+        value: "true"
+      - key: STORAGE_BACKEND
+        value: local
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://docintel-ai.vercel.app,http://localhost:3000

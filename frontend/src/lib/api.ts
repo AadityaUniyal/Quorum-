@@ -39,6 +39,21 @@ export interface DocumentResponse {
   fields: ExtractedField[];
 }
 
+export interface BatchUploadItem {
+  filename: string;
+  document_id: string | null;
+  category: string | null;
+  status: string;
+  error: string | null;
+}
+
+export interface BatchUploadResponse {
+  total: number;
+  successful: number;
+  failed: number;
+  items: BatchUploadItem[];
+}
+
 export interface DocumentSimpleResponse {
   id: string;
   filename: string;
@@ -74,6 +89,28 @@ export interface AuditLogResponse {
   action: string;
   details: Record<string, unknown> | null;
   timestamp: string;
+}
+
+export interface NotificationResponse {
+  id: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface BookmarkResponse {
+  id: string;
+  name: string;
+  query_text: string;
+  filters: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface BookmarkCreate {
+  name: string;
+  query_text: string;
+  filters?: Record<string, unknown>;
 }
 
 export interface CrawledPage {
@@ -120,17 +157,25 @@ export interface ApiKeyResponse {
   is_active: boolean;
 }
 
-export interface BookmarkResponse {
+export interface WebhookResponse {
   id: string;
-  user_id: string;
-  name: string;
-  title?: string;
-  query_text: string;
-  query?: string;
-  filters: Record<string, any> | null;
-  tags?: string[];
-  created_at: string;
+  url: string;
+  event_type: string;
+  is_active: boolean;
+  created_at: string | null;
 }
+
+export interface WebhookCreateRequest {
+  url: string;
+  event_type: string;
+}
+
+export interface WebhookCreateResponse {
+  status: string;
+  message: string;
+  id: string;
+}
+
 
 export interface ExpandQueryResponse {
   original_query: string;
@@ -267,6 +312,15 @@ export const api = {
   },
 
   getMe: async (): Promise<UserResponse> => {
+    if (typeof window !== "undefined") {
+      const demo = localStorage.getItem("docintel_demo_session");
+      if (demo) {
+        try {
+          const user = JSON.parse(demo);
+          if (user?.email) return user;
+        } catch {}
+      }
+    }
     return request("/api/auth/me");
   },
 
@@ -317,11 +371,26 @@ export const api = {
     });
   },
 
-  listDocuments: async (category?: string, status?: string): Promise<DocumentSimpleResponse[]> => {
+  batchUploadDocuments: async (files: File[]): Promise<BatchUploadResponse> => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    return request("/api/documents/batch-upload", {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  exportDocumentErp: async (documentId: string, format: "quickbooks" | "xero" | "sap" | "universal"): Promise<any> => {
+    return request(`/api/documents/${documentId}/export/${format}`);
+  },
+
+  listDocuments: async (category?: string, status?: string, skip?: number, limit?: number): Promise<DocumentSimpleResponse[]> => {
     let url = "/api/documents";
     const params = new URLSearchParams();
     if (category) params.append("category", category);
     if (status) params.append("status", status);
+    if (skip !== undefined) params.append("skip", skip.toString());
+    if (limit !== undefined) params.append("limit", limit.toString());
     if (params.toString()) {
       url += `?${params.toString()}`;
     }
@@ -341,6 +410,20 @@ export const api = {
   deleteDocument: async (id: string): Promise<void> => {
     return request(`/api/documents/${id}`, {
       method: "DELETE",
+    });
+  },
+
+  updateDocument: async (id: string, data: { filename?: string; category?: string }): Promise<DocumentResponse> => {
+    return request(`/api/documents/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  bulkDeleteDocuments: async (documentIds: string[]): Promise<{ message: string; count: number }> => {
+    return request("/api/documents/bulk-delete", {
+      method: "POST",
+      body: JSON.stringify({ document_ids: documentIds }),
     });
   },
 
@@ -369,11 +452,16 @@ export const api = {
     });
   },
 
-  submitReview: async (id: string, updates: { field_key: string; consensus_value: string }[], lockToken?: string): Promise<DocumentResponse> => {
+  submitReview: async (
+    id: string,
+    updates: { field_key: string; consensus_value: string }[],
+    lockToken?: string,
+    deletedKeys?: string[]
+  ): Promise<DocumentResponse> => {
     const queryStr = lockToken ? `?lock_token=${lockToken}` : "";
     return request(`/api/review/${id}/submit${queryStr}`, {
       method: "POST",
-      body: JSON.stringify({ updates }),
+      body: JSON.stringify({ updates, deleted_field_keys: deletedKeys || [] }),
     });
   },
 
@@ -435,22 +523,6 @@ export const api = {
     });
   },
 
-  listBookmarks: async (): Promise<BookmarkResponse[]> => {
-    return request("/api/bookmarks");
-  },
-
-  createBookmark: async (name: string, queryText: string, filters?: Record<string, any>): Promise<BookmarkResponse> => {
-    return request("/api/bookmarks", {
-      method: "POST",
-      body: JSON.stringify({ name, query_text: queryText, filters }),
-    });
-  },
-
-  deleteBookmark: async (bookmarkId: string): Promise<void> => {
-    return request(`/api/bookmarks/${bookmarkId}`, {
-      method: "DELETE",
-    });
-  },
 
   exportSearchResults: async (query: string, format: "csv" | "pdf", category?: string, status?: string, minScore?: number): Promise<Blob> => {
     const params = new URLSearchParams({ format });
@@ -491,6 +563,42 @@ export const api = {
   getAuditLogs: async (limit: number = 50): Promise<AuditLogResponse[]> => {
     return request(`/api/analytics/audit-logs?limit=${limit}`);
   },
+
+  getSpendByVendor: async (days: number = 30): Promise<{ vendor_name: string; invoice_count: number; total_spend: number; avg_invoice_value: number; confidence: number }[]> => {
+    return request(`/api/analytics/spend-by-vendor?days=${days}`);
+  },
+
+  getVolumeTrends: async (days: number = 30): Promise<{ date: string; count: number; spend: number }[]> => {
+    return request(`/api/analytics/volume-trends?days=${days}`);
+  },
+
+  getReconciliationVariances: async (): Promise<{ total_documents: number; matched_documents: number; match_rate_pct: number; total_line_items: number; flagged_variances: number; variance_rate_pct: number }> => {
+    return request("/api/analytics/reconciliation-variances");
+  },
+
+  getDynamicAlerts: async (): Promise<{ id: string; severity: string; type: string; title: string; message: string; document_id: string; vendor_name: string; timestamp: string }[]> => {
+    return request("/api/analytics/alerts");
+  },
+
+  // Notifications
+  getNotifications: () => request<NotificationResponse[]>('/api/notifications'),
+  markNotificationRead: (id: string) => request<{ status: string }>(`/api/notifications/${id}/read`, { method: 'POST' }),
+
+  // Bookmarks  
+  getBookmarks: () => request<BookmarkResponse[]>('/api/bookmarks'),
+  listBookmarks: () => request<BookmarkResponse[]>('/api/bookmarks'),
+  createBookmark: (nameOrData: string | BookmarkCreate, queryText?: string, filters?: Record<string, unknown>) => {
+    const payload: BookmarkCreate =
+      typeof nameOrData === 'string'
+        ? { name: nameOrData, query_text: queryText || '', filters }
+        : nameOrData;
+    return request<BookmarkResponse>('/api/bookmarks', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    });
+  },
+  deleteBookmark: (id: string) => request<void>(`/api/bookmarks/${id}`, { method: 'DELETE' }),
 
   getAgentStats: async () => {
     return request<{
@@ -731,6 +839,74 @@ export const api = {
     audit_results: any[];
   }> => {
     return request(`/api/documents/${documentId}/audit-line-items`);
+  },
+
+  // ── Demo Sandbox & Benchmarks (Roadmap) ─────────────────────────────────────
+
+  seedDemoSandbox: async (): Promise<{ message: string; documents: { id: string; title: string; scenario: string }[] }> => {
+    return request("/api/v1/demo/seed", { method: "POST" });
+  },
+
+  clearDemoSandbox: async (): Promise<{ message: string; deleted_count: number }> => {
+    return request("/api/v1/demo/clear", { method: "DELETE" });
+  },
+
+  getBenchmarks: async (): Promise<{
+    timestamp: string;
+    sample_size: number;
+    metrics: {
+      precision: number;
+      recall: number;
+      f1_score: number;
+      math_rule_accuracy: number;
+      hallucination_rate: number;
+    };
+    competitor_comparison: {
+      single_pass_gpt4_gemini: {
+        precision: number;
+        recall: number;
+        math_error_catch_rate: number;
+        hallucination_rate: number;
+      };
+      docintel_6agent_consensus: {
+        precision: number;
+        recall: number;
+        math_error_catch_rate: number;
+        hallucination_rate: number;
+      };
+    };
+    details_sample: any[];
+  }> => {
+    return request("/api/v1/benchmarks/latest");
+  },
+
+  runBenchmarks: async (sampleSize = 20): Promise<any> => {
+    return request(`/api/v1/benchmarks/run?sample_size=${sampleSize}`, { method: "POST" });
+  },
+
+  // ── Webhooks (Requirement R3) ─────────────────────────────────────────────
+
+  listWebhooks: async (): Promise<WebhookResponse[]> => {
+    return request("/api/webhooks");
+  },
+
+  registerWebhook: async (data: WebhookCreateRequest): Promise<WebhookCreateResponse> => {
+    return request("/api/webhooks", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteWebhook: async (webhookId: string): Promise<void> => {
+    return request(`/api/webhooks/${webhookId}`, {
+      method: "DELETE",
+    });
+  },
+
+  revokeWebhook: async (webhookId: string): Promise<void> => {
+    return request(`/api/webhooks/${webhookId}`, {
+      method: "DELETE",
+    });
   },
 
   // ── Generic HTTP Helpers ───────────────────────────────────────────────────

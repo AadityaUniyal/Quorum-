@@ -4,9 +4,8 @@ from collections.abc import Callable
 from functools import wraps
 
 import redis
-from redis import asyncio as aioredis
-
 from app.config import settings
+from redis import asyncio as aioredis
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +16,21 @@ def get_redis_client() -> redis.Redis:
     """Return a singleton synchronous Redis client."""
     global _redis_client
     if _redis_client is None:
-        _redis_client = redis.Redis(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            password=settings.REDIS_PASSWORD,
-            decode_responses=True,
-            socket_connect_timeout=2,
-        )
+        redis_url = settings.get_redis_url()
+        if redis_url:
+            _redis_client = redis.from_url(
+                redis_url,
+                decode_responses=True,
+                socket_connect_timeout=5,
+            )
+        else:
+            _redis_client = redis.Redis(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                password=settings.REDIS_PASSWORD,
+                decode_responses=True,
+                socket_connect_timeout=2,
+            )
     return _redis_client
 
 # Asynchronous Redis client for general async operations (e.g., SSE reads)
@@ -36,6 +43,8 @@ def get_redis_async_client() -> aioredis.Redis:
         _redis_async_client = aioredis.from_url(
             settings.get_redis_url(),
             decode_responses=True,
+            socket_timeout=3,
+            socket_connect_timeout=3,
         )
     return _redis_async_client
 
@@ -172,18 +181,20 @@ def release_redis_semaphore(name: str, owner_id: str):
 
 async def cache_get(key: str) -> str | None:
     """Get a value from async Redis client."""
+    import asyncio
     try:
         client = get_redis_async_client()
-        return await client.get(key)
+        return await asyncio.wait_for(client.get(key), timeout=2.5)
     except Exception as exc:
         logger.warning(f"Error reading key {key} from async Redis: {exc}")
         return None
 
 async def cache_set(key: str, value: str, ttl: int = 3600) -> bool:
     """Set a value in async Redis client with a TTL."""
+    import asyncio
     try:
         client = get_redis_async_client()
-        await client.setex(key, ttl, value)
+        await asyncio.wait_for(client.setex(key, ttl, value), timeout=2.5)
         return True
     except Exception as exc:
         logger.warning(f"Error setting key {key} in async Redis: {exc}")

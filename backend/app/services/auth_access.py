@@ -6,11 +6,10 @@ Prevents Insecure Direct Object References (IDOR) across documents, RAG queries,
 reviews, exports, and comments.
 """
 
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Query
-
 from app.models.auth import User, UserRole
 from app.models.document import Document
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Query
 
 
 def can_read_document(user: User, doc: Document) -> bool:

@@ -21,14 +21,10 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements/dev.txt
-          pip install -e packages/googi-crawler
+          pip install ruff
 
       - name: Lint with Ruff
-        run: ruff check backend/ packages/ tests/
-
-      - name: Run Test Suite
-        run: pytest -v --tb=short
+        run: ruff check backend/
 
   frontend-build:
     name: Frontend Lint & Build

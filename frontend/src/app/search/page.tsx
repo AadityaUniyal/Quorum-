@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import * as Dialog from '@radix-ui/react-dialog';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
 import DOMPurify from 'dompurify';
@@ -14,7 +16,6 @@ import {
   Sparkles, 
   Loader2, 
   FileText,
-  AlertCircle,
   CheckSquare,
   Square,
   Globe,
@@ -23,7 +24,9 @@ import {
   Bookmark,
   Download,
   Trash2,
-  BookmarkCheck
+  BookmarkCheck,
+  SearchX,
+  RotateCcw
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -350,7 +353,7 @@ export default function SearchPage() {
       printWindow.document.write(`
         <html>
           <head>
-            <title>RAG Copilot Chat Export</title>
+            <title>Document Copilot Chat Export</title>
             <style>
               body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; background: #fff; color: #111; line-height: 1.6; }
               h1 { font-size: 20px; border-bottom: 2px solid #eaeaea; padding-bottom: 10px; margin-bottom: 5px; }
@@ -362,7 +365,7 @@ export default function SearchPage() {
             </style>
           </head>
           <body>
-            <h1>RAG Chat Session Export</h1>
+            <h1>Document Copilot Session Export</h1>
             <div class="header">Exported on: ${new Date().toLocaleString()}</div>
             ${chatHistory.map(m => `
               <div class="msg ${m.role}">
@@ -418,17 +421,17 @@ export default function SearchPage() {
             >
               <div className="flex flex-col items-center gap-3 text-center">
                 <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-accent-2 text-white shadow-lg shadow-primary/20">
-                  <SearchIcon className="h-6 w-6 animate-pulse" />
+                  <SearchIcon className="h-6 w-6 animate-pulse" aria-hidden="true" />
                 </div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-foreground font-sans">Cognitive RAG Search</h1>
+                <h1 className="text-3xl font-extrabold tracking-tight text-foreground font-sans">Neural Semantic Search</h1>
                 <p className="text-xs text-muted-foreground max-w-md font-sans">
-                  Query indexing models semantically or filter properties directly using metadata parameters.
+                  Search across financial records, contracts, and invoices with natural language semantic discovery.
                 </p>
               </div>
 
               <form onSubmit={handleSearchSubmit} className="w-full relative flex flex-col gap-4">
                 <div className="flex items-center gap-3 bg-[#0c0c0c]/85 border border-white/8 focus-within:border-primary/50 focus-within:shadow-primary/5 p-3.5 pl-5 rounded-2xl shadow-2xl transition-all duration-300">
-                  <SearchIcon className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <SearchIcon className="h-5 w-5 text-muted-foreground shrink-0" aria-hidden="true" />
                   <div className="relative grow">
                     <input
                       type="text"
@@ -437,6 +440,7 @@ export default function SearchPage() {
                       onFocus={() => setShowSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                       placeholder={placeholders[placeholderIdx]}
+                      aria-label="Search documents"
                       className="w-full bg-transparent border-0 text-neutral-200 placeholder-neutral-500 text-sm focus:outline-none focus:ring-0 font-sans"
                     />
                     
@@ -448,9 +452,10 @@ export default function SearchPage() {
                             key={i}
                             type="button"
                             onClick={() => handleSelectSuggestion(sug)}
+                            aria-label={`Select search suggestion: ${sug}`}
                             className="w-full text-left px-5 py-3 text-xs text-neutral-300 hover:bg-primary/10 hover:text-primary transition-colors border-b border-white/2 last:border-b-0 cursor-pointer flex items-center gap-2 font-sans"
                           >
-                            <SearchIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                            <SearchIcon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                             {sug}
                           </button>
                         ))}
@@ -465,13 +470,15 @@ export default function SearchPage() {
                     <div className="flex items-center gap-1.5 bg-[#111] p-1 rounded-xl border border-white/4">
                       {[
                         { label: 'Semantic (AI)', value: 'semantic' },
-                        { label: 'Keyword (ts_rank_cd)', value: 'keyword' },
+                        { label: 'Keyword Search', value: 'keyword' },
                         { label: 'Hybrid', value: 'hybrid' }
                       ].map(mode => (
                         <button
                           key={mode.value}
                           type="button"
                           onClick={() => setSearchMode(mode.value as typeof searchMode)}
+                          aria-label={`Search mode: ${mode.label}`}
+                          aria-pressed={searchMode === mode.value}
                           className={clsx(
                             "px-3.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider font-mono cursor-pointer transition-all duration-200",
                             searchMode === mode.value ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
@@ -489,21 +496,24 @@ export default function SearchPage() {
                           setExpandActive(!expandActive);
                           if (!expandActive && query.trim()) handleTriggerExpandQuery();
                         }}
+                        aria-label="Toggle Smart Query Expansion"
+                        aria-pressed={expandActive}
                         className={clsx(
-                          "px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer",
+                          "px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer touch-press",
                           expandActive ? "bg-primary/20 border-primary/40 text-primary" : "bg-[#111] border-white/4 text-neutral-400 hover:text-white"
                         )}
-                        title="Query Expansion via LLM"
+                        title="Smart Query Expansion"
                       >
-                        <Sparkles className="h-3.5 w-3.5" /> Expand Query (AI)
+                        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Smart Query Expansion
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setIsBookmarksOpen(true)}
+                        aria-label={`View saved search bookmarks (${bookmarks.length} saved)`}
                         className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#111] border border-white/4 text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer"
                       >
-                        <BookmarkCheck className="h-3.5 w-3.5 text-primary" /> Bookmarks ({bookmarks.length})
+                        <BookmarkCheck className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> Bookmarks ({bookmarks.length})
                       </button>
                     </div>
                   </div>
@@ -511,7 +521,7 @@ export default function SearchPage() {
                   {/* Paraphrase Chips */}
                   {expandActive && expandedQueries.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 p-2.5 rounded-xl bg-primary/5 border border-primary/15 text-xs">
-                      <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 animate-pulse" />
+                      <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 animate-pulse" aria-hidden="true" />
                       <span className="font-mono text-[10px] uppercase font-bold text-neutral-300">Expanded Paraphrases:</span>
                       {expandedQueries.map((eq, idx) => (
                         <span key={idx} className="px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary font-mono text-[10px]">
@@ -534,6 +544,8 @@ export default function SearchPage() {
                         key={cat.value}
                         type="button"
                         onClick={() => setCategory(cat.value)}
+                        aria-label={`Filter by category: ${cat.label}`}
+                        aria-pressed={category === cat.value}
                         className={clsx(
                           "px-3 py-1.5 rounded-xl text-xs transition-all duration-200 border cursor-pointer",
                           category === cat.value
@@ -559,12 +571,13 @@ export default function SearchPage() {
               {/* Compact Header search bar */}
               <div className="flex flex-col gap-3.5 bg-[#0c0c0c]/85 border border-white/4 p-4 rounded-2xl shadow-md">
                 <form onSubmit={handleSearchSubmit} className="flex items-center gap-3">
-                  <SearchIcon className="h-4.5 w-4.5 text-muted-foreground shrink-0" />
+                  <SearchIcon className="h-4.5 w-4.5 text-muted-foreground shrink-0" aria-hidden="true" />
                   <input
                     type="text"
                     value={query}
                     onChange={(e) => handleInputChange(e.target.value)}
                     placeholder="Search query parameter..."
+                    aria-label="Search documents"
                     className="flex-1 bg-transparent border-0 text-neutral-200 placeholder-neutral-500 text-xs focus:outline-none focus:ring-0 font-sans"
                   />
                   
@@ -581,6 +594,8 @@ export default function SearchPage() {
                         onClick={() => {
                           setSearchMode(mode.value as typeof searchMode);
                         }}
+                        aria-label={`Search mode: ${mode.label}`}
+                        aria-pressed={searchMode === mode.value}
                         className={clsx(
                           "px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-wider font-mono cursor-pointer transition-all",
                           searchMode === mode.value ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
@@ -593,12 +608,14 @@ export default function SearchPage() {
 
                   <button
                     type="submit"
+                    aria-label="Submit search query"
                     className="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg cursor-pointer hover:bg-primary-hover transition-colors shrink-0"
                   >
                     Search
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => {
                       setExpandActive(!expandActive);
                       if (!expandActive && query.trim()) handleTriggerExpandQuery();
@@ -608,9 +625,10 @@ export default function SearchPage() {
                       expandActive ? "bg-primary/20 border-primary/40 text-primary" : "bg-[#111] border-white/4 text-neutral-400 hover:text-white"
                     )}
                     title="Toggle Query Expansion (AI)"
-                    aria-label="Toggle Query Expansion"
+                    aria-label="Toggle AI query expansion"
+                    aria-pressed={expandActive}
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
 
                   <button
@@ -618,9 +636,9 @@ export default function SearchPage() {
                     onClick={() => setIsSaveBookmarkModalOpen(true)}
                     className="p-1.5 rounded-lg border border-white/4 bg-[#111] text-neutral-300 hover:text-primary cursor-pointer transition-colors shrink-0"
                     title="Save Search Bookmark"
-                    aria-label="Save Search Bookmark"
+                    aria-label="Save current search as bookmark"
                   >
-                    <Bookmark className="h-3.5 w-3.5" />
+                    <Bookmark className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
 
                   <button
@@ -628,9 +646,9 @@ export default function SearchPage() {
                     onClick={() => setIsBookmarksOpen(true)}
                     className="px-2.5 py-1.5 rounded-lg border border-white/4 bg-[#111] text-neutral-300 hover:text-white text-xs flex items-center gap-1 cursor-pointer shrink-0"
                     title="Saved Bookmarks"
-                    aria-label="Saved Bookmarks"
+                    aria-label={`View saved bookmarks (${bookmarks.length} saved)`}
                   >
-                    <BookmarkCheck className="h-3.5 w-3.5 text-primary" /> ({bookmarks.length})
+                    <BookmarkCheck className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> ({bookmarks.length})
                   </button>
 
                   <div className="h-5 w-px bg-white/6 shrink-0" />
@@ -640,9 +658,9 @@ export default function SearchPage() {
                     onClick={() => handleExportResults('csv')}
                     disabled={isExporting}
                     className="px-2.5 py-1.5 bg-[#111] border border-white/6 rounded-lg text-xs text-neutral-300 hover:text-white hover:border-white/10 cursor-pointer flex items-center gap-1 shrink-0"
-                    aria-label="Export results as CSV"
+                    aria-label="Export search results as CSV file"
                   >
-                    <Download className="h-3.5 w-3.5" /> CSV
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" /> CSV
                   </button>
 
                   <button
@@ -650,9 +668,9 @@ export default function SearchPage() {
                     onClick={() => handleExportResults('pdf')}
                     disabled={isExporting}
                     className="px-2.5 py-1.5 bg-[#111] border border-white/6 rounded-lg text-xs text-neutral-300 hover:text-white hover:border-white/10 cursor-pointer flex items-center gap-1 shrink-0"
-                    aria-label="Export results as PDF"
+                    aria-label="Export search results as PDF document"
                   >
-                    <FileText className="h-3.5 w-3.5" /> PDF
+                    <FileText className="h-3.5 w-3.5" aria-hidden="true" /> PDF
                   </button>
 
                   <div className="h-5 w-px bg-white/6 shrink-0" />
@@ -662,16 +680,16 @@ export default function SearchPage() {
                     onClick={clearSearch}
                     className="p-1.5 rounded-lg border border-white/4 hover:bg-white/5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors shrink-0"
                     title="Clear search"
-                    aria-label="Clear search"
+                    aria-label="Clear search query and results"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 </form>
 
                 {/* Paraphrase Chips in Header */}
                 {expandActive && expandedQueries.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5 border-t border-white/2 pt-2 text-xs">
-                    <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 animate-pulse" />
+                    <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 animate-pulse" aria-hidden="true" />
                     <span className="font-mono text-[10px] uppercase font-bold text-neutral-400">Expanded Query Variants:</span>
                     {expandedQueries.map((eq, idx) => (
                       <span key={idx} className="px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary font-mono text-[10px]">
@@ -693,9 +711,12 @@ export default function SearchPage() {
                   ].map((cat) => (
                     <button
                       key={cat.value}
+                      type="button"
                       onClick={() => {
                         setCategory(cat.value);
                       }}
+                      aria-label={`Filter by category: ${cat.label}`}
+                      aria-pressed={category === cat.value}
                       className={clsx(
                         "px-3 py-1 rounded-lg text-xs transition-all duration-200 border cursor-pointer",
                         category === cat.value
@@ -715,16 +736,18 @@ export default function SearchPage() {
                 {/* Left Side: Filter Sidebar Panel */}
                 <div className="w-56 border border-white/4 bg-[#0c0c0c]/80 rounded-2xl p-4 flex flex-col gap-6 shrink-0 select-none">
                   <div className="flex items-center gap-2 pb-2 border-b border-white/4">
-                    <Filter className="h-4 w-4 text-primary" />
+                    <Filter className="h-4 w-4 text-primary" aria-hidden="true" />
                     <span className="text-xs font-bold text-foreground">Filter Results</span>
                   </div>
 
                   {/* Category Selection */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Category Type</label>
+                    <label htmlFor="search-category-select" className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Category Type</label>
                     <select
+                      id="search-category-select"
                       value={category}
                       onChange={(e) => { setCategory(e.target.value); }}
+                      aria-label="Filter results by category type"
                       className="w-full bg-[#111] border border-white/6 rounded-xl px-3 py-2 text-xs text-neutral-300 focus:outline-none"
                     >
                       <option value="">All Categories</option>
@@ -749,6 +772,11 @@ export default function SearchPage() {
                       step={5}
                       value={minScore}
                       onChange={(e) => setMinScore(Number(e.target.value))}
+                      aria-label={`Relevance threshold: ${minScore}%`}
+                      aria-valuemin={0}
+                      aria-valuemax={90}
+                      aria-valuenow={minScore}
+                      aria-valuetext={`${minScore} percent minimum relevance`}
                       className="w-full accent-primary h-1 bg-neutral-800 rounded-lg cursor-pointer"
                     />
                   </div>
@@ -761,10 +789,23 @@ export default function SearchPage() {
                       <Loader2 className="h-6 w-6 text-primary animate-spin" />
                     </div>
                   ) : filteredResults.length === 0 ? (
-                    <div className="py-20 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
-                      <AlertCircle className="h-5 w-5 opacity-30" />
-                      <span>No matching document chunks found above score threshold.</span>
-                    </div>
+                    <EmptyState
+                      icon={SearchX}
+                      title="No Search Results"
+                      description="We couldn't find any documents matching your search criteria. Try adjusting your filters, using different keywords, or switching to semantic search mode for better results."
+                      action={
+                        (category || minScore > 0)
+                          ? {
+                              label: "Clear Filters",
+                              onClick: () => {
+                                setCategory('');
+                                setMinScore(0);
+                              },
+                              icon: RotateCcw,
+                            }
+                          : undefined
+                      }
+                    />
                   ) : (
                     filteredResults.map((item, index) => {
                       const isSelected = selectedDocIds.includes(item.id);
@@ -786,13 +827,16 @@ export default function SearchPage() {
                         >
                           {/* Select check button for RAG */}
                           <button
+                            type="button"
                             onClick={() => handleToggleDocSelect(item.id)}
+                            aria-label={`${isSelected ? 'Deselect' : 'Select'} document: ${item.filename}`}
+                            aria-pressed={isSelected}
                             className="p-1 text-muted-foreground hover:text-primary transition-colors cursor-pointer mt-0.5 shrink-0"
                           >
                             {isSelected ? (
-                              <CheckSquare className="h-4 w-4.5 text-primary" />
+                              <CheckSquare className="h-4 w-4.5 text-primary" aria-hidden="true" />
                             ) : (
-                              <Square className="h-4 w-4.5 opacity-60" />
+                              <Square className="h-4 w-4.5 opacity-60" aria-hidden="true" />
                             )}
                           </button>
 
@@ -800,9 +844,9 @@ export default function SearchPage() {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2.5">
                                 {item.type === 'web' ? (
-                                  <Globe className="h-4 w-4 text-emerald-400 shrink-0" />
+                                  <Globe className="h-4 w-4 text-emerald-400 shrink-0" aria-hidden="true" />
                                 ) : (
-                                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
                                 )}
                                 <span className="text-xs font-bold text-neutral-200 truncate max-w-[160px]">{item.filename}</span>
                                 <Badge variant="category" value={item.category} size="sm">
@@ -831,7 +875,9 @@ export default function SearchPage() {
                                 </span>
                                 {item.type !== 'web' && (
                                   <button
+                                    type="button"
                                     onClick={() => router.push(`/review?doc_id=${item.id}`)}
+                                    aria-label={`Review extraction for document ${item.filename}`}
                                     className="px-2 py-0.5 text-[9px] font-bold border border-white/6 bg-white/2 hover:bg-white/8 hover:text-white rounded text-neutral-450 cursor-pointer transition-all"
                                   >
                                     Review
@@ -878,12 +924,14 @@ export default function SearchPage() {
             {/* Chat header */}
             <div className="p-4 border-b border-white/4 bg-white/1 flex items-center justify-between select-none">
               <div className="flex items-center gap-2.5 text-primary">
-                <MessageSquare className="h-4.5 w-4.5" />
+                <MessageSquare className="h-4.5 w-4.5" aria-hidden="true" />
                 <span className="text-xs font-bold tracking-wider uppercase font-sans">RAG Copilot Chat</span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
+                  type="button"
                   onClick={handleExportChatToPDF}
+                  aria-label="Export copilot chat session to PDF document"
                   className="px-2 py-0.5 text-[9px] font-bold border border-white/8 bg-white/2 hover:bg-white/8 rounded text-neutral-350 hover:text-white transition-all cursor-pointer"
                 >
                   Export PDF
@@ -892,10 +940,12 @@ export default function SearchPage() {
                   {selectedDocIds.length} doc{selectedDocIds.length > 1 ? 's' : ''}
                 </span>
                 <button
+                  type="button"
                   onClick={() => setIsChatOpen(false)}
+                  aria-label="Close copilot chat panel"
                   className="p-1 text-neutral-400 hover:text-white rounded cursor-pointer transition-colors"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -903,13 +953,13 @@ export default function SearchPage() {
             {/* Chat History */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs scrollbar">
               {chatHistory.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6 text-neutral-400 space-y-2">
-                  <Sparkles className="h-8 w-8 text-primary/40 animate-pulse" />
-                  <p className="font-semibold text-neutral-200">Ask DocIntel Copilot</p>
-                  <p className="text-[11px] leading-relaxed">
-                    Query across all {selectedDocIds.length} selected document context sources using RAG search synthesis.
-                  </p>
-                </div>
+                <EmptyState
+                  icon={Sparkles}
+                  title="Ask DocIntel Copilot"
+                  description={`Query across all ${selectedDocIds.length} selected document context sources using RAG search synthesis.`}
+                  compact
+                  className="h-full"
+                />
               ) : (
                 chatHistory.map((msg, idx) => (
                   <div
@@ -927,7 +977,7 @@ export default function SearchPage() {
                     <div className="whitespace-pre-wrap leading-relaxed">
                       {msg.content || (isChatLoading && idx === chatHistory.length - 1 ? (
                         <span className="inline-flex items-center gap-1 text-primary">
-                          <Loader2 className="h-3 w-3 animate-spin" /> Thinking...
+                          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> Thinking...
                         </span>
                       ) : (
                         ''
@@ -939,7 +989,9 @@ export default function SearchPage() {
                         {msg.citations.map((cit: any, cIdx: number) => (
                           <button
                             key={cIdx}
+                            type="button"
                             onClick={() => window.open(`/review?doc_id=${cit.id}`, '_blank')}
+                            aria-label={`Open cited source ${cit.name} in document review`}
                             className="text-left text-[11px] text-primary hover:underline truncate"
                           >
                             • {cit.name}
@@ -964,9 +1016,10 @@ export default function SearchPage() {
               <button
                 type="submit"
                 disabled={!chatInput.trim() || isChatLoading}
+                aria-label={isChatLoading ? "Sending query to copilot..." : "Send query to copilot"}
                 className="p-2 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white rounded-xl transition-all shrink-0 cursor-pointer"
               >
-                {isChatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isChatLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="h-4 w-4" aria-hidden="true" />}
               </button>
             </form>
           </motion.div>
@@ -974,109 +1027,134 @@ export default function SearchPage() {
       </AnimatePresence>
 
       {/* Bookmarks Modal */}
-      <AnimatePresence>
-        {isBookmarksOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#0c0c0c] border border-white/8 rounded-2xl w-full max-w-md p-6 flex flex-col gap-4 shadow-2xl"
-            >
-              <div className="flex items-center justify-between border-b border-white/6 pb-3">
-                <div className="flex items-center gap-2 text-primary font-bold text-sm font-sans">
-                  <BookmarkCheck className="h-4.5 w-4.5" /> Saved Searches & Bookmarks
-                </div>
+      <Dialog.Root open={isBookmarksOpen} onOpenChange={setIsBookmarksOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm animate-fadeIn" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0c0c0c] border border-white/8 rounded-2xl w-full max-w-md p-6 flex flex-col gap-4 shadow-2xl focus:outline-none">
+            <div className="flex items-center justify-between border-b border-white/6 pb-3">
+              <div className="flex items-center gap-2 text-primary font-bold text-sm font-sans">
+                <BookmarkCheck className="h-4.5 w-4.5" aria-hidden="true" />
+                <Dialog.Title className="text-sm font-bold text-foreground">Saved Searches & Bookmarks</Dialog.Title>
+              </div>
+              <Dialog.Description className="sr-only">
+                View and apply your saved search queries
+              </Dialog.Description>
+              <Dialog.Close asChild>
                 <button
-                  onClick={() => setIsBookmarksOpen(false)}
-                  className="p-1 text-muted-foreground hover:text-white rounded"
+                  type="button"
+                  aria-label="Close saved bookmarks modal"
+                  className="p-1 text-muted-foreground hover:text-white rounded cursor-pointer"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4" aria-hidden="true" />
                 </button>
-              </div>
+              </Dialog.Close>
+            </div>
 
-              <div className="flex flex-col gap-3 max-h-[350px] overflow-y-auto pr-1 scrollbar">
-                {bookmarks.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-muted-foreground">
-                    No saved search bookmarks yet.
-                  </div>
-                ) : (
-                  bookmarks.map((bm) => (
-                    <div
-                      key={bm.id}
-                      className="p-3 bg-[#111] border border-white/4 hover:border-primary/40 rounded-xl flex items-center justify-between gap-3 group transition-all"
+            <div
+              className="flex flex-col gap-3 max-h-[350px] overflow-y-auto pr-1 scrollbar focus:outline-none focus:ring-1 focus:ring-white/10 rounded"
+              tabIndex={0}
+              aria-label="Saved search bookmarks list"
+            >
+              {bookmarks.length === 0 ? (
+                <EmptyState
+                  icon={BookmarkCheck}
+                  title="No Saved Bookmarks"
+                  description="You haven't saved any search bookmarks yet."
+                  compact
+                />
+              ) : (
+                bookmarks.map((bm) => (
+                  <div
+                    key={bm.id}
+                    className="p-3 bg-[#111] border border-white/4 hover:border-primary/40 rounded-xl flex items-center justify-between gap-3 group transition-all"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleApplyBookmark(bm)}
+                      aria-label={`Apply saved bookmark: ${bm.name} with query "${bm.query_text}"`}
+                      className="flex flex-col gap-1 cursor-pointer flex-1 text-left bg-transparent border-0 p-0 focus:outline-none focus:ring-1 focus:ring-primary rounded"
                     >
-                      <div className="flex flex-col gap-1 cursor-pointer flex-1" onClick={() => handleApplyBookmark(bm)}>
-                        <span className="text-xs font-bold text-foreground font-sans truncate">{bm.name}</span>
-                        <span className="text-[11px] font-mono text-muted-foreground truncate">"{bm.query_text}"</span>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteBookmark(bm.id)}
-                        className="p-1.5 text-muted-foreground hover:text-red-400 cursor-pointer rounded hover:bg-white/5 transition-colors"
-                        title="Delete Bookmark"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                      <span className="text-xs font-bold text-foreground font-sans truncate">{bm.name}</span>
+                      <span className="text-[11px] font-mono text-muted-foreground truncate">"{bm.query_text}"</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteBookmark(bm.id)}
+                      className="p-1.5 text-muted-foreground hover:text-red-400 cursor-pointer rounded hover:bg-white/5 transition-colors"
+                      title="Delete Bookmark"
+                      aria-label={`Delete saved bookmark: ${bm.name}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       {/* Save Bookmark Dialog */}
-      <AnimatePresence>
-        {isSaveBookmarkModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#0c0c0c] border border-white/8 rounded-2xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl"
-            >
-              <div className="flex items-center justify-between border-b border-white/6 pb-3">
-                <div className="flex items-center gap-2 text-primary font-bold text-sm font-sans">
-                  <Bookmark className="h-4.5 w-4.5" /> Save Search Bookmark
-                </div>
+      <Dialog.Root open={isSaveBookmarkModalOpen} onOpenChange={setIsSaveBookmarkModalOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm animate-fadeIn" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0c0c0c] border border-white/8 rounded-2xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-2xl focus:outline-none">
+            <div className="flex items-center justify-between border-b border-white/6 pb-3">
+              <div className="flex items-center gap-2 text-primary font-bold text-sm font-sans">
+                <Bookmark className="h-4.5 w-4.5" aria-hidden="true" />
+                <Dialog.Title className="text-sm font-bold text-foreground">Save Search Bookmark</Dialog.Title>
+              </div>
+              <Dialog.Description className="sr-only">
+                Save current search query and filters as a bookmark
+              </Dialog.Description>
+              <Dialog.Close asChild>
                 <button
-                  onClick={() => setIsSaveBookmarkModalOpen(false)}
-                  className="p-1 text-muted-foreground hover:text-white rounded"
+                  type="button"
+                  aria-label="Close save bookmark dialog"
+                  className="p-1 text-muted-foreground hover:text-white rounded cursor-pointer"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4" aria-hidden="true" />
                 </button>
-              </div>
+              </Dialog.Close>
+            </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-neutral-300">Bookmark Name</label>
-                <input
-                  type="text"
-                  value={bookmarkName}
-                  onChange={(e) => setBookmarkName(e.target.value)}
-                  placeholder={`Search: "${query}"`}
-                  className="w-full bg-[#111] border border-white/6 rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50"
-                />
-              </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="save-bookmark-name-input" className="text-xs font-semibold text-neutral-300">
+                Bookmark Name
+              </label>
+              <input
+                id="save-bookmark-name-input"
+                type="text"
+                value={bookmarkName}
+                onChange={(e) => setBookmarkName(e.target.value)}
+                placeholder={`Search: "${query}"`}
+                autoFocus
+                className="w-full bg-[#111] border border-white/6 rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50"
+              />
+            </div>
 
-              <div className="flex justify-end gap-2 mt-2">
+            <div className="flex justify-end gap-2 mt-2">
+              <Dialog.Close asChild>
                 <button
-                  onClick={() => setIsSaveBookmarkModalOpen(false)}
-                  className="px-3 py-1.5 bg-[#111] border border-white/6 rounded-lg text-xs text-neutral-300 hover:text-white"
+                  type="button"
+                  aria-label="Cancel saving bookmark"
+                  className="px-3 py-1.5 bg-[#111] border border-white/6 rounded-lg text-xs text-neutral-300 hover:text-white cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleSaveBookmark}
-                  className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-semibold hover:bg-primary-hover"
-                >
-                  Save
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </Dialog.Close>
+              <button
+                type="button"
+                onClick={handleSaveBookmark}
+                aria-label="Save bookmark"
+                className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-semibold hover:bg-primary-hover cursor-pointer"
+              >
+                Save
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
     </div>
   );

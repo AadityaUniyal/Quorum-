@@ -5,7 +5,6 @@ from typing import Any
 
 import chromadb
 import numpy as np
-
 from app.config import settings
 from app.services.citation_verifier import verify_citations
 

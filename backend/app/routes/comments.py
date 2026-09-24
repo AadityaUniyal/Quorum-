@@ -1,8 +1,5 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.comment import Comment
@@ -10,6 +7,8 @@ from app.models.document import Document
 from app.routes.auth import RoleChecker
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.services.auth_access import require_document_read, require_document_write
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/documents", tags=["comments"])
 

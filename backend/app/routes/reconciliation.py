@@ -5,16 +5,15 @@ Reconciliation API routes for Enterprise 3-Way Cross-Document Matching.
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.document import Document
 from app.routes.auth import RoleChecker
 from app.services.auth_access import require_document_read
 from app.services.reconciliation_3way import ThreeWayReconciliationEngine
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/v1/reconciliation", tags=["reconciliation"])
 
@@ -34,19 +33,52 @@ class ThreeWayPayloadRequest(BaseModel):
 
 def _doc_to_payload(doc: Document) -> dict[str, Any]:
     """Extracts structured line items and totals from document fields."""
+    import json
     items = []
     total_val = None
     doc_id = str(doc.id)
 
+    item_name = None
+    item_qty = None
+    item_price = None
+
     # Inspect extracted fields
     for field in doc.fields:
-        if field.field_key == "total_amount" and field.consensus_value:
+        val = field.consensus_value or field.extracted_value or ""
+        clean_str = val.replace("$", "").replace(",", "").strip()
+
+        if field.field_key == "total_amount":
             try:
-                # Strip currency symbols and commas
-                clean_num = field.consensus_value.replace("$", "").replace(",", "").strip()
-                total_val = float(clean_num)
+                total_val = float(clean_str)
             except ValueError:
                 pass
+        elif field.field_key == "line_items":
+            try:
+                parsed = json.loads(val)
+                if isinstance(parsed, list):
+                    items.extend(parsed)
+            except Exception:
+                pass
+        elif field.field_key in ("item_name", "description", "part_name"):
+            item_name = val
+        elif field.field_key in ("quantity", "qty"):
+            try:
+                item_qty = float(clean_str)
+            except ValueError:
+                pass
+        elif field.field_key in ("unit_price", "price"):
+            try:
+                item_price = float(clean_str)
+            except ValueError:
+                pass
+
+    if not items and item_name:
+        items.append({
+            "name": item_name,
+            "qty": item_qty or 1.0,
+            "unit_price": item_price or total_val or 0.0,
+            "total": (item_qty or 1.0) * (item_price or total_val or 0.0),
+        })
 
     return {
         "document_id": doc_id,

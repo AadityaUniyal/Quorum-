@@ -3,7 +3,6 @@ import logging
 import threading
 
 import pika
-
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -27,10 +26,18 @@ def register_local_crawl_worker_callback(callback):
     _local_crawl_worker_callback = callback
 
 def get_rabbitmq_connection():
+    url = settings.CLOUDAMQP_URL
+    if url and "<" not in url and ">" not in url:
+        parameters = pika.URLParameters(url)
+        parameters.socket_timeout = 3
+        parameters.connection_attempts = 1
+        return pika.BlockingConnection(parameters)
+
     credentials = pika.PlainCredentials(settings.RABBITMQ_USER, settings.RABBITMQ_PASS)
     parameters = pika.ConnectionParameters(
         host=settings.RABBITMQ_HOST,
         port=settings.RABBITMQ_PORT,
+        virtual_host=settings.RABBITMQ_VHOST,
         credentials=credentials,
         connection_attempts=1,
         retry_delay=1,
@@ -94,7 +101,8 @@ def publish_document_event(event_type: str, document_id: str):
             thread = threading.Thread(
                 target=callback,
                 args=(document_id,),
-                daemon=True
+                daemon=True,
+                name="local_fallback_worker"
             )
             thread.start()
         else:

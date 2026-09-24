@@ -2,6 +2,7 @@ import enum
 import uuid
 from datetime import UTC, datetime
 
+from app.database import GUID, Base
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -16,8 +17,6 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import relationship
-
-from app.database import GUID, Base
 
 
 class DocumentStatus(enum.StrEnum):
@@ -112,6 +111,10 @@ class ExtractedField(Base):
     verification_source = Column(String, default="AI", nullable=False)  # AI, HUMAN, SYSTEM
     verified_by = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     verified_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("ix_extracted_fields_doc_key", "document_id", "field_key"),
+    )
 
     # Relationships
     document = relationship("Document", back_populates="fields")

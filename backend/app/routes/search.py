@@ -1,10 +1,6 @@
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel, model_validator
-from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.models.auth import User, UserRole
 from app.models.document import Document, DocumentCategory, DocumentStatus
@@ -14,6 +10,9 @@ from app.services.cache import cache
 from app.services.export import export_to_csv, export_to_pdf
 from app.services.reranker import rerank_search_results
 from app.services.vector_store import query_rag_knowledge, search_vector_store
+from fastapi import APIRouter, Depends, HTTPException, Response
+from pydantic import BaseModel, model_validator
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +35,8 @@ def get_autocomplete_suggestions(
 
     prefix = q.strip().lower()
 
-    from sqlalchemy import func
-
     from app.models.search import SearchLog
+    from sqlalchemy import func
 
     # Query popular queries matching the prefix
     suggestions = db.query(
@@ -286,9 +284,8 @@ def search_documents_metadata(
 ):
     import time
 
-    from sqlalchemy import func, or_
-
     from app.models.search import CrawledPage, SearchLog
+    from sqlalchemy import func, or_
 
     start_time = time.time()
 
