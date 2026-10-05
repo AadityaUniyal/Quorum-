@@ -16,14 +16,6 @@ interface AuthState {
 
 const DEMO_USER_KEY = 'docintel_demo_session';
 
-const DEFAULT_FOUNDER_USER: UserResponse = {
-  id: 'usr_founder_01',
-  email: 'founder@quorum.ai',
-  full_name: 'Alex Vance (Lead Auditor)',
-  role: 'ADMIN',
-  created_at: '2026-01-01T00:00:00Z',
-};
-
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
@@ -140,11 +132,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     } catch {}
 
-    // Auto-provision default founder session for frictionless exploration
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(DEMO_USER_KEY, JSON.stringify(DEFAULT_FOUNDER_USER));
-      localStorage.setItem('doc_intel_token', 'demo-jwt-bypass-token');
-    }
-    set({ user: DEFAULT_FOUNDER_USER, isAuthenticated: true, isDemoMode: true });
+    // Clean slate: unauthenticated state for new visitors
+    set({ user: null, isAuthenticated: false, isDemoMode: false });
   },
 }));

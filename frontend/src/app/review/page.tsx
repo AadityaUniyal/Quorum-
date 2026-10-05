@@ -484,7 +484,8 @@ export default function ReviewPage() {
             />
           ) : (
             queue?.map((item) => {
-              const lockMatch = item.uploader_name.match(/\(Locked by (.+)\)$/);
+              const uploader = item.uploader_name || '';
+              const lockMatch = uploader.match(/\(Locked by (.+)\)$/);
               const isLocked = Boolean(lockMatch) && item.id !== selectedDocId;
               const lockHolder = lockMatch?.[1] ?? null;
               const lockInitials = lockHolder

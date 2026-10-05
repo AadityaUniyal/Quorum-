@@ -14,29 +14,26 @@ export const ConfidenceBar: React.FC<ConfidenceBarProps> = ({
   showText = true,
   label,
 }) => {
-  const percent = Math.round(score * 100);
+  const percent = Math.min(Math.max(Math.round(score * 100), 0), 100);
   const [animatedWidth, setAnimatedWidth] = useState(0);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setAnimatedWidth(percent);
-    }, 150);
+    }, 120);
     return () => clearTimeout(timer);
   }, [percent]);
 
-  // Color logic based on confidence range
-  let barColor = 'bg-rose-500 shadow-rose-500/20';
+  // Obsidian Titanium accent colors
+  let barGradient = 'from-rose-500 to-rose-600 shadow-[0_0_12px_rgba(244,63,94,0.35)]';
   let textColor = 'text-rose-400';
-  let bgColor = 'bg-rose-950/20 border-rose-900/10';
 
   if (percent >= 85) {
-    barColor = 'bg-emerald-500 shadow-emerald-500/20';
+    barGradient = 'from-emerald-400 to-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.35)]';
     textColor = 'text-emerald-400';
-    bgColor = 'bg-emerald-950/20 border-emerald-900/10';
   } else if (percent >= 70) {
-    barColor = 'bg-amber-500 shadow-amber-500/20';
+    barGradient = 'from-amber-400 to-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.35)]';
     textColor = 'text-amber-400';
-    bgColor = 'bg-amber-950/20 border-amber-900/10';
   }
 
   return (
@@ -47,16 +44,22 @@ export const ConfidenceBar: React.FC<ConfidenceBarProps> = ({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuetext={`${percent}% confidence`}
-      className={clsx('flex items-center gap-3 w-full', className)}
+      className={clsx('flex items-center gap-3 w-full select-none', className)}
     >
-      <div className={clsx('relative h-2 w-full rounded-full border overflow-hidden', bgColor)}>
+      <div className="relative h-2 w-full rounded-full bg-white/[0.05] border border-white/[0.06] overflow-hidden backdrop-blur-md">
         <div
-          className={clsx('h-full rounded-full transition-all duration-1000 ease-out shadow-sm', barColor)}
+          className={clsx(
+            'h-full rounded-full bg-gradient-to-r transition-all duration-700 ease-out',
+            barGradient
+          )}
           style={{ width: `${animatedWidth}%` }}
         />
       </div>
       {showText && (
-        <span aria-hidden="true" className={clsx('text-xs font-mono font-semibold min-w-[36px] text-right', textColor)}>
+        <span
+          aria-hidden="true"
+          className={clsx('text-xs font-mono font-semibold min-w-[36px] text-right', textColor)}
+        >
           {percent}%
         </span>
       )}

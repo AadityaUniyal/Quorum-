@@ -31,7 +31,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         className="shrink-0 drop-shadow-[0_2px_10px_rgba(37,99,235,0.35)] transition-transform hover:scale-105 duration-200"
       >
         <defs>
-          <linearGradient id="docIntelBrandGrad" x1="4" y1="4" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <linearGradient id="quorumBrandGrad" x1="4" y1="4" x2="32" y2="32" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#3B82F6" />
             <stop offset="60%" stopColor="#1D4ED8" />
             <stop offset="100%" stopColor="#1E1B4B" />
@@ -57,7 +57,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         {/* Cognitive Facet Fold */}
         <path
           d="M12 11C12 9.89543 12.8954 9 14 9H23L29 15V24C29 25.1046 28.1046 26 27 26H14C12.8954 26 12 25.1046 12 24V11Z"
-          fill="url(#docIntelBrandGrad)"
+          fill="url(#quorumBrandGrad)"
         />
 
         {/* Corner Fold Reflection */}
@@ -93,7 +93,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
               iconDimensions.badge
             )}
           >
-            AI
+            OS
           </span>
         </div>
       )}

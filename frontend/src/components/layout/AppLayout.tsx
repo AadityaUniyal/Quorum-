@@ -8,8 +8,7 @@ import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
-import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
-
+import { CommandPalette } from './CommandPalette';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 
 const queryClient = new QueryClient({
@@ -25,24 +24,12 @@ const queryClient = new QueryClient({
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { loadUser } = useAuthStore();
   const pathname = usePathname();
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     loadUser();
-
-    // Check if user has seen onboarding
-    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-    if (!hasSeenOnboarding) {
-      setShowOnboarding(true);
-    }
   }, [loadUser]);
-
-  const handleOnboardingComplete = () => {
-    localStorage.setItem('hasSeenOnboarding', 'true');
-    setShowOnboarding(false);
-  };
 
   if (!mounted) {
     return null;
@@ -53,11 +40,12 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   if (isPublicPage) {
     return (
       <QueryClientProvider client={queryClient}>
-        <div className="min-h-screen bg-black text-foreground font-sans selection:bg-primary/25">
+        <div className="min-h-screen bg-black text-foreground font-sans selection:bg-blue-500/30">
           <main id="main-content" role="main" aria-label="Main content">
             {children}
           </main>
         </div>
+        <CommandPalette />
         <KeyboardShortcutsModal />
         {/* Toast Notifications */}
         <Toaster
@@ -65,9 +53,12 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#121217',
-              color: '#fff',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              background: '#0A0A0C',
+              color: '#f5f5f7',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              backdropFilter: 'blur(28px)',
+              fontSize: '12px',
+              borderRadius: '16px',
             },
             success: {
               iconTheme: {
@@ -89,13 +80,13 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex h-screen bg-background overflow-hidden">
+      <div className="flex h-screen bg-background overflow-hidden selection:bg-blue-500/30">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header />
           <main 
             id="main-content" 
-            className="flex-1 overflow-auto"
+            className="flex-1 overflow-auto bg-black"
             role="main"
             aria-label="Main content"
           >
@@ -105,13 +96,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         </div>
       </div>
       
-      {/* Keyboard Shortcuts Helper */}
+      {/* Global Command Palette & Keyboard Shortcuts Helper */}
+      <CommandPalette />
       <KeyboardShortcutsModal />
-
-      {/* Onboarding Wizard */}
-      {showOnboarding && (
-        <OnboardingWizard onComplete={handleOnboardingComplete} />
-      )}
 
       {/* Toast Notifications */}
       <Toaster
@@ -119,9 +106,12 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#121217',
+            background: '#0d0d11',
             color: '#fff',
             border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            fontSize: '12px',
+            borderRadius: '16px',
           },
           success: {
             iconTheme: {

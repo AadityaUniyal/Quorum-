@@ -16,7 +16,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   className,
 }) => {
   return (
-    <RadixTooltip.Provider delayDuration={200}>
+    <RadixTooltip.Provider delayDuration={150}>
       <RadixTooltip.Root>
         <RadixTooltip.Trigger asChild>
           {children}
@@ -25,13 +25,13 @@ export const Tooltip: React.FC<TooltipProps> = ({
           <RadixTooltip.Content
             side={side}
             className={clsx(
-              'z-50 overflow-hidden rounded-lg border border-white/10 bg-[#0c0c0c]/95 backdrop-blur-md px-3 py-1.5 text-xs text-white shadow-xl animate-in fade-in-0 zoom-in-95',
+              'z-50 overflow-hidden rounded-xl border border-white/[0.08] bg-[#121217]/95 backdrop-blur-2xl px-3 py-1.5 text-xs font-medium text-[#f5f5f7] shadow-[0_12px_32px_rgba(0,0,0,0.7)] animate-in fade-in-0 zoom-in-95',
               className
             )}
-            sideOffset={5}
+            sideOffset={6}
           >
             {content}
-            <RadixTooltip.Arrow className="fill-[#0c0c0c]/95" />
+            <RadixTooltip.Arrow className="fill-[#121217]" />
           </RadixTooltip.Content>
         </RadixTooltip.Portal>
       </RadixTooltip.Root>
@@ -61,7 +61,7 @@ export const SimpleTooltip: React.FC<TooltipProps> = ({
       {isVisible && (
         <div
           className={clsx(
-            'absolute z-50 px-3 py-1.5 text-xs font-medium text-white bg-[#0c0c0c]/95 backdrop-blur-md border border-white/10 rounded-lg shadow-xl whitespace-nowrap pointer-events-none',
+            'absolute z-50 px-3 py-1.5 text-xs font-medium text-[#f5f5f7] bg-[#121217]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.7)] whitespace-nowrap pointer-events-none',
             {
               'bottom-full left-1/2 -translate-x-1/2 mb-2': side === 'top',
               'top-full left-1/2 -translate-x-1/2 mt-2': side === 'bottom',

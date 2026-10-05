@@ -5,12 +5,6 @@ const isVercel = Boolean(process.env.VERCEL);
 const nextConfig: NextConfig = {
   // Use standalone output for Docker containers; Vercel handles its own serverless packaging
   ...(isVercel ? {} : { output: "standalone" }),
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   async headers() {
     return [
       {
@@ -33,7 +27,7 @@ const nextConfig: NextConfig = {
     ];
   },
   async rewrites() {
-    const defaultBackendUrl = isVercel ? "https://docintel-api.onrender.com" : "http://localhost:8000";
+    const defaultBackendUrl = isVercel ? "https://docintel-api.onrender.com" : "http://127.0.0.1:8000";
     const backendUrl = (process.env.BACKEND_URL || defaultBackendUrl).replace(/\/$/, "");
     return [
       {
@@ -43,6 +37,10 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         destination: `${backendUrl}/api/:path*`,
+      },
+      {
+        source: "/admin/:path*",
+        destination: `${backendUrl}/admin/:path*`,
       },
       {
         source: "/health/:path*",

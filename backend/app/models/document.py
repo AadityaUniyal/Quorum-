@@ -1,6 +1,7 @@
 import enum
 import uuid
 from datetime import UTC, datetime
+from typing import Optional
 
 from sqlalchemy import (
     JSON,
@@ -15,7 +16,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import GUID, Base
 
@@ -60,6 +61,8 @@ class Document(Base):
     consensus_score = Column(Float, nullable=True)
     content_hash = Column(String(64), index=True, nullable=True)
     processing_version = Column(String(32), default="1.0.0", nullable=False)
+    vendor_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    total_amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     uploaded_by = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     assigned_to_id = Column(GUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

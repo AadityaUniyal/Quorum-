@@ -97,21 +97,30 @@ export interface NotificationResponse {
   title: string;
   message: string;
   is_read: boolean;
+  read?: boolean;
   created_at: string;
+  timestamp?: string;
 }
 
 export interface BookmarkResponse {
   id: string;
+  user_id?: string;
   name: string;
+  title?: string | null;
   query_text: string;
+  query?: string | null;
   filters: Record<string, unknown> | null;
+  tags?: string[] | null;
   created_at: string;
 }
 
 export interface BookmarkCreate {
-  name: string;
+  name?: string;
+  title?: string;
   query_text: string;
+  query?: string;
   filters?: Record<string, unknown>;
+  tags?: string[];
 }
 
 export interface CrawledPage {
@@ -982,11 +991,27 @@ export const api = {
   },
 
   // Search
-  searchDocuments: async (query: string, filters?: { category?: string; status?: string; min_confidence?: number }): Promise<SearchResultItem[]> => {
+  searchDocuments: async (query: string, filters?: { category?: string; status?: string; min_confidence?: number } | string, status?: string, minScore?: number, expand?: boolean): Promise<SearchResultItem[]> => {
     const params = new URLSearchParams({ q: query });
-    if (filters?.category) params.append("category", filters.category);
-    if (filters?.status) params.append("status", filters.status);
-    if (filters?.min_confidence !== undefined) params.append("min_confidence", filters.min_confidence.toString());
+    if (typeof filters === "object" && filters !== null) {
+      if (filters.category) params.append("category", filters.category);
+      if (filters.status) params.append("status", filters.status);
+      if (filters.min_confidence !== undefined) params.append("min_confidence", filters.min_confidence.toString());
+    } else {
+      if (typeof filters === "string") params.append("category", filters);
+      if (status) params.append("status", status);
+      if (minScore !== undefined) params.append("min_score", minScore.toString());
+      if (expand) params.append("expand", "true");
+    }
+    return request(`/api/search?${params.toString()}`);
+  },
+
+  searchMetadata: async (query: string, category?: string, status?: string, minScore?: number, expand?: boolean): Promise<SearchResultItem[]> => {
+    const params = new URLSearchParams({ q: query });
+    if (category) params.append("category", category);
+    if (status) params.append("status", status);
+    if (minScore !== undefined) params.append("min_score", minScore.toString());
+    if (expand) params.append("expand", "true");
     return request(`/api/search?${params.toString()}`);
   },
 
@@ -997,8 +1022,16 @@ export const api = {
     });
   },
 
-  semanticSearch: async (query: string, limit?: number): Promise<SemanticSearchResult[]> => {
+  semanticSearch: async (query: string, category?: string, limit?: number): Promise<SemanticSearchResult[]> => {
     const params = new URLSearchParams({ q: query });
+    if (category) params.append("category", category);
+    if (limit) params.append("limit", limit.toString());
+    return request(`/api/search/semantic?${params.toString()}`);
+  },
+
+  searchSemantic: async (query: string, category?: string, limit?: number): Promise<SemanticSearchResult[]> => {
+    const params = new URLSearchParams({ q: query });
+    if (category) params.append("category", category);
     if (limit) params.append("limit", limit.toString());
     return request(`/api/search/semantic?${params.toString()}`);
   },
@@ -1007,14 +1040,29 @@ export const api = {
     return request(`/api/search/suggestions?q=${encodeURIComponent(query)}`);
   },
 
+  searchSuggest: async (query: string): Promise<string[]> => {
+    return request(`/api/search/suggestions?q=${encodeURIComponent(query)}`);
+  },
+
   getBookmarks: async (): Promise<BookmarkResponse[]> => {
     return request("/api/search/bookmarks");
   },
 
-  createBookmark: async (data: BookmarkCreate): Promise<BookmarkResponse> => {
+  listBookmarks: async (): Promise<BookmarkResponse[]> => {
+    return request("/api/search/bookmarks");
+  },
+
+  createBookmark: async (
+    dataOrName: BookmarkCreate | string,
+    queryText?: string,
+    filters?: Record<string, unknown>
+  ): Promise<BookmarkResponse> => {
+    const payload = typeof dataOrName === "string"
+      ? { name: dataOrName, query_text: queryText || "", filters }
+      : dataOrName;
     return request("/api/search/bookmarks", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
   },
 
@@ -1025,6 +1073,13 @@ export const api = {
   },
 
   expandSearch: async (query: string): Promise<ExpandQueryResponse> => {
+    return request("/api/search/expand", {
+      method: "POST",
+      body: JSON.stringify({ query }),
+    });
+  },
+
+  expandQuery: async (query: string): Promise<ExpandQueryResponse> => {
     return request("/api/search/expand", {
       method: "POST",
       body: JSON.stringify({ query }),
@@ -1083,15 +1138,62 @@ export const api = {
     return request("/api/analytics/alerts");
   },
 
+  getDynamicAlerts: async (): Promise<any[]> => {
+    return request("/api/analytics/alerts");
+  },
+
+  getReconciliationVariances: async (): Promise<any> => {
+    return request("/api/analytics/reconciliation-variances");
+  },
+
+  getAgentStats: async (): Promise<{
+    avg_critic_score: number;
+    avg_auditor_score: number;
+    avg_confidence: number;
+    flagged_fields_count: number;
+    total_fields: number;
+    flag_rate_pct: number;
+    documents_processed: number;
+    documents_failed: number;
+    agent_latency: { name: string; latency: number }[];
+  }> => {
+    return request("/api/analytics/agent-stats");
+  },
+
+  getSearchStats: async (): Promise<{
+    top_queries: { text: string; count: number }[];
+    zero_result_queries: { query: string; timestamp: string; count: number }[];
+    avg_latency_ms: number;
+    daily_volume: { date: string; count: number }[];
+  }> => {
+    return request("/api/analytics/search-stats");
+  },
+
+  getCrawlStats: async (): Promise<{
+    total_pages: number;
+    avg_pagerank: number;
+    top_pages: { name: string; rank: number; url: string }[];
+    pagerank_distribution: { bucket: string; count: number }[];
+  }> => {
+    return request("/api/analytics/crawl-stats");
+  },
+
   getVolumeTrends: async (days: number = 30): Promise<{ date: string; count: number; spend: number }[]> => {
     return request(`/api/analytics/volume-trends?days=${days}`);
   },
 
   // Web Crawler
   crawlUrl: async (url: string, maxDepth: number = 2): Promise<{ job_id: string; status: string; pages_crawled?: number }> => {
-    return request("/api/crawl", {
+    return request("/api/crawl/start", {
       method: "POST",
       body: JSON.stringify({ url, max_depth: maxDepth }),
+    });
+  },
+
+  startCrawl: async (startUrl: string, maxDepth: number = 2): Promise<{ message: string; job_id?: string }> => {
+    return request("/api/crawl/start", {
+      method: "POST",
+      body: JSON.stringify({ url: startUrl, max_depth: maxDepth }),
     });
   },
 
@@ -1102,6 +1204,30 @@ export const api = {
   recalculatePageRank: async (): Promise<{ message: string }> => {
     return request("/api/crawl/pagerank", {
       method: "POST",
+    });
+  },
+
+  // Review Submissions
+  submitReview: async (
+    documentId: string,
+    updates: any[],
+    lockToken?: string,
+    deletedKeys?: string[]
+  ): Promise<{ message: string; document?: DocumentResponse }> => {
+    return request(`/api/review/${documentId}/submit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(lockToken ? { "X-Lock-Token": lockToken } : {}),
+      },
+      body: JSON.stringify({
+        updates: updates.map((u) => ({
+          field_key: u.field_key,
+          value: u.corrected_value !== undefined ? u.corrected_value : u.value,
+          confidence: u.confidence || 1.0,
+        })),
+        deleted_field_keys: deletedKeys,
+      }),
     });
   },
 

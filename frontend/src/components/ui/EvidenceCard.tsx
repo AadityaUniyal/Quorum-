@@ -50,23 +50,35 @@ export const EvidenceCard: React.FC<EvidenceFieldProps> = ({
   const confidencePercent = Math.round(confidence * 100);
 
   return (
-    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 transition-all hover:border-slate-700 space-y-3">
+    <div className="bg-[#121217]/85 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-4 transition-all duration-200 hover:border-white/[0.16] hover:bg-[#16161d] space-y-3 shadow-sm select-none">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-[#a1a1a6] uppercase tracking-wider font-sans">
             {fieldKey.replace(/_/g, " ")}
           </span>
-          <span className="text-xs text-slate-500">Page {pageNumber}</span>
+          <span className="text-xs text-[#86868b]">Page {pageNumber}</span>
         </div>
         {getStatusBadge()}
       </div>
 
       <div className="flex items-baseline justify-between">
-        <div className="text-lg font-bold text-slate-100 font-mono">
-          {value !== null && value !== undefined ? String(value) : <span className="text-slate-500 italic">Not found</span>}
+        <div className="text-lg font-bold text-[#f5f5f7] font-mono">
+          {value !== null && value !== undefined ? (
+            String(value)
+          ) : (
+            <span className="text-[#86868b] italic">Not found</span>
+          )}
         </div>
-        <div className="text-xs font-medium text-slate-400">
-          <span className={confidencePercent >= 85 ? "text-emerald-400" : confidencePercent >= 60 ? "text-amber-400" : "text-rose-400"}>
+        <div className="text-xs font-medium text-[#a1a1a6]">
+          <span
+            className={
+              confidencePercent >= 85
+                ? "text-emerald-400 font-mono font-semibold"
+                : confidencePercent >= 60
+                ? "text-amber-400 font-mono font-semibold"
+                : "text-rose-400 font-mono font-semibold"
+            }
+          >
             {confidencePercent}%
           </span>{" "}
           confidence
@@ -74,20 +86,20 @@ export const EvidenceCard: React.FC<EvidenceFieldProps> = ({
       </div>
 
       {evidenceText && (
-        <div className="bg-slate-950/60 rounded-lg p-2.5 border border-slate-800/80 text-xs text-slate-300 font-mono flex items-start gap-2">
-          <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
-          <span className="line-clamp-2">{evidenceText}</span>
+        <div className="bg-[#0A0A0C]/90 rounded-xl p-2.5 border border-white/[0.06] text-xs text-[#f5f5f7] font-mono flex items-start gap-2.5">
+          <FileText className="w-3.5 h-3.5 text-[#38bdf8] shrink-0 mt-0.5" />
+          <span className="line-clamp-2 leading-relaxed">{evidenceText}</span>
         </div>
       )}
 
-      {notes && <p className="text-xs text-slate-400 italic">{notes}</p>}
+      {notes && <p className="text-xs text-[#a1a1a6] italic">{notes}</p>}
 
       {onVerify && (
         <div className="pt-1">
           <button
             type="button"
             onClick={onVerify}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold tracking-wide text-slate-200 transition-colors hover:bg-white/10"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] active:bg-white/[0.12] px-3 py-1.5 text-[11px] font-semibold tracking-wide text-[#f5f5f7] transition-all touch-press cursor-pointer"
           >
             Mark as verified
           </button>

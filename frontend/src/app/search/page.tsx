@@ -396,12 +396,13 @@ export default function SearchPage() {
   };
 
   // Filtered results client-side by score slider (if active)
-  const filteredResults = results?.filter(item => {
-    const itemScore = item.score !== undefined && item.score !== null 
-      ? item.score * 100 
-      : (item.consensus_score !== null ? item.consensus_score * 100 : 100);
+  const filteredResults = ((results as any[]) || []).filter((item: any) => {
+    const rawScore = item.score ?? item.confidence_score ?? item.consensus_score;
+    const itemScore = rawScore !== undefined && rawScore !== null 
+      ? rawScore * 100 
+      : 100;
     return itemScore >= minScore;
-  }) || [];
+  });
 
   return (
     <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-8rem)] w-full max-w-7xl mx-auto select-none overflow-hidden relative">
