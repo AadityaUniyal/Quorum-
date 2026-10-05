@@ -157,7 +157,7 @@ export default function LandingPage() {
       setShowAuthModal(false);
       toast.success('Touch ID / Passkey Verified');
       router.push('/dashboard');
-    }, 900);
+    }, 800);
   };
 
   // 5 Pillars of Quorum Architecture
@@ -438,7 +438,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-lg font-medium text-white">Silent Arithmetic Drift</h3>
               <p className="mt-2 text-xs text-zinc-400 leading-relaxed font-light">
-                Generative AI models approximate tokens rather than doing actual arithmetic. A single miscalculated \$150 tax rounding creates millions in audit exposure.
+                Generative AI models approximate tokens rather than doing actual arithmetic. A single miscalculated $150 tax rounding creates millions in audit exposure.
               </p>
             </div>
             <div className="mt-6 pt-4 border-t border-white/5 text-[11px] text-rose-400 font-mono">
@@ -453,7 +453,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-lg font-medium text-white">Zero Spatial Provenance</h3>
               <p className="mt-2 text-xs text-zinc-400 leading-relaxed font-light">
-                When an AI extracts a total of \$48,250.00, compliance teams must still manually scroll through 20-page PDFs to verify where the figure came from.
+                When an AI extracts a total of $48,250.00, compliance teams must still manually scroll through 20-page PDFs to verify where the figure came from.
               </p>
             </div>
             <div className="mt-6 pt-4 border-t border-white/5 text-[11px] text-amber-400 font-mono">
@@ -722,7 +722,7 @@ export default function LandingPage() {
               <div className="text-3xl font-semibold text-emerald-400 font-mono mt-1">
                 ${(costSavings * 12).toLocaleString()} / yr
               </div>
-              <div className="text-[11px] text-zinc-500 mt-1">At standard \$45/hr compliance cost</div>
+              <div className="text-[11px] text-zinc-500 mt-1">At standard $45/hr compliance cost</div>
             </div>
           </div>
         </div>
