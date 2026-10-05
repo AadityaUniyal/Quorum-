@@ -4,7 +4,7 @@
 
 **The Enterprise Operating System for Autonomous Financial & Legal Document Verification**
 
-[![Production Live](https://img.shields.io/badge/Production-Live%20on%20Vercel-0071E3?style=for-the-badge&logo=vercel&logoColor=white)](https://frontend-brown-seven-19.vercel.app)
+[![Production Live](https://img.shields.io/badge/Production%20Live-frontend--brown--seven--19.vercel.app-0071E3?style=for-the-badge&logo=vercel&logoColor=white)](https://frontend-brown-seven-19.vercel.app)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16%20Turbopack-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -12,9 +12,18 @@
 [![Groq LPU](https://img.shields.io/badge/Inference-Groq%20750%20tps-F55036?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
+### 🚀 **Live Production Deployment**: [https://frontend-brown-seven-19.vercel.app](https://frontend-brown-seven-19.vercel.app)
+
 [Live Production App](https://frontend-brown-seven-19.vercel.app) • [Core Problem](#-the-140b-enterprise-problem) • [Pillars](#-architectural-pillars) • [7-Agent Consensus](#-7-agent-consensus-mesh) • [Deterministic Math](#-deterministic-arithmetic-core) • [Quickstart](#-quickstart-guide) • [Database Architecture](#-neon-postgresql-architecture) • [ERP Integration](#-certified-erp-ledger-dispatch)
 
 </div>
+
+---
+
+> ### 🌐 **Live Web Application**
+> Quorum OS is deployed in production and actively serving traffic on Vercel at:  
+> **👉 [https://frontend-brown-seven-19.vercel.app](https://frontend-brown-seven-19.vercel.app)**  
+> *Features: Kinetic Scroll Typography, Passkey Biometrics, 7-Agent Consensus Simulator, Interactive 2D Coordinate Grounding, and Clean-Slate Zero-Seed Architecture.*
 
 ---
 
@@ -148,7 +157,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) or visit the live deployment at [https://frontend-brown-seven-19.vercel.app](https://frontend-brown-seven-19.vercel.app).
 
 ---
 
@@ -208,3 +217,5 @@ pytest tests/ -v
 ## 📜 License & Compliance
 
 Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details. Built to satisfy SOC2 Type II, ISO 27001, and HIPAA compliance specifications.
+
+**Live Production Link**: [https://frontend-brown-seven-19.vercel.app](https://frontend-brown-seven-19.vercel.app)

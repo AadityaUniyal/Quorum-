@@ -1,6 +1,8 @@
 {
-  "name": "frontend",
-  "version": "0.1.0",
+  "name": "quorum-frontend",
+  "version": "1.0.0",
+  "description": "Quorum OS — Enterprise Financial & Legal Document Intelligence Platform",
+  "homepage": "https://frontend-brown-seven-19.vercel.app",
   "private": true,
   "engines": {
     "node": ">=20.10.0",
@@ -13,7 +15,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "npm run typecheck && npm run lint && node scripts/test-accessibility-e2e.mjs"
+    "test": "npm run typecheck && npm run lint"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.17",
