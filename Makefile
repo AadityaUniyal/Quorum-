@@ -1,7 +1,7 @@
 # ============================================================================
-# DocIntel AI Platform - Makefile
+# Quorum OS Platform - Makefile
 # ============================================================================
-.PHONY: dev install test lint typecheck build stop clean migrate migration help
+.PHONY: dev install test lint typecheck build stop clean migrate help
 
 ifeq ($(OS),Windows_NT)
     PYTHON ?= python
@@ -19,37 +19,36 @@ endif
 
 help:
 	@echo "============================================"
-	@echo "  DocIntel AI Platform - Available Commands"
+	@echo "  Quorum OS Platform - Available Commands"
 	@echo "============================================"
 	@echo "  make install    Install Python & Frontend dependencies"
 	@echo "  make dev        Start development infrastructure and apps"
-	@echo "  make test       Run test suite across monorepo"
+	@echo "  make test       Run test suite across backend"
 	@echo "  make lint       Run linters (ruff + eslint)"
-	@echo "  make typecheck  Run typecheck (mypy + tsc)"
+	@echo "  make typecheck  Run typecheck (tsc)"
 	@echo "  make build      Build Docker images"
 	@echo "  make stop       Stop all running Docker services"
-	@echo "  make clean      Stop services and remove artifacts"
+	@echo "  make clean      Stop services and remove build artifacts"
 	@echo "  make migrate    Run database migrations (Alembic)"
 	@echo ""
 
 install:
 	@echo "Installing Python dependencies..."
-	$(PYTHON) -m pip install -r requirements/dev.txt
-	$(PYTHON) -m pip install -e packages/googi-crawler
+	$(PYTHON) -m pip install -r requirements/base.txt
 	@echo "Installing Frontend dependencies..."
-	cd frontend && npm ci
+	cd frontend && npm install
 
 dev:
-	@echo "Starting DocIntel AI Platform..."
+	@echo "Starting Quorum OS Platform..."
 	docker compose up -d
 
 test:
-	@echo "Running tests across monorepo..."
-	$(PYTHON) -m pytest
+	@echo "Running backend test suite..."
+	cd backend && $(PYTHON) -m pytest tests/
 
 lint:
 	@echo "Linting backend (ruff)..."
-	$(PYTHON) -m ruff check backend/ packages/ tests/
+	$(PYTHON) -m ruff check backend/
 	@echo "Linting frontend (eslint)..."
 	cd frontend && npm run lint
 
@@ -58,26 +57,20 @@ typecheck:
 	cd frontend && npm run typecheck
 
 build:
-	@echo "Building Docker images..."
+	@echo "Building production Docker images..."
 	docker compose build
 
 stop:
-	@echo "Stopping Docker services..."
+	@echo "Stopping Quorum OS services..."
 	docker compose down
 
 clean:
-	@echo "Cleaning up containers and build artifacts..."
-	docker compose down -v
+	@echo "Cleaning runtime and build caches..."
+	docker compose down -v --remove-orphans
 	$(RM_PYCACHE)
 	$(RM_NEXT)
-	@echo "Clean complete."
+	@echo "Clean completed."
 
 migrate:
-	@echo "Running database migrations..."
+	@echo "Running database schema migrations..."
 	cd backend && $(PYTHON) -m alembic upgrade head
-
-migration:
-ifndef msg
-	$(error Usage: make migration msg="migration description")
-endif
-	cd backend && $(PYTHON) -m alembic revision --autogenerate -m "$(msg)"
