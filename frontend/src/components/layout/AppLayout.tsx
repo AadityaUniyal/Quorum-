@@ -4,10 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '@/stores/auth';
+import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
+
+import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +24,7 @@ const queryClient = new QueryClient({
 
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { loadUser } = useAuthStore();
+  const pathname = usePathname();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -44,6 +48,45 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     return null;
   }
 
+  const isPublicPage = pathname === '/' || pathname === '/pricing';
+
+  if (isPublicPage) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <div className="min-h-screen bg-black text-foreground font-sans selection:bg-primary/25">
+          <main id="main-content" role="main" aria-label="Main content">
+            {children}
+          </main>
+        </div>
+        <KeyboardShortcutsModal />
+        {/* Toast Notifications */}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#121217',
+              color: '#fff',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+            },
+            success: {
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <div className="flex h-screen bg-background overflow-hidden">
@@ -62,6 +105,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         </div>
       </div>
       
+      {/* Keyboard Shortcuts Helper */}
+      <KeyboardShortcutsModal />
+
       {/* Onboarding Wizard */}
       {showOnboarding && (
         <OnboardingWizard onComplete={handleOnboardingComplete} />
@@ -73,7 +119,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#0c0c0c',
+            background: '#121217',
             color: '#fff',
             border: '1px solid rgba(255, 255, 255, 0.1)',
           },

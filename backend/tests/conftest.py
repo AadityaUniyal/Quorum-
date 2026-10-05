@@ -88,3 +88,10 @@ def test_admin_user(db_session):
     token = create_access_token(user)
     headers = {"Authorization": f"Bearer {token}"}
     return {"user": user, "token": token, "headers": headers}
+
+
+@pytest.fixture
+def auth_headers(test_admin_user):
+    """Convenience fixture returning Authorization header for admin user."""
+    return test_admin_user["headers"]
+

@@ -100,7 +100,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        onClick={handleClose}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm cursor-pointer"
         role="dialog"
         aria-modal="true"
         aria-labelledby="onboarding-title"
@@ -110,7 +111,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="relative w-full max-w-2xl mx-4 bg-[#0c0c0c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-2xl mx-4 bg-[#0c0c0c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden cursor-default"
         >
           {/* Close Button */}
           <button
