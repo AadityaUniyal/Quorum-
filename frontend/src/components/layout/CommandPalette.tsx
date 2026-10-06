@@ -19,6 +19,7 @@ import {
   Home
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { iosAudio } from '@/lib/iosAudio';
 
 export const CommandPalette: React.FC = () => {
   const { commandPaletteOpen, setCommandPaletteOpen } = useUIStore();
@@ -65,6 +66,7 @@ export const CommandPalette: React.FC = () => {
   }, [query]);
 
   const handleSelect = (href: string) => {
+    iosAudio.playPop();
     setCommandPaletteOpen(false);
     setQuery('');
     router.push(href);
@@ -73,9 +75,11 @@ export const CommandPalette: React.FC = () => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
+      iosAudio.playTap();
       setSelectedIndex((prev) => (prev + 1) % (filteredCommands.length || 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
+      iosAudio.playTap();
       setSelectedIndex((prev) => (prev - 1 + filteredCommands.length) % (filteredCommands.length || 1));
     } else if (e.key === 'Enter' && filteredCommands[selectedIndex]) {
       e.preventDefault();

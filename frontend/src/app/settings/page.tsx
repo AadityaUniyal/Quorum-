@@ -13,13 +13,24 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUIStore } from '@/stores/ui';
+import { useUIStore, AccentColor, FontFamily } from '@/stores/ui';
+import { iosAudio } from '@/lib/iosAudio';
+import { IOSSwitch } from '@/components/ui/IOSSwitch';
+import { Palette, Type, Volume2, VolumeX } from 'lucide-react';
 
 type TabId = 'profile' | 'appearance' | 'notifications' | 'apikeys' | 'webhooks' | 'team' | 'auditlog' | 'synonyms';
 
 export default function SettingsPage() {
   const { user, setUser } = useAuthStore();
-  const { setSidebarOpen } = useUIStore();
+  const { 
+    setSidebarOpen, 
+    accentColor, 
+    setAccentColor, 
+    fontFamily, 
+    setFontFamily, 
+    soundEnabled, 
+    setSoundEnabled 
+  } = useUIStore();
   const [activeTab, setActiveTab] = useState<TabId>('profile');
 
   // Synonyms management state
@@ -658,27 +669,177 @@ export default function SettingsPage() {
               </motion.div>
             )}
 
-            {/* ── APPEARANCE ── */}
+            {/* ── APPEARANCE & IOS CONTROLS ── */}
             {activeTab === 'appearance' && (
               <motion.div key="appearance" {...tabMotion} className="flex flex-col gap-6 w-full max-w-xl">
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">Appearance</h3>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Customize theme, layout defaults, and typography scale.</p>
+                  <h3 className="text-sm font-bold text-foreground">Appearance &amp; iOS System Styling</h3>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Customize theme, accent tint, typography engine, and acoustic feedback.</p>
                 </div>
+
+                {/* Theme Mode */}
                 <div className="flex flex-col gap-2">
-                  <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Theme Mode</span>
+                  <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Theme Appearance</span>
                   <div className="flex gap-3">
                     {(['dark', 'light'] as const).map(t => (
                       <button key={t} onClick={() => handleThemeChange(t)}
-                        className={clsx('touch-press flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border font-semibold text-xs transition-all cursor-pointer',
-                          theme === t ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-neutral-900 border-neutral-800 text-muted-foreground hover:text-foreground')}>
+                        className={clsx('touch-press flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl border font-semibold text-xs transition-all cursor-pointer',
+                          theme === t ? 'bg-primary/10 border-primary/30 text-primary shadow-sm' : 'bg-neutral-900 border-neutral-800 text-muted-foreground hover:text-foreground')}>
                         {t === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                        <span>{t.charAt(0).toUpperCase() + t.slice(1)}</span>
+                        <span>{t === 'dark' ? 'Obsidian Space Black' : 'Cupertino Light'}</span>
                       </button>
                     ))}
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-4 border border-white/8 bg-white/5 rounded-xl gap-4 select-none">
+
+                {/* Accent Color Tint */}
+                <div className="flex flex-col gap-2.5">
+                  <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono flex items-center gap-1.5">
+                    <Palette className="w-3.5 h-3.5 text-pink-400" />
+                    iOS Accent Color Tint
+                  </span>
+                  <div className="grid grid-cols-6 gap-2">
+                    {[
+                      { id: 'blue', name: 'Cupertino Blue', bg: 'bg-[#0071e3]' },
+                      { id: 'purple', name: 'Vision Purple', bg: 'bg-[#af52de]' },
+                      { id: 'green', name: 'Apple Mint', bg: 'bg-[#30d158]' },
+                      { id: 'amber', name: 'Sunset Amber', bg: 'bg-[#ff9f0a]' },
+                      { id: 'cyan', name: 'Neon Cyan', bg: 'bg-[#64d2ff]' },
+                      { id: 'rose', name: 'Coral Rose', bg: 'bg-[#ff375f]' },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setAccentColor(item.id as AccentColor)}
+                        className={clsx(
+                          'h-11 rounded-2xl flex items-center justify-center transition-all cursor-pointer border',
+                          item.bg,
+                          accentColor === item.id
+                            ? 'ring-2 ring-white ring-offset-2 ring-offset-black scale-105 border-transparent shadow-lg'
+                            : 'border-white/10 opacity-70 hover:opacity-100'
+                        )}
+                        title={item.name}
+                      >
+                        {accentColor === item.id && <Check className="w-4 h-4 text-white drop-shadow" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Typography Engine */}
+                <div className="flex flex-col gap-2.5">
+                  <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono flex items-center gap-1.5">
+                    <Type className="w-3.5 h-3.5 text-cyan-400" />
+                    System Typography Engine
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      { id: 'sf-pro', label: 'SF Pro Display', desc: 'Apple standard modern sans-serif' },
+                      { id: 'geist', label: 'Plus Jakarta', desc: 'Geometric precision font' },
+                      { id: 'inter', label: 'Inter Dynamic', desc: 'Dense UI tabular typography' },
+                      { id: 'jetbrains', label: 'JetBrains Mono', desc: 'Deterministic developer code' },
+                      { id: 'new-york', label: 'New York Editorial', desc: 'Legal contract serif style' },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setFontFamily(f.id as FontFamily)}
+                        className={clsx(
+                          'flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer text-left',
+                          fontFamily === f.id
+                            ? 'bg-white/15 border-white/25 text-white font-semibold shadow-sm'
+                            : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                        )}
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-xs">{f.label}</span>
+                          <span className="text-[10px] text-zinc-500">{f.desc}</span>
+                        </div>
+                        {fontFamily === f.id && <Check className="w-3.5 h-3.5 text-white" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Audio & Acoustic Feedback */}
+                <div className="flex flex-col gap-3 p-4 border border-white/8 bg-white/5 rounded-2xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        {soundEnabled ? <Volume2 className="w-4 h-4 text-blue-400" /> : <VolumeX className="w-4 h-4 text-zinc-500" />}
+                        Acoustic Micro-Feedback
+                      </span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Play synthesized iOS clicks, chimes, and scanner sounds.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSoundEnabled(!soundEnabled)}
+                      className={clsx(
+                        'px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border',
+                        soundEnabled
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                          : 'bg-white/5 text-zinc-400 border-white/10 hover:text-white'
+                      )}
+                    >
+                      {soundEnabled ? 'Enabled' : 'Muted'}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <span className="text-[11px] text-zinc-400">Audition Verification Chime</span>
+                    <button
+                      type="button"
+                      onClick={() => iosAudio.playSuccess()}
+                      className="px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-xs text-white border border-white/10 cursor-pointer transition-colors"
+                    >
+                      Play Test Chime
+                    </button>
+                  </div>
+                </div>
+
+                {/* iPhone Storage Style Visual Breakdown */}
+                <div className="flex flex-col gap-2.5 p-4 border border-white/8 bg-white/5 rounded-2xl select-none">
+                  <div className="flex items-center justify-between text-xs font-semibold text-white">
+                    <span>Quorum OS Storage Allocation</span>
+                    <span className="text-[10px] font-mono text-zinc-400">1.4 GB / 50 GB Used (2.8%)</span>
+                  </div>
+                  
+                  {/* Segmented multi-color storage bar */}
+                  <div className="h-3 w-full rounded-full bg-zinc-800 overflow-hidden flex gap-0.5">
+                    <div className="bg-[#0071e3] h-full w-[35%]" title="Invoices & Purchase Orders (35%)" />
+                    <div className="bg-[#af52de] h-full w-[25%]" title="Contracts & Compliance (25%)" />
+                    <div className="bg-[#30d158] h-full w-[20%]" title="Vector RAG Embeddings (20%)" />
+                    <div className="bg-[#ff9f0a] h-full w-[12%]" title="Multi-Agent Audit Logs (12%)" />
+                    <div className="bg-[#64d2ff] h-full w-[8%]" title="System Cache & Temp (8%)" />
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 text-[10px] text-zinc-400">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-[#0071e3]" />
+                      <span>Invoices (490 MB)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-[#af52de]" />
+                      <span>Contracts (350 MB)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-[#30d158]" />
+                      <span>Vectors (280 MB)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-[#ff9f0a]" />
+                      <span>Audit Logs (168 MB)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-[#64d2ff]" />
+                      <span>Cache (112 MB)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 border border-white/8 bg-white/5 rounded-2xl gap-4 select-none">
                   <div>
                     <span className="text-xs font-bold text-foreground">Collapsed Sidebar Default</span>
                     <p className="text-[10px] text-muted-foreground mt-0.5">Start with the sidebar collapsed on every page load.</p>
@@ -687,18 +848,6 @@ export default function SettingsPage() {
                     className={clsx('touch-press relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors', collapseSidebar ? 'bg-primary' : 'bg-white/10')}>
                     <span className={clsx('pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition', collapseSidebar ? 'translate-x-5' : 'translate-x-0')} />
                   </button>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <span className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase font-mono">Typography Scale</span>
-                  <div className="flex gap-2">
-                    {(['sm', 'md', 'lg'] as const).map(s => (
-                      <button key={s} onClick={() => { setFontSize(s); toast.success(`Font scale set to ${s}`); }}
-                        className={clsx('touch-press px-4 py-2 border rounded-xl text-xs font-semibold cursor-pointer uppercase transition-all',
-                          fontSize === s ? 'bg-white/10 border-white/15 text-foreground' : 'bg-white/5 border-white/10 text-muted-foreground hover:text-foreground')}>
-                        {s}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </motion.div>
             )}

@@ -7,19 +7,21 @@ import { useAuthStore } from '@/stores/auth';
 import { useUIStore } from '@/stores/ui';
 import { api } from '@/lib/api';
 import { SseStatusPill } from '@/components/layout/SseStatusPill';
+import { IOSDynamicIsland } from '@/components/ui/IOSDynamicIsland';
+import { iosAudio } from '@/lib/iosAudio';
 import {
   Search, 
   Bell, 
-  Sun, 
-  Moon, 
   ChevronRight, 
   LogOut, 
   Settings,
-  Key,
-  CheckCircle2,
   Inbox,
   Command,
-  Sparkles
+  Sparkles,
+  Sliders,
+  Volume2,
+  VolumeX,
+  Palette
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,25 +32,10 @@ export const Header: React.FC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, logout, isDemoMode } = useAuthStore();
-  const { setCommandPaletteOpen } = useUIStore();
+  const { setCommandPaletteOpen, toggleControlCenter, soundEnabled, setSoundEnabled } = useUIStore();
 
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-
-  // Load and apply theme
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme as 'dark' | 'light');
-    document.documentElement.setAttribute('data-theme', savedTheme);
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-  };
 
   // Fetch real notifications from backend
   const { data: notifications = [] } = useQuery({
@@ -105,15 +92,16 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-white/[0.08] bg-black/75 px-6 backdrop-blur-2xl transition-all">
-      {/* Left: macOS Style Breadcrumbs */}
-      <div className="flex items-center gap-2 text-xs font-normal">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-white/[0.08] bg-[#0A0A0C]/80 px-4 sm:px-6 backdrop-blur-3xl transition-all">
+      {/* Left: macOS / iOS Breadcrumbs */}
+      <div className="flex items-center gap-2 text-xs font-normal min-w-0">
         {breadcrumbs.map((crumb, idx) => (
           <React.Fragment key={crumb.href}>
-            {idx > 0 && <ChevronRight className="h-3 w-3 text-zinc-600" />}
+            {idx > 0 && <ChevronRight className="h-3 w-3 text-zinc-600 shrink-0" />}
             <span
               className={clsx(
-                crumb.active ? 'text-white font-medium' : 'text-zinc-400 hover:text-zinc-200 transition-colors'
+                'truncate',
+                crumb.active ? 'text-white font-semibold' : 'text-zinc-400 hover:text-zinc-200 transition-colors'
               )}
             >
               {crumb.label}
@@ -122,36 +110,51 @@ export const Header: React.FC = () => {
         ))}
       </div>
 
-      {/* Center: macOS Spotlight Style Search Trigger */}
-      <div className="hidden sm:flex items-center">
+      {/* Center: iOS Dynamic Island */}
+      <div className="hidden md:flex items-center justify-center">
+        <IOSDynamicIsland />
+      </div>
+
+      {/* Right: Quick Search, Control Center, Notifications & Profile */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Spotlight Search Launcher */}
         <button
-          onClick={() => setCommandPaletteOpen(true)}
-          className="flex items-center gap-3 px-3.5 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-zinc-400 hover:text-white transition-all cursor-pointer shadow-sm w-64 justify-between"
+          onClick={() => {
+            iosAudio.playPop();
+            setCommandPaletteOpen(true);
+          }}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-zinc-400 hover:text-white transition-all cursor-pointer shadow-sm touch-press"
+          title="Spotlight Search (⌘K)"
         >
-          <div className="flex items-center gap-2">
-            <Search className="h-3.5 w-3.5 text-zinc-500" />
-            <span className="text-[12px] font-normal">Search documents...</span>
-          </div>
-          <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono text-zinc-400">
+          <Search className="h-3.5 w-3.5 text-zinc-400" />
+          <span className="hidden lg:inline text-[11px] font-normal">Spotlight</span>
+          <kbd className="hidden sm:inline px-1.5 py-0.2 rounded bg-white/10 text-[9px] font-mono text-zinc-400">
             ⌘K
           </kbd>
         </button>
-      </div>
 
-      {/* Right: Status Pill, Notifications & User Menu */}
-      <div className="flex items-center gap-3">
-        <SseStatusPill />
+        {/* Control Center Launcher */}
+        <button
+          onClick={toggleControlCenter}
+          className="p-2 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer touch-press"
+          title="Control Center (Audio, Font, Sliders)"
+        >
+          <Sliders className="h-4 w-4" />
+        </button>
 
         {/* Notifications Popover */}
         <div className="relative">
           <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            onClick={() => {
+              iosAudio.playPop();
+              setShowNotifications(!showNotifications);
+            }}
+            className="relative p-2 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer touch-press"
             title="Notifications"
           >
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-blue-500 ring-2 ring-black" />
+              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-blue-500 ring-2 ring-black animate-pulse" />
             )}
           </button>
 
@@ -167,7 +170,7 @@ export const Header: React.FC = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 mt-2 w-80 rounded-2xl bg-[#121217] border border-white/10 shadow-2xl p-4 z-50 text-white"
+                  className="absolute right-0 mt-2 w-80 rounded-3xl bg-[#121217]/95 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-4 z-50 text-white backdrop-blur-2xl"
                 >
                   <div className="flex items-center justify-between pb-3 border-b border-white/10 text-xs">
                     <span className="font-semibold text-white">Notifications</span>
@@ -190,10 +193,10 @@ export const Header: React.FC = () => {
                           key={n.id}
                           onClick={() => !n.is_read && markReadMutation.mutate(n.id)}
                           className={clsx(
-                            "p-2.5 rounded-xl border transition-all cursor-pointer text-xs",
+                            "p-2.5 rounded-2xl border transition-all cursor-pointer text-xs",
                             n.is_read
                               ? "bg-white/[0.02] border-white/5 text-zinc-400"
-                              : "bg-blue-500/5 border-blue-500/20 text-zinc-200"
+                              : "bg-blue-500/10 border-blue-500/30 text-zinc-200"
                           )}
                         >
                           <div className="font-medium text-white">{n.title}</div>
@@ -212,10 +215,13 @@ export const Header: React.FC = () => {
         {/* User Profile Avatar / Quick Menu */}
         <div className="relative">
           <button
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="flex items-center gap-2 p-1 rounded-full hover:ring-2 hover:ring-white/20 transition-all cursor-pointer"
+            onClick={() => {
+              iosAudio.playPop();
+              setShowProfileMenu(!showProfileMenu);
+            }}
+            className="flex items-center gap-2 p-0.5 rounded-full hover:ring-2 hover:ring-white/20 transition-all cursor-pointer touch-press"
           >
-            <div className="h-7 w-7 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-xs font-semibold text-white">
+            <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 border border-white/20 flex items-center justify-center text-xs font-semibold text-white shadow-md">
               {user?.full_name ? user.full_name[0].toUpperCase() : 'U'}
             </div>
           </button>
@@ -232,7 +238,7 @@ export const Header: React.FC = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 mt-2 w-56 rounded-2xl bg-[#121217] border border-white/10 shadow-2xl p-2 z-50 text-white"
+                  className="absolute right-0 mt-2 w-56 rounded-3xl bg-[#121217]/95 border border-white/10 shadow-2xl p-2 z-50 text-white backdrop-blur-2xl"
                 >
                   <div className="px-3 py-2 border-b border-white/10 mb-1">
                     <div className="text-xs font-semibold text-white truncate">{user?.full_name || 'User'}</div>
@@ -244,7 +250,7 @@ export const Header: React.FC = () => {
                       setShowProfileMenu(false);
                       router.push('/settings');
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-2xl text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer text-left"
                   >
                     <Settings className="w-3.5 h-3.5 text-zinc-400" />
                     <span>System Settings</span>
@@ -255,7 +261,7 @@ export const Header: React.FC = () => {
                       setShowProfileMenu(false);
                       logout();
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer text-left mt-1"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-2xl text-xs text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer text-left mt-1"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Sign Out</span>

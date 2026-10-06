@@ -2,7 +2,6 @@
 
 import React, { forwardRef } from 'react';
 import { clsx } from 'clsx';
-import { motion, HTMLMotionProps } from 'framer-motion';
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'elevated' | 'mica' | 'ghost';

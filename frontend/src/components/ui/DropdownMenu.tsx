@@ -7,7 +7,6 @@ import { motion, AnimatePresence, HTMLMotionProps } from 'framer-motion';
 interface DropdownMenuContextType {
   isOpen: boolean;
   setIsOpen: (val: boolean) => void;
-  triggerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const DropdownMenuContext = createContext<DropdownMenuContextType | null>(null);
@@ -18,7 +17,6 @@ export interface DropdownMenuProps {
 
 export const DropdownMenu: React.FC<DropdownMenuProps> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -46,7 +44,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({ children }) => {
   }, [isOpen]);
 
   return (
-    <DropdownMenuContext.Provider value={{ isOpen, setIsOpen, triggerRef }}>
+    <DropdownMenuContext.Provider value={{ isOpen, setIsOpen }}>
       <div ref={containerRef} className="relative inline-block text-left">
         {children}
       </div>
@@ -63,7 +61,6 @@ export const DropdownMenuTrigger: React.FC<{
 
   return (
     <div
-      ref={context.triggerRef}
       onClick={() => context.setIsOpen(!context.isOpen)}
       className="inline-flex cursor-pointer"
     >

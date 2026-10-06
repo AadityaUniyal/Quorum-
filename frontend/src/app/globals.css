@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&family=JetBrains+Mono:ital,wght@0,400..800;1,400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Plus+Jakarta+Sans:wght@400..800&display=swap');
 @import "tailwindcss";
 
 @theme inline {
@@ -30,12 +30,12 @@
   --color-hairline: rgba(255, 255, 255, 0.08);
   --color-primary: #0071e3;
   --color-primary-hover: #0077ed;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
+  --color-success: #30d158;
+  --color-warning: #ff9f0a;
+  --color-danger: #ff453a;
   --color-accent: #6366f1;
   --color-accent-2: #8b5cf6;
-  --color-cyan: #06b6d4;
+  --color-cyan: #64d2ff;
   --color-muted: #86868b;
   --color-muted-foreground: #a1a1a6;
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", sans-serif;
@@ -46,8 +46,68 @@
 :root {
   --radius-card: 20px;
   --radius-panel: 24px;
-  --shadow-glow: 0 0 32px rgba(0, 113, 227, 0.12);
+  --radius-squircle: 28px;
+  --shadow-glow: 0 0 32px rgba(0, 113, 227, 0.15);
   --shadow-obsidian-card: 0 16px 40px -12px rgba(0, 0, 0, 0.75);
+  --color-primary-selection: rgba(0, 113, 227, 0.45);
+  --ios-spring-easing: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Accent Color Overrides */
+[data-accent='purple'] {
+  --color-primary: #af52de;
+  --color-primary-hover: #bf5af2;
+  --color-primary-selection: rgba(175, 82, 222, 0.45);
+  --shadow-glow: 0 0 32px rgba(175, 82, 222, 0.2);
+}
+
+[data-accent='green'] {
+  --color-primary: #30d158;
+  --color-primary-hover: #34c759;
+  --color-primary-selection: rgba(48, 209, 88, 0.45);
+  --shadow-glow: 0 0 32px rgba(48, 209, 88, 0.2);
+}
+
+[data-accent='amber'] {
+  --color-primary: #ff9f0a;
+  --color-primary-hover: #ffb340;
+  --color-primary-selection: rgba(255, 159, 10, 0.45);
+  --shadow-glow: 0 0 32px rgba(255, 159, 10, 0.2);
+}
+
+[data-accent='cyan'] {
+  --color-primary: #64d2ff;
+  --color-primary-hover: #70d7ff;
+  --color-primary-selection: rgba(100, 210, 255, 0.45);
+  --shadow-glow: 0 0 32px rgba(100, 210, 255, 0.2);
+}
+
+[data-accent='rose'] {
+  --color-primary: #ff375f;
+  --color-primary-hover: #ff6482;
+  --color-primary-selection: rgba(255, 55, 95, 0.45);
+  --shadow-glow: 0 0 32px rgba(255, 55, 95, 0.2);
+}
+
+/* Font Family Selection Overrides */
+[data-font='inter'] {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Inter', sans-serif;
+}
+
+[data-font='geist'] {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+}
+
+[data-font='jetbrains'] {
+  --font-sans: 'JetBrains Mono', monospace;
+  --font-display: 'JetBrains Mono', monospace;
+}
+
+[data-font='new-york'] {
+  --font-sans: 'Newsreader', -apple-system, Georgia, serif;
+  --font-display: 'Newsreader', Georgia, serif;
 }
 
 [data-theme='light'] {
@@ -66,46 +126,76 @@
   --color-muted-foreground: #6e6e73;
 }
 
+/* iOS Native Selection Tint */
+::selection {
+  background: var(--color-primary-selection);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+::-moz-selection {
+  background: var(--color-primary-selection);
+  color: #ffffff;
+}
+
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+  user-select: auto;
+  overflow-x: hidden;
 }
 
 html {
   scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Apple Precision Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
 
-/* Micro-Interaction Button Feedback */
+/* iOS Micro-Interaction Touch Press (Haptic-like feel) */
 .touch-press {
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.15s var(--ios-spring-easing), opacity 0.15s ease-out;
 }
 .touch-press:active {
-  transform: scale(0.97);
-  opacity: 0.9;
+  transform: scale(0.96);
+  opacity: 0.88;
 }
 
-/* Apple Obsidian Glass Card with Smooth Hover */
+/* iOS Liquid Glass Card */
+.ios-glass-card,
 .glass-card {
-  background: rgba(18, 18, 23, 0.85);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+  background: rgba(18, 18, 23, 0.82);
+  backdrop-filter: blur(32px) saturate(190%);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.7), inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-card);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s var(--ios-spring-easing);
 }
 
+.ios-glass-card:hover,
 .glass-card:hover {
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 24px 56px -12px rgba(0, 0, 0, 0.85), inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* iOS Dynamic Island Capsule */
+.ios-dynamic-island {
+  background: rgba(0, 0, 0, 0.94);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  transition: all 0.35s var(--ios-spring-easing);
 }
 
 /* Frosted Mica Glass Surfaces */
@@ -123,12 +213,37 @@ html {
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.8), inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .hairline-border,
 .border-hairline {
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Laser Scanner Sweep Animation for Dropzone & Processing */
+@keyframes laser-sweep {
+  0% {
+    top: 0%;
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0.2;
+  }
+}
+
+.scanner-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-primary, #0071e3), #64d2ff, var(--color-primary, #0071e3), transparent);
+  box-shadow: 0 0 16px 2px var(--color-primary, #0071e3);
+  animation: laser-sweep 2.2s ease-in-out infinite;
 }
 
 /* Skeleton Shimmer Keyframe Animation */
@@ -150,30 +265,35 @@ html {
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
-/* Subtle Titanium Glow Accents */
+/* Glowing Apple Accents */
 .glow-apple-blue {
-  box-shadow: 0 0 32px -4px rgba(0, 113, 227, 0.25);
+  box-shadow: 0 0 32px -4px rgba(0, 113, 227, 0.35);
 }
 
 /* Animated Pulse Dot */
 @keyframes pulse-subtle {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.95); }
+  50% { opacity: 0.5; transform: scale(0.92); }
 }
 
 .pulse-dot {
-  animation: pulse-subtle 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: pulse-subtle 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* Keyframes for Smooth Fade In */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.35s var(--ios-spring-easing) forwards;
+}
+
+/* Safe area padding for mobile iPhone Home Indicator */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px);
 }

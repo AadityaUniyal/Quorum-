@@ -4,12 +4,14 @@ import React, { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '@/stores/auth';
+import { useUIStore } from '@/stores/ui';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
 import { CommandPalette } from './CommandPalette';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
+import { IOSControlCenter } from '@/components/ui/IOSControlCenter';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,13 +25,20 @@ const queryClient = new QueryClient({
 
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { loadUser } = useAuthStore();
+  const { accentColor, fontFamily } = useUIStore();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     loadUser();
-  }, [loadUser]);
+
+    // Apply saved accent & font
+    const savedAccent = localStorage.getItem('quorum_accent') || accentColor || 'blue';
+    const savedFont = localStorage.getItem('quorum_font') || fontFamily || 'sf-pro';
+    document.documentElement.setAttribute('data-accent', savedAccent);
+    document.documentElement.setAttribute('data-font', savedFont);
+  }, [loadUser, accentColor, fontFamily]);
 
   if (!mounted) {
     return null;
@@ -40,13 +49,14 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
   if (isPublicPage) {
     return (
       <QueryClientProvider client={queryClient}>
-        <div className="min-h-screen bg-black text-foreground font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen bg-black text-foreground font-sans">
           <main id="main-content" role="main" aria-label="Main content">
             {children}
           </main>
         </div>
         <CommandPalette />
         <KeyboardShortcutsModal />
+        <IOSControlCenter />
         {/* Toast Notifications */}
         <Toaster
           position="top-right"
@@ -55,20 +65,21 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             style: {
               background: '#0A0A0C',
               color: '#f5f5f7',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              backdropFilter: 'blur(28px)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              backdropFilter: 'blur(32px)',
               fontSize: '12px',
-              borderRadius: '16px',
+              borderRadius: '20px',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.8)',
             },
             success: {
               iconTheme: {
-                primary: '#10b981',
+                primary: '#30d158',
                 secondary: '#fff',
               },
             },
             error: {
               iconTheme: {
-                primary: '#ef4444',
+                primary: '#ff453a',
                 secondary: '#fff',
               },
             },
@@ -80,7 +91,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex h-screen bg-background overflow-hidden selection:bg-blue-500/30">
+      <div className="flex h-screen bg-black overflow-hidden">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header />
@@ -96,11 +107,12 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         </div>
       </div>
       
-      {/* Global Command Palette & Keyboard Shortcuts Helper */}
+      {/* Global Command Palette, Control Center & Keyboard Shortcuts */}
       <CommandPalette />
       <KeyboardShortcutsModal />
+      <IOSControlCenter />
 
-      {/* Toast Notifications */}
+      {/* iOS Style Toast Notifications */}
       <Toaster
         position="top-right"
         toastOptions={{
@@ -108,20 +120,21 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
           style: {
             background: '#0d0d11',
             color: '#fff',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.14)',
+            backdropFilter: 'blur(32px)',
             fontSize: '12px',
-            borderRadius: '16px',
+            borderRadius: '20px',
+            boxShadow: '0 20px 48px rgba(0,0,0,0.85)',
           },
           success: {
             iconTheme: {
-              primary: '#10b981',
+              primary: '#30d158',
               secondary: '#fff',
             },
           },
           error: {
             iconTheme: {
-              primary: '#ef4444',
+              primary: '#ff453a',
               secondary: '#fff',
             },
           },
