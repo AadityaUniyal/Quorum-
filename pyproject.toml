@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quorum-os"
+version = "1.0.0"
+description = "Quorum OS: Enterprise Document Analytics, Multi-Agent Consensus & Real-Time Financial Verification Engine"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Quorum Systems Architecture", email = "architecture@quorum.os"}
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+]
+ignore = [
+    "B008",   # Allow function calls in argument defaults (FastAPI Depends)
+    "B904",   # Allow raising exceptions without explicit from clause in FastAPI handlers
+    "E402",   # Module level import not at top of file
+    "E501",   # Line too long (handled by formatter)
+    "E741",   # Ambiguous variable name in list comprehensions
+    "W293",   # Blank line contains whitespace
+]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/alembic/*" = ["F401", "I001", "E402"]
+"alembic/*" = ["F401", "I001", "E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

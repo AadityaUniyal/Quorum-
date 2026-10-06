@@ -32,25 +32,25 @@ def init_neon_database():
                 
                 # Documents JSONB indexes
                 conn.execute(text("""
-                    CREATE INDEX IF NOT EXISTS idx_docs_extracted_fields_gin 
+                    CREATE INDEX IF NOT EXISTS idx_docs_extracted_fields_gin
                     ON documents USING gin ((extracted_fields::jsonb));
                 """))
                 conn.execute(text("""
-                    CREATE INDEX IF NOT EXISTS idx_docs_reconciliation_gin 
+                    CREATE INDEX IF NOT EXISTS idx_docs_reconciliation_gin
                     ON documents USING gin ((reconciliation_result::jsonb));
                 """))
                 conn.execute(text("""
-                    CREATE INDEX IF NOT EXISTS idx_docs_audit_trail_gin 
+                    CREATE INDEX IF NOT EXISTS idx_docs_audit_trail_gin
                     ON documents USING gin ((audit_trail::jsonb));
                 """))
-                
+
                 # Composite query indexes for fast multi-tenant per-user filtering
                 conn.execute(text("""
-                    CREATE INDEX IF NOT EXISTS idx_docs_user_status_created 
+                    CREATE INDEX IF NOT EXISTS idx_docs_user_status_created
                     ON documents (user_id, status, created_at DESC);
                 """))
                 conn.execute(text("""
-                    CREATE INDEX IF NOT EXISTS idx_audit_user_action_timestamp 
+                    CREATE INDEX IF NOT EXISTS idx_audit_user_action_timestamp
                     ON audit_logs (user_id, action, timestamp DESC);
                 """))
                 
