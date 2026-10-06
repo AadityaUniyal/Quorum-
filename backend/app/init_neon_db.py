@@ -3,11 +3,13 @@ Quorum High-Performance Neon PostgreSQL Schema & Database Initializer.
 Sets up optimized tables, composite indexes, JSONB GIN indexes, and verifies connection resilience.
 """
 
-import sys
 import logging
-from sqlalchemy import create_engine, text
-from app.database import Base, engine, get_db
-import app.models  # Ensure all models are imported
+import sys
+
+from sqlalchemy import text
+
+import app.models  # noqa: F401 - Ensure all models are registered in Base.metadata
+from app.database import Base, engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("quorum.neon_init")

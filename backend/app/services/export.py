@@ -6,6 +6,7 @@ Milestone 3 requirement.
 import csv
 import html
 import io
+import json
 import re
 from datetime import UTC, datetime
 from typing import Any
@@ -270,8 +271,6 @@ def export_to_pdf(results: list[dict[str, Any]], query: str | None = None) -> by
 # ERP & Accounting Integration Export Engine (Roadmap Phase 2.4)
 # Supports QuickBooks Online, Xero XML, SAP S/4HANA & NetSuite CSV, Universal JSON
 # ------------------------------------------------------------------------------
-
-import json
 
 
 def _extract_doc_payload(doc: Any) -> tuple[dict[str, Any], list[dict[str, Any]]]:

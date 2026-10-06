@@ -5,6 +5,7 @@ Loads the database URL from application settings (environment variables)
 and configures SQLAlchemy metadata for auto-generating migrations.
 """
 
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -17,8 +18,6 @@ from sqlalchemy import engine_from_config, pool
 
 # Alembic Config object
 config = context.config
-
-import os
 
 # Override sqlalchemy.url with DIRECT_DATABASE_URL if set (specifically for direct migration connections on Neon), otherwise use DATABASE_URL.
 db_url = os.environ.get("DIRECT_DATABASE_URL") or settings.DATABASE_URL

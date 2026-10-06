@@ -11,13 +11,15 @@ Production-grade FastAPI application with:
 """
 
 import asyncio
+import os
 import time
 from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -383,9 +385,6 @@ def health_readiness():
     return JSONResponse(content=health, status_code=status_code)
 
 
-from fastapi.responses import PlainTextResponse
-
-
 def get_queue_depth() -> int:
     try:
         import pika
@@ -462,10 +461,6 @@ def prometheus_metrics():
 
     return "\n".join(lines)
 
-
-import os
-
-from fastapi.staticfiles import StaticFiles
 
 # Serve the frontend UI
 app.mount("/", StaticFiles(directory=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "frontend"), html=True), name="static")

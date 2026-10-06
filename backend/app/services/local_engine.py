@@ -222,7 +222,7 @@ class LocalLayoutParser:
             if date_match:
                 extracted["invoice_date"] = date_match.group(1).strip().title()
 
-            lines = [l.strip() for l in ocr_text.split("\n") if l.strip()]
+            lines = [line.strip() for line in ocr_text.split("\n") if line.strip()]
             if lines:
                 extracted["vendor_name"] = lines[0]
 
@@ -299,7 +299,7 @@ class LocalLayoutParser:
             if exp and exp.group(1):
                 extracted["expiry_date"] = exp.group(1).strip().title()
 
-            lines = [l.strip() for l in ocr_text.split("\n") if l.strip()]
+            lines = [line.strip() for line in ocr_text.split("\n") if line.strip()]
             if len(lines) >= 2:
                 extracted["client_name"] = lines[0]
                 extracted["contractor_name"] = lines[1]
@@ -310,7 +310,7 @@ class LocalLayoutParser:
                 "extracted_date": "N/A",
                 "line_items": []
             }
-            lines = [l.strip() for l in ocr_text.split("\n") if l.strip()]
+            lines = [line.strip() for line in ocr_text.split("\n") if line.strip()]
             if lines:
                 extracted["document_title"] = lines[0]
 
