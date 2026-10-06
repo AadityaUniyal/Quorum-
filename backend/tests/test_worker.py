@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import app.models  # Registers all models in Base.metadata
 from app.database import Base
 from app.models.document import Document, DocumentCategory, DocumentStatus
 from app.worker import classify_document, process_document

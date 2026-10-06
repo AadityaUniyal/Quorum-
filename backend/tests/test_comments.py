@@ -1,12 +1,14 @@
 
-def test_comments_workflow(client, auth_headers, sample_upload_file):
+import io
+
+
+def test_comments_workflow(client, auth_headers):
     # 1. First upload a document so we have a document_id
-    with open(sample_upload_file, "rb") as f:
-        upload_response = client.post(
-            "/api/documents/upload",
-            files={"file": ("test_invoice_comment.txt", f, "text/plain")},
-            headers=auth_headers
-        )
+    upload_response = client.post(
+        "/api/documents/upload",
+        files={"file": ("test_invoice_comment.txt", io.BytesIO(b"Mock Invoice Data 123"), "text/plain")},
+        headers=auth_headers
+    )
     assert upload_response.status_code in (200, 201)
     doc_data = upload_response.json()
     

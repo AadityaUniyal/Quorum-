@@ -170,13 +170,17 @@ def process_document(document_id: str):
         logger.exception(f"Fatal error while worker processed document {document_id}: {str(e)}")
         # Attempt to set document status as FAILED
         try:
+            db.rollback()
             doc = db.query(Document).filter(Document.id == document_id).first()
             if doc:
                 doc.status = DocumentStatus.FAILED
                 db.commit()
         except Exception as db_err:
             logger.error(f"Failed to record FAILED status for document {document_id}: {db_err}")
-            db.rollback()
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
         # Re-raise only if running inside RabbitMQ consumer, not in unmonitored local fallback thread
         if not threading.current_thread().name.startswith("local_fallback"):

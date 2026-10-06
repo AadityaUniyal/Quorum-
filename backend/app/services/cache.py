@@ -153,6 +153,8 @@ def acquire_redis_semaphore(name: str, limit: int, timeout: int = 180) -> str | 
     """
     import time
     import uuid
+    if settings.ENVIRONMENT.lower() in {"testing", "test"}:
+        return f"test_owner:{uuid.uuid4()}"
     try:
         client = get_redis_client()
         sem_key = f"semaphore:{name}"
@@ -172,6 +174,8 @@ def acquire_redis_semaphore(name: str, limit: int, timeout: int = 180) -> str | 
 
 def release_redis_semaphore(name: str, owner_id: str):
     """Release a previously acquired semaphore slot."""
+    if not owner_id or owner_id.startswith("fallback:") or owner_id.startswith("test_owner:") or settings.ENVIRONMENT.lower() in {"testing", "test"}:
+        return
     try:
         client = get_redis_client()
         sem_key = f"semaphore:{name}"

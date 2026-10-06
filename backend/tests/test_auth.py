@@ -189,11 +189,7 @@ class TestPasswordStrengthValidation:
         for pwd in strong_passwords:
             assert zxcvbn(pwd)["score"] >= 3
 
-    def test_register_rejects_weak_password(self):
-        from fastapi.testclient import TestClient
-
-        from app.main import app
-        client = TestClient(app)
+    def test_register_rejects_weak_password(self, client):
         response = client.post(
             "/api/auth/register",
             json={
@@ -206,11 +202,7 @@ class TestPasswordStrengthValidation:
         assert response.status_code == 400
         assert "Password too weak" in response.json()["detail"]
 
-    def test_register_accepts_strong_password(self):
-        from fastapi.testclient import TestClient
-
-        from app.main import app
-        client = TestClient(app)
+    def test_register_accepts_strong_password(self, client):
         email = f"strong_{uuid.uuid4().hex[:6]}@example.com"
         response = client.post(
             "/api/auth/register",

@@ -17,6 +17,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy.exc import OperationalError
 
+import app.models  # Registers all models in Base.metadata
 from app.database import Base
 from app.models.document import Document, DocumentStatus
 from app.worker import process_document
@@ -332,12 +333,15 @@ def test_concurrent_fallback_and_consumer_threads_stress(mock_ocr):
     t_c1 = threading.Thread(target=consumer_worker, args=(doc_ids[2],), name="rabbitmq_consumer_worker_1")
     t_c2 = threading.Thread(target=consumer_worker, args=(doc_ids[3],), name="rabbitmq_consumer_worker_2")
 
-    threads = [t_f1, t_f2, t_c1, t_c2]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join(timeout=10)
-        assert not t.is_alive()
+    import time
+    with patch("app.worker.perform_ocr", side_effect=RuntimeError("Concurrent stress failure")):
+        threads = [t_f1, t_f2, t_c1, t_c2]
+        for t in threads:
+            t.start()
+            time.sleep(0.05)
+        for t in threads:
+            t.join(timeout=10)
+            assert not t.is_alive()
 
     assert len(fallback_errors) == 0, f"Fallback threads leaked errors: {fallback_errors}"
     assert len(consumer_errors) == 2, f"Expected 2 consumer errors, got: {len(consumer_errors)}"

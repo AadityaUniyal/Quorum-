@@ -20,6 +20,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+import app.models  # Registers all models in Base.metadata
 from app.core.security import create_access_token, get_password_hash
 from app.database import Base, get_db
 from app.main import app

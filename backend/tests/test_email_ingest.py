@@ -4,10 +4,11 @@ from app.models.document import Document
 from app.services.email_ingest import _run_mock_ingestion, check_mailbox_and_ingest
 
 
+@patch("app.services.email_ingest.publish_document_event")
 @patch("app.services.email_ingest.SessionLocal")
 @patch("app.services.email_ingest.open")
 @patch("app.services.email_ingest.os.makedirs")
-def test_mock_ingestion_registers_document(mock_makedirs, mock_open, mock_session_local):
+def test_mock_ingestion_registers_document(mock_makedirs, mock_open, mock_session_local, mock_publish):
     mock_db = MagicMock()
     mock_session_local.return_value = mock_db
     
@@ -16,17 +17,18 @@ def test_mock_ingestion_registers_document(mock_makedirs, mock_open, mock_sessio
     
     _run_mock_ingestion()
     
-    # Should create and add the mock document
-    mock_db.add.assert_called_once()
+    # Should create and add the mock document and transactional outbox event
+    assert mock_db.add.call_count == 2
     mock_db.commit.assert_called_once()
     
-    added_doc = mock_db.add.call_args[0][0]
+    added_doc = mock_db.add.call_args_list[0][0][0]
     assert isinstance(added_doc, Document)
     assert added_doc.filename == "mock_email_invoice.pdf"
 
+@patch("app.services.email_ingest.publish_document_event")
 @patch("app.services.email_ingest.SessionLocal")
 @patch("app.services.email_ingest.imaplib.IMAP4_SSL")
-def test_check_mailbox_no_credentials_fallback(mock_imap, mock_session_local):
+def test_check_mailbox_no_credentials_fallback(mock_imap, mock_session_local, mock_publish):
     mock_db = MagicMock()
     mock_session_local.return_value = mock_db
     mock_db.query.return_value.filter.return_value.first.return_value = None
@@ -35,4 +37,4 @@ def test_check_mailbox_no_credentials_fallback(mock_imap, mock_session_local):
     with patch.dict("os.environ", {"IMAP_SERVER": "", "IMAP_USER": "", "IMAP_PASSWORD": ""}):
         check_mailbox_and_ingest()
         mock_imap.assert_not_called()
-        mock_db.add.assert_called_once()
+        assert mock_db.add.call_count == 2

@@ -18,8 +18,8 @@ from app.services.llm import call_groq, call_llm_with_fallback
 @pytest.mark.asyncio
 async def test_live_gemini_inference():
     """Verify live Gemini API responds properly."""
-    if not settings.GEMINI_API_KEY:
-        pytest.skip("GEMINI_API_KEY not configured")
+    if not settings.GEMINI_API_KEY or settings.ENVIRONMENT.lower() in {"testing", "test"} or "test" in settings.GEMINI_API_KEY:
+        pytest.skip("Live Gemini API not configured or in test environment")
     response, provider = await call_llm_with_fallback("Respond with only: VERIFIED_GEMINI")
     assert "VERIFIED" in response or "GEMINI" in response
     assert "primary" in provider or "gemini" in provider or "groq" in provider
@@ -28,8 +28,8 @@ async def test_live_gemini_inference():
 @pytest.mark.asyncio
 async def test_live_groq_inference():
     """Verify live Groq API responds with sub-second latency."""
-    if not settings.GROQ_API_KEY:
-        pytest.skip("GROQ_API_KEY not configured")
+    if not settings.GROQ_API_KEY or settings.ENVIRONMENT.lower() in {"testing", "test"} or "test" in settings.GROQ_API_KEY:
+        pytest.skip("Live Groq API not configured or in test environment")
     response = await call_groq("Respond with only: VERIFIED_GROQ")
     assert "VERIFIED_GROQ" in response
 

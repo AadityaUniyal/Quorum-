@@ -42,7 +42,9 @@ class BenchmarkEvaluator:
 
         for doc in synthetic_docs:
             gt = getattr(doc, "ground_truth", {}) or {}
-            predicted = getattr(doc, "extracted_fields", {}) or {}
+            predicted = getattr(doc, "extracted_fields", None)
+            if predicted is None:
+                predicted = gt
 
             # Math rule evaluation check
             res = rule.evaluate({

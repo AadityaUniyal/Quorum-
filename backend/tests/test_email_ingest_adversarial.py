@@ -93,17 +93,19 @@ def test_imap_ingestion_malformed_none_payload_graceful_handling(db_session, mon
     mock_mail.search.return_value = ("OK", [b"1"])
     mock_mail.fetch.return_value = ("OK", [(b"1 (RFC822)", msg.as_bytes())])
 
+    mock_part = MagicMock()
+    mock_part.get_content_maintype.return_value = "application"
+    mock_part.get.return_value = "attachment"
+    mock_part.get_filename.return_value = "corrupted.pdf"
+    mock_part.get_payload.return_value = None  # None payload simulates broken decoding
+
+    mock_msg = MagicMock()
+    mock_msg.__getitem__.return_value = "Corrupted MIME Invoice"
+    mock_msg.walk.return_value = [mock_part]
+
     with patch("imaplib.IMAP4_SSL", return_value=mock_mail), \
-         patch("email.message.EmailMessage.walk") as mock_walk, \
+         patch("email.message_from_bytes", return_value=mock_msg), \
          patch("app.services.email_ingest.publish_document_event") as mock_publish:
-
-        mock_part = MagicMock()
-        mock_part.get_content_maintype.return_value = "application"
-        mock_part.get.return_value = "attachment"
-        mock_part.get_filename.return_value = "corrupted.pdf"
-        mock_part.get_payload.return_value = None  # None payload simulates broken decoding
-
-        mock_walk.return_value = [mock_part]
 
         check_mailbox_and_ingest(db=db_session)
 
@@ -197,7 +199,8 @@ def test_mock_ingestion_db_commit_failure_prevents_publish(monkeypatch):
     session.commit()
     session.close()
 
-    with patch.object(TestingSessionLocal, "commit", side_effect=OperationalError("disk I/O error", {}, None)), \
+    from sqlalchemy.orm import Session
+    with patch.object(Session, "commit", side_effect=OperationalError("disk I/O error", {}, None)), \
          patch("app.services.email_ingest.SessionLocal", TestingSessionLocal), \
          patch("app.services.email_ingest.publish_document_event") as mock_publish:
 
