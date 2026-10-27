@@ -42,17 +42,13 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/${{ env.OWNER_LC }}/googi-backend:latest
-          cache-from: type=registry,ref=ghcr.io/${{ env.OWNER_LC }}/googi-backend:cache
-          cache-to: type=registry,ref=ghcr.io/${{ env.OWNER_LC }}/googi-backend:cache,mode=max
+          push: false
+          tags: ${{ env.OWNER_LC }}-backend:latest
 
       - name: Build and push worker image
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile.worker
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/${{ env.OWNER_LC }}/googi-worker:latest
-          cache-from: type=registry,ref=ghcr.io/${{ env.OWNER_LC }}/googi-worker:cache
-          cache-to: type=registry,ref=ghcr.io/${{ env.OWNER_LC }}/googi-worker:cache,mode=max
+          push: false
+          tags: ${{ env.OWNER_LC }}-worker:latest
