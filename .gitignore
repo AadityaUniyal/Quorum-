@@ -81,8 +81,6 @@ AGENTS.md
 CLAUDE.md
 PROJECT.md
 QUORUM_ELEVATION_MASTER_REPORT.md
-*ELEVATION*
-*AUDIT*
 *.tsbuildinfo
 .vercel/
 frontend/.vercel/
