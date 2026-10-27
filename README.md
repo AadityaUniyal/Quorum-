@@ -160,9 +160,6 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) or visit the live deployment at [https://frontend-brown-seven-19.vercel.app](https://frontend-brown-seven-19.vercel.app).
-
----
 
 ## 🗄️ Neon PostgreSQL Architecture
 
