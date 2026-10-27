@@ -10,6 +10,7 @@ import { ConfidenceBar } from '@/components/ui/ConfidenceBar';
 import { useAuthStore } from '@/stores/auth';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { SpatialBoundingCanvas } from '@/components/review/SpatialBoundingCanvas';
+import { FormalAuditBadge } from '@/components/review/FormalAuditBadge';
 import { saveReviewDraft, loadReviewDraft, clearReviewDraft } from '@/lib/offlineStorage';
 
 const DocumentDiffViewer = dynamic(
@@ -209,6 +210,15 @@ export default function ReviewPage() {
   const { data: probabilities = {} } = useQuery({
     queryKey: ['probabilities', selectedDocId],
     queryFn: () => api.getDocumentProbabilities(selectedDocId),
+    enabled: !!selectedDocId,
+    refetchInterval: selectedDocId ? 15000 : false,
+    refetchIntervalInBackground: true,
+  });
+
+  // Fetch Formal SMT Constraints & Cryptographic Merkle Provenance
+  const { data: formalAudit, isLoading: formalAuditLoading } = useQuery({
+    queryKey: ['formalAudit', selectedDocId],
+    queryFn: () => api.getFormalAudit(selectedDocId),
     enabled: !!selectedDocId,
     refetchInterval: selectedDocId ? 15000 : false,
     refetchIntervalInBackground: true,
@@ -564,13 +574,15 @@ export default function ReviewPage() {
           <div className="flex-1 flex flex-col overflow-hidden">
             
             {/* Header info / lock status */}
-            <div className="p-4 border-b border-white/[0.04] bg-white/[0.01] flex items-center justify-between">
+            <div className="p-4 border-b border-white/[0.04] bg-white/[0.01] flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <FileText className="h-4.5 w-4.5 text-muted-foreground" aria-hidden="true" />
                 <span className="text-sm font-semibold text-foreground truncate max-w-[250px]">{doc.filename}</span>
                 <Badge variant="category" value={doc.category} size="sm">
                   {doc.category}
                 </Badge>
+                {/* Formal SMT and Merkle Provenance Badge */}
+                <FormalAuditBadge auditData={formalAudit} isLoading={formalAuditLoading} />
               </div>
 
               {/* Lock card */}

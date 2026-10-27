@@ -473,6 +473,75 @@ def bulk_delete_documents(
     return {"message": f"Successfully deleted {deleted_count} documents", "count": deleted_count}
 
 
+# SMT Constraint Verification & Merkle Provenance Inspection Endpoint
+@router.get("/{document_id}/formal-audit", status_code=status.HTTP_200_OK)
+def get_document_formal_audit(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(any_user)
+):
+    """
+    Computes formal SMT arithmetic satisfiability and cryptographic Merkle provenance seal.
+    """
+    from app.services.smt_verifier import SMTArithmeticProver
+    from app.services.merkle_provenance import MerkleProvenanceEngine
+
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    require_document_read(current_user, doc)
+
+    # Build fields dictionary
+    fields_dict = {}
+    fields_list = []
+    for f in doc.fields:
+        val = f.consensus_value or f.extracted_value or ""
+        fields_dict[f.field_key] = val
+        fields_list.append({
+            "field_key": f.field_key,
+            "extracted_value": f.extracted_value,
+            "consensus_value": f.consensus_value,
+            "bounding_box": f.bounding_box,
+            "evidence_text": f.evidence_text,
+            "confidence_score": f.confidence_score,
+            "validation_status": f.validation_status.value if hasattr(f.validation_status, "value") else str(f.validation_status),
+        })
+
+    # 1. Run SMT Prover
+    smt_res = SMTArithmeticProver.verify_financial_constraints(fields_dict)
+
+    # 2. Compute Merkle Provenance Seal
+    seal_res = MerkleProvenanceEngine.generate_verification_seal(
+        document_id=str(doc.id),
+        fields=fields_list,
+        organization_id=str(doc.organization_id) if doc.organization_id else None
+    )
+
+    return {
+        "document_id": str(doc.id),
+        "smt_verification": {
+            "is_satisfiable": smt_res.is_satisfiable,
+            "status": smt_res.status,
+            "claimed_total": float(smt_res.claimed_total),
+            "computed_total": float(smt_res.computed_total),
+            "arithmetic_delta": float(smt_res.arithmetic_delta),
+            "subtotal": float(smt_res.subtotal),
+            "tax_amount": float(smt_res.tax_amount),
+            "math_accuracy_score": smt_res.math_accuracy_score,
+            "unsat_core_reasons": smt_res.unsat_core_reasons,
+        },
+        "merkle_provenance": {
+            "seal_id": seal_res.seal_id,
+            "merkle_root": seal_res.merkle_root,
+            "algorithm": seal_res.algorithm,
+            "leaf_count": seal_res.leaf_count,
+            "timestamp": seal_res.timestamp,
+            "field_hashes": seal_res.field_hashes,
+            "audit_receipt": seal_res.audit_receipt,
+        }
+    }
+
+
 # Inspect DLQ messages
 @router.get("/dlq", status_code=status.HTTP_200_OK)
 def inspect_dlq(

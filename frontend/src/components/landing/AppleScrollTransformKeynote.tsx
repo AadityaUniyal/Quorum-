@@ -32,9 +32,9 @@ const stages: KeynoteStage[] = [
   {
     id: 0,
     tag: 'Autonomous Verification OS',
-    badge: 'Spatial Vision Core',
+    badge: 'Topological Delaunay Graph',
     title: 'Precision.',
-    subtitle: 'Every invoice, contract, and balance sheet mapped to normalized 1000 × 1000 coordinates before inference.',
+    subtitle: 'Every invoice, contract, and balance sheet mapped to geometric Delaunay graphs and normalized 1000 × 1000 coordinates before inference.',
     metrics: [
       { label: 'Ingestion Latency', value: '< 380ms' },
       { label: 'Spatial Resolution', value: '1000 × 1000' },
@@ -44,25 +44,25 @@ const stages: KeynoteStage[] = [
   },
   {
     id: 1,
-    tag: 'Deterministic Math Engine',
-    badge: 'Arithmetic Guarantee',
+    tag: 'Deterministic SMT Engine',
+    badge: 'Z3-Formal Proof (Δ == 0.00)',
     title: 'Zero Drift.',
-    subtitle: 'LLMs estimate tokens. Quorum recomputes all quantity × price multiplications down to the exact cent.',
+    subtitle: 'LLMs estimate tokens. Quorum evaluates formal first-order arithmetic constraints to eliminate all calculation discrepancies.',
     metrics: [
       { label: 'Math Delta', value: 'Δ == $0.00' },
       { label: 'Rounding Errors Caught', value: '100%' },
-      { label: 'Tax Precision', value: 'Exact Decimal' }
+      { label: 'Formal Prover', value: 'SMT Satisfiability' }
     ],
     highlightSection: 'math'
   },
   {
     id: 2,
-    tag: '2D Coordinate Anchoring',
-    badge: 'Spatial Provenance',
-    title: '100% Provenance.',
-    subtitle: 'Hover any extracted dollar figure to illuminate its exact bounding box on the original document.',
+    tag: 'Adversarial Debate Core',
+    badge: 'Nash Equilibrium Scoring',
+    title: 'Adversarial Truth.',
+    subtitle: 'Extractors and Critics engage in zero-sum reflexive debate until claims reach mathematical and visual stability.',
     metrics: [
-      { label: 'Audit Time Saved', value: '92%' },
+      { label: 'Consensus Mode', value: 'Nash Bimatrix' },
       { label: 'Confidence Score', value: '99.8%' },
       { label: 'Traceability', value: 'Bidirectional' }
     ],
@@ -70,8 +70,8 @@ const stages: KeynoteStage[] = [
   },
   {
     id: 3,
-    tag: 'Direct ERP Integration',
-    badge: 'Certified Accounting',
+    tag: 'Cryptographic Ledger Proof',
+    badge: 'Merkle Provenance Seal',
     title: 'Instant Dispatch.',
     subtitle: '1-click certified journal entry push directly to SAP S/4HANA, NetSuite, and QuickBooks with audit hashes.',
     metrics: [

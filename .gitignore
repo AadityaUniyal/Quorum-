@@ -75,8 +75,17 @@ Thumbs.db
 # Agent artifacts & AI scratchpads
 .agents/
 .kiro/
+.gemini/
+.antigravity/
 AGENTS.md
 CLAUDE.md
+PROJECT.md
+QUORUM_ELEVATION_MASTER_REPORT.md
+*ELEVATION*
+*AUDIT*
+*.tsbuildinfo
+.vercel/
+frontend/.vercel/
 
 # Test outputs
 locust_output_*

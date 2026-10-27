@@ -1427,6 +1427,32 @@ export const api = {
     return request(`/api/documents/${documentId}/audit-line-items`);
   },
 
+  getFormalAudit: async (documentId: string): Promise<{
+    document_id: string;
+    smt_verification: {
+      is_satisfiable: boolean;
+      status: 'SAT' | 'UNSAT';
+      claimed_total: number;
+      computed_total: number;
+      arithmetic_delta: number;
+      subtotal: number;
+      tax_amount: number;
+      math_accuracy_score: number;
+      unsat_core_reasons: string[];
+    };
+    merkle_provenance: {
+      seal_id: string;
+      merkle_root: string;
+      algorithm: string;
+      leaf_count: number;
+      timestamp: string;
+      field_hashes: Record<string, string>;
+      audit_receipt: Record<string, any>;
+    };
+  }> => {
+    return request(`/api/documents/${documentId}/formal-audit`);
+  },
+
   // Demo Sandbox & Benchmarks
   seedDemoSandbox: async (): Promise<{ message: string; documents: { id: string; title: string; scenario: string }[] }> => {
     return request("/api/v1/demo/seed", { method: "POST" });

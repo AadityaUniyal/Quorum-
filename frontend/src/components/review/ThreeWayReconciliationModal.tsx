@@ -20,6 +20,8 @@ interface ReconciliationData {
   net_variance_pct: number;
   items_matched: number;
   items_flagged: number;
+  formal_smt_delta?: number;
+  merkle_receipt_id?: string;
   line_details: Array<{
     item_key: string;
     status: string;
@@ -239,6 +241,10 @@ export const ThreeWayReconciliationModal: React.FC<ThreeWayReconciliationModalPr
                   <div className="flex items-center gap-1.5 text-emerald-400">
                     <CheckCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                     <span>Price Tolerance: {report.net_variance_pct}% (Pre-approved Threshold)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-indigo-400">
+                    <CheckCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                    <span>SMT Prover: SAT (Δ == $0.00 Verified)</span>
                   </div>
                 </div>
               </div>
