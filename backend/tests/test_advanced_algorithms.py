@@ -7,7 +7,6 @@ Comprehensive Test Suite for QUORUM OS Algorithmic Engines:
 """
 
 from decimal import Decimal
-import pytest
 
 from app.services.smt_verifier import SMTArithmeticProver
 from app.services.merkle_provenance import MerkleProvenanceEngine

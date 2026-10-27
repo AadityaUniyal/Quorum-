@@ -8,7 +8,7 @@ satisfying SOC 2 Type II, SOX, and ISO 27001 requirements.
 
 import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 

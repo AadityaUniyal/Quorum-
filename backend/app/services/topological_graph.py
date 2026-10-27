@@ -123,9 +123,7 @@ class TopologicalSpatialEngine:
         """
         Groups horizontally adjacent nodes with high collinearity into structured table rows.
         """
-        horizontal_edges = [e for e in edges if e.relationship == "HORIZONTAL_RIGHT"]
-        node_map = {n.token_id: n for n in nodes}
-
+        _ = edges  # Unused in basic collinearity pass
         # Cluster by y-bands
         y_clusters: dict[int, list[SpatialTokenNode]] = {}
         for n in nodes:
