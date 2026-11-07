@@ -79,11 +79,13 @@ RUN mkdir -p /app/uploads && chown appuser:appuser /app/uploads
 USER appuser
 
 # Expose the API port
-EXPOSE 8000
+# Expose default API ports
+EXPOSE 8000 10000
 
 # Health check - verify the API is responding
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl --fail http://localhost:8000/health || exit 1
+    CMD curl --fail http://localhost:${PORT:-8000}/health/live || exit 1
 
 # Run the FastAPI application with Uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# Run the FastAPI application with dynamic PORT binding (compatible with Render, Railway, Docker)
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"]
