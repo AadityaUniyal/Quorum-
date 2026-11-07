@@ -1,11 +1,5 @@
 # ============================================================================
-# DocIntel AI Platform - Backend Dockerfile (Multi-Stage)
-# ============================================================================
-# Stage 1 (builder): Install Python dependencies in an isolated layer
-# Stage 2 (runtime): Minimal image with only runtime dependencies
-#
-# Build:  docker build -t docintel-backend ./backend
-# Run:    docker run -p 8000:8000 --env-file .env docintel-backend
+# Quorum OS Backend Dockerfile (Multi-Stage, Context-Agnostic)
 # ============================================================================
 
 # --------------------------------------------------------------------------
@@ -13,7 +7,6 @@
 # --------------------------------------------------------------------------
 FROM python:3.11-slim AS builder
 
-# Prevent Python from writing .pyc files and enable unbuffered output
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
@@ -26,12 +19,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies into a virtual environment for clean copying
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy only requirements first to leverage Docker layer caching
-COPY requirements.txt .
+# Copy requirements from either root or backend/ context
+COPY requirements.txt* backend/requirements.txt* ./
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir -r requirements.txt
 
@@ -40,19 +32,15 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
 # --------------------------------------------------------------------------
 FROM python:3.11-slim AS runtime
 
-# Labels for container metadata
 LABEL maintainer="Aaditya Uniyal" \
-      org.opencontainers.image.title="DocIntel Backend" \
-      org.opencontainers.image.description="FastAPI backend for the DocIntel AI platform" \
-      org.opencontainers.image.source="https://github.com/AadityaUniyal/Googi"
+      org.opencontainers.image.title="Quorum OS Backend" \
+      org.opencontainers.image.description="FastAPI backend for Quorum OS"
 
-# Prevent Python from writing .pyc files and enable unbuffered output
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    # Ensure the virtualenv is on PATH
     PATH="/opt/venv/bin:$PATH"
 
-# Install minimal runtime dependencies
+# Install minimal runtime dependencies including Tesseract OCR
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 \
         curl \
@@ -60,7 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user for security
+# Create non-root user
 RUN groupadd --gid 1000 appuser \
     && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
 
@@ -72,20 +60,18 @@ COPY --from=builder /opt/venv /opt/venv
 # Copy application code
 COPY --chown=appuser:appuser . .
 
-# Create directory for uploaded documents (if needed)
-RUN mkdir -p /app/uploads && chown appuser:appuser /app/uploads
+# Normalize paths if build context was repository root
+RUN if [ -d "backend/app" ]; then cp -r backend/* . && rm -rf backend; fi
 
-# Switch to non-root user
+# Create uploads directory
+RUN mkdir -p /app/uploads && chown -R appuser:appuser /app
+
 USER appuser
 
-# Expose the API port
-# Expose default API ports
 EXPOSE 8000 10000
 
-# Health check - verify the API is responding
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl --fail http://localhost:${PORT:-8000}/health/live || exit 1
 
-# Run the FastAPI application with Uvicorn
 # Run the FastAPI application with dynamic PORT binding (compatible with Render, Railway, Docker)
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"]

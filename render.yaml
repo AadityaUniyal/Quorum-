@@ -2,8 +2,7 @@ services:
   - type: web
     name: quorum-backend
     env: docker
-    dockerContext: backend
-    dockerfilePath: backend/Dockerfile
+    dockerfilePath: Dockerfile
     plan: free
     healthCheckPath: /health/live
     autoDeploy: true
@@ -15,6 +14,8 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: LLM_PREFERRED_PROVIDER
+        value: gemini
+      - key: EMBEDDING_PROVIDER
         value: gemini
       - key: LLM_OFFLINE_MOCK_FALLBACK
         value: "false"

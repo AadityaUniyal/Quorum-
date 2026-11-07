@@ -36,7 +36,7 @@ google-generativeai>=0.3.0
 google-genai>=0.1.1
 tenacity>=8.2.0
 aiohttp>=3.9.0
-sentence-transformers>=2.7.0
+# sentence-transformers>=2.7.0  # Optional: Cloud builds use Gemini API embeddings to prevent 2.5GB PyTorch wheel timeouts
 
 # ─── OCR, PDF & Document Processing ──────────────────────────────────────────
 pytesseract>=0.3.10
