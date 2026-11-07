@@ -288,6 +288,40 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
     if has_anchor_arithmetic_failure:
         overall_score = min(overall_score, 0.55)
 
+    # ── Step 8: SMT Formal Arithmetic Verification ───────────────────────────
+    smt_verification_data = None
+    if category in (DocumentCategory.INVOICE, DocumentCategory.PURCHASE_ORDER):
+        try:
+            from app.services.smt_verifier import SMTArithmeticProver
+            smt_res = SMTArithmeticProver.verify_financial_constraints(extracted_fields)
+            smt_verification_data = {
+                "status": smt_res.status,
+                "is_satisfiable": smt_res.is_satisfiable,
+                "delta": str(smt_res.arithmetic_delta),
+                "claimed_total": str(smt_res.claimed_total),
+                "computed_total": str(smt_res.computed_total),
+                "unsat_reasons": smt_res.unsat_core_reasons,
+            }
+            if smt_res.status == "UNSAT":
+                has_anchor_arithmetic_failure = True
+                overall_score = min(overall_score, 0.50)
+        except Exception as smt_err:
+            logger.warning(f"SMT verification exception: {smt_err}")
+
+    # ── Step 9: Merkle Provenance Seal ───────────────────────────────────────
+    merkle_seal_data = None
+    try:
+        from app.services.merkle_provenance import MerkleProvenanceEngine
+        seal = MerkleProvenanceEngine.generate_verification_seal("consensus", field_reports)
+        merkle_seal_data = {
+            "seal_id": seal.seal_id,
+            "merkle_root": seal.merkle_root,
+            "algorithm": seal.algorithm,
+            "timestamp": seal.timestamp,
+        }
+    except Exception as merkle_err:
+        logger.warning(f"Merkle seal generation exception: {merkle_err}")
+
     logger.info(f"Consensus complete — score: {overall_score:.2%}, drift flags: {len(drift_flags)}")
 
     return {
@@ -295,4 +329,6 @@ async def run_agent_consensus(ocr_text: str, category: DocumentCategory) -> dict
         "fields":           field_reports,
         "drift_flags":      drift_flags,
         "executive_summary": executive_summary,
+        "smt_verification": smt_verification_data,
+        "merkle_seal":      merkle_seal_data,
     }

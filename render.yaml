@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: quorum-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    plan: standard
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: ENVIRONMENT
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: LLM_PREFERRED_PROVIDER
+        value: gemini
+      - key: LLM_OFFLINE_MOCK_FALLBACK
+        value: "false"

@@ -149,7 +149,7 @@ def process_document(document_id: str):
         }
         add_document_to_vector_store(doc.id, ocr_result, metadata)
 
-        # 7. Write Audit Log
+        # 7. Write Audit Log (including Formal SMT Verification and Merkle Provenance Seal)
         audit = AuditLog(
             document_id=doc.id,
             action="SYSTEM_PROCESSING_COMPLETE",
@@ -160,6 +160,8 @@ def process_document(document_id: str):
                 "fields_extracted": len(consensus["fields"]),
                 "drift_flags": consensus.get("drift_flags", []),
                 "executive_summary": consensus.get("executive_summary", ""),
+                "smt_verification": consensus.get("smt_verification"),
+                "merkle_seal": consensus.get("merkle_seal"),
             }
         )
         db.add(audit)
