@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Cpu, Cloud } from "lucide-react";
+import { getApiBaseUrl } from "@/lib/api";
 
 export const SseStatusPill: React.FC = () => {
   const [mode, setMode] = useState<"cloud_live" | "standalone_engine">("standalone_engine");
@@ -10,10 +11,10 @@ export const SseStatusPill: React.FC = () => {
     let isMounted = true;
     const probeBackend = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://docintel-api.onrender.com";
+        const apiUrl = getApiBaseUrl() || "https://quorum-backend-dvwv.onrender.com";
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
-        const res = await fetch(`${apiUrl}/health`, { signal: controller.signal });
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const res = await fetch(`${apiUrl}/health/live`, { signal: controller.signal });
         clearTimeout(timeoutId);
         if (res.ok && isMounted) {
           setMode("cloud_live");
