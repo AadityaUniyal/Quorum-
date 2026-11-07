@@ -1,4 +1,14 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+export function getApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const custom = localStorage.getItem("quorum_custom_api_url");
+    if (custom && custom.trim()) {
+      return custom.trim().replace(/\/$/, "");
+    }
+  }
+  return (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface UserResponse {
   id: string;
@@ -302,7 +312,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await fetch(`${getApiBaseUrl()}${path}`, {
       ...options,
       headers,
       credentials: "include",
@@ -1222,7 +1232,7 @@ export const api = {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/search/export?${params.toString()}`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/search/export?${params.toString()}`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -1350,7 +1360,7 @@ export const api = {
   },
 
   streamDocumentPipeline: (documentId: string): EventSource => {
-    const url = `${API_BASE_URL}/api/streaming/documents/${encodeURIComponent(documentId)}/stream`;
+    const url = `${getApiBaseUrl()}/api/streaming/documents/${encodeURIComponent(documentId)}/stream`;
     const token = typeof window !== "undefined" ? localStorage.getItem("doc_intel_token") : null;
     const cookieMatch = typeof document !== "undefined" && document.cookie
       ? document.cookie.match(/(?:^|; )access_token=([^;]*)/)
@@ -1447,7 +1457,7 @@ export const api = {
     history?: { role: string; content: string }[]
   ): Promise<Response> => {
     try {
-      return await fetch(`${API_BASE_URL}/api/rag/ask/stream`, {
+      return await fetch(`${getApiBaseUrl()}/api/rag/ask/stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

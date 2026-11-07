@@ -9,7 +9,7 @@ import {
   User, Settings, Bell, Key, FileSpreadsheet,
   Moon, Sun, Lock, QrCode, Copy, Plus, Trash,
   Loader2, AlertCircle, Shield, UserCog,
-  Webhook, CheckCircle2, AlertTriangle, ExternalLink, Filter, RefreshCw, Check
+  Webhook, CheckCircle2, AlertTriangle, ExternalLink, Filter, RefreshCw, Check, Cpu
 } from 'lucide-react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,6 +64,15 @@ export default function SettingsPage() {
   });
 
   // API Keys
+  const [customApiUrl, setCustomApiUrl] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('quorum_custom_api_url') || '';
+    }
+    return '';
+  });
+  const [pingStatus, setPingStatus] = useState<string | null>(null);
+  const [isPinging, setIsPinging] = useState(false);
+
   const [newKeyName, setNewKeyName] = useState('');
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
 
@@ -890,6 +899,89 @@ export default function SettingsPage() {
             {/* ── API KEYS ── */}
             {activeTab === 'apikeys' && (
               <motion.div key="apikeys" {...tabMotion} className="flex flex-col gap-6 w-full">
+                {/* Cloud Cluster Endpoint Configuration */}
+                <div className="border border-white/10 bg-white/[0.02] p-5 rounded-2xl flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                        <Cpu className="w-4 h-4 text-blue-400" />
+                        Cloud Neural Cluster Endpoint
+                      </h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        Connect this web app to your live Docker / Railway / Render backend microservices.
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-400">
+                      Zero-Trust Secure Proxy
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2.5">
+                    <input
+                      type="url"
+                      value={customApiUrl}
+                      onChange={(e) => setCustomApiUrl(e.target.value)}
+                      placeholder="https://quorum-backend.up.railway.app (or http://localhost:8000)"
+                      className="flex-1 bg-black/50 border border-white/10 rounded-xl px-3.5 py-2 text-xs font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500/50"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={isPinging}
+                        onClick={async () => {
+                          setIsPinging(true);
+                          setPingStatus('Pinging /health...');
+                          const target = (customApiUrl.trim() || 'https://docintel-api.onrender.com').replace(/\/$/, '');
+                          const start = Date.now();
+                          try {
+                            const res = await fetch(`${target}/health`, { signal: AbortSignal.timeout(4000) });
+                            const duration = Date.now() - start;
+                            if (res.ok) {
+                              setPingStatus(`Online (${duration}ms latency)`);
+                              toast.success(`Cluster connected: ${duration}ms latency`);
+                            } else {
+                              setPingStatus(`HTTP ${res.status} - Cluster Offline`);
+                              toast.error(`Cluster returned status ${res.status}`);
+                            }
+                          } catch (err: any) {
+                            setPingStatus('Host Unreachable: Operating in Standalone SMT Core');
+                            toast.error('Could not reach backend endpoint');
+                          } finally {
+                            setIsPinging(false);
+                          }
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        {isPinging ? 'Pinging...' : 'Test Connection'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (customApiUrl.trim()) {
+                            localStorage.setItem('quorum_custom_api_url', customApiUrl.trim());
+                            toast.success('Custom backend endpoint saved');
+                          } else {
+                            localStorage.removeItem('quorum_custom_api_url');
+                            toast.success('Reset to default backend');
+                          }
+                          setTimeout(() => window.location.reload(), 400);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-500 transition-colors"
+                      >
+                        Save &amp; Reload
+                      </button>
+                    </div>
+                  </div>
+
+                  {pingStatus && (
+                    <div className="text-[11px] font-mono text-zinc-400 flex items-center gap-2 pt-1 border-t border-white/5">
+                      <span className="text-zinc-500">Status:</span>
+                      <span className={pingStatus.includes('Online') ? 'text-emerald-400 font-semibold' : 'text-amber-400'}>
+                        {pingStatus}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <div>
                   <h3 className="text-sm font-bold text-foreground">API Keys</h3>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Generate tokens for third-party integrations using the X-API-Key header.</p>
