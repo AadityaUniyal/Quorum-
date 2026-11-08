@@ -5,7 +5,7 @@ export function getApiBaseUrl(): string {
       return custom.trim().replace(/\/$/, "");
     }
   }
-  return (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+  return (process.env.NEXT_PUBLIC_API_URL || "https://quorum-backend-dvwv.onrender.com").replace(/\/$/, "");
 }
 
 const API_BASE_URL = getApiBaseUrl();
@@ -319,7 +319,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     });
 
     if (response.status === 401) {
-      if (isDemoSession || typeof window !== "undefined") {
+      if (isDemoSession) {
         return getMockResponse<T>(path, options);
       }
       clearLegacyTokens();
@@ -327,7 +327,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     }
 
     if (!response.ok) {
-      if (isDemoSession || typeof window !== "undefined") {
+      if (isDemoSession) {
         return getMockResponse<T>(path, options);
       }
       const errData = await response.json().catch(() => ({}));
@@ -340,8 +340,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
     return response.json() as Promise<T>;
   } catch (networkError) {
-    // Fallback to local clean-slate engine
-    return getMockResponse<T>(path, options);
+    if (isDemoSession) {
+      return getMockResponse<T>(path, options);
+    }
+    throw networkError;
   }
 }
 
