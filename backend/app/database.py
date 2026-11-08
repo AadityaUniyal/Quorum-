@@ -63,6 +63,12 @@ def _resolve_db_url(url: str) -> tuple[str, dict]:
     if clean_url.startswith("sqlite"):
         return clean_url, {"check_same_thread": False}
 
+    # Normalize PostgreSQL URL for SQLAlchemy 2.0 to use psycopg2 explicitly
+    if clean_url.startswith("postgresql://"):
+        clean_url = "postgresql+psycopg2://" + clean_url[len("postgresql://"):]
+    elif clean_url.startswith("postgres://"):
+        clean_url = "postgresql+psycopg2://" + clean_url[len("postgres://"):]
+
     parsed = urlparse(clean_url)
     host = parsed.hostname
     if host and host not in ("localhost", "127.0.0.1", ""):
