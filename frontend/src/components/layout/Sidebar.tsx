@@ -80,7 +80,7 @@ export const Sidebar: React.FC = () => {
           {sidebarOpen && (
             <button
               onClick={toggleSidebar}
-              className="p-1 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] text-zinc-400 hover:text-white cursor-pointer transition-colors"
+              className="p-1 rounded-lg border border-white/5 bg-zinc-900/60 hover:bg-white/[0.06] text-zinc-400 hover:text-white cursor-pointer transition-colors"
               title="Collapse sidebar"
             >
               <ChevronLeft className="h-3.5 w-3.5" />

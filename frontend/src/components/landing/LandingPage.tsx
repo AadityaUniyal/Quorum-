@@ -383,7 +383,7 @@ export default function LandingPage() {
 
           <button
             onClick={handlePasskeyAuth}
-            className="flex items-center gap-2 px-5 py-3 rounded-full border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] text-sm font-medium text-zinc-300 hover:text-white transition-all duration-200 cursor-pointer"
+            className="flex items-center gap-2 px-5 py-3 rounded-full border border-white/10 bg-zinc-900/50 hover:bg-white/[0.08] text-sm font-medium text-zinc-300 hover:text-white transition-all duration-200 cursor-pointer"
           >
             <Fingerprint className="h-4 w-4 text-blue-400" />
             <span>Instant Passkey Access</span>
@@ -511,7 +511,7 @@ export default function LandingPage() {
                   <p className="text-xs text-zinc-500 max-w-2xl font-light">{pillar.desc}</p>
                 </div>
               </div>
-              <div className="shrink-0 px-4 py-2 rounded-xl bg-white/[0.03] border border-white/5 text-right font-mono text-xs text-zinc-300">
+              <div className="shrink-0 px-4 py-2 rounded-xl bg-zinc-900/50 border border-white/5 text-right font-mono text-xs text-zinc-300">
                 {pillar.stat}
               </div>
             </div>

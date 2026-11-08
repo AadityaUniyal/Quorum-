@@ -16,7 +16,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       elevated:
         'bg-[#18181F]/90 backdrop-blur-3xl border border-white/[0.10] shadow-[0_24px_50px_-12px_rgba(0,0,0,0.85)]',
       mica:
-        'bg-white/[0.03] backdrop-blur-3xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5)]',
+        'bg-zinc-900/50 backdrop-blur-3xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5)]',
       ghost:
         'bg-transparent border border-white/[0.08] hover:border-white/[0.14]',
     };

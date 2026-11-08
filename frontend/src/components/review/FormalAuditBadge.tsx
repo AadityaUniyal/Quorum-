@@ -33,7 +33,7 @@ export const FormalAuditBadge: React.FC<FormalAuditBadgeProps> = ({ auditData, i
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/[0.03] border border-white/10 text-xs text-zinc-400 animate-pulse font-mono">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-zinc-900/50 border border-white/10 text-xs text-zinc-400 animate-pulse font-mono">
         <Cpu className="w-3.5 h-3.5 text-blue-400 animate-spin" />
         <span>Evaluating SMT Constraints &amp; Merkle Root...</span>
       </div>
@@ -179,7 +179,7 @@ export const FormalAuditBadge: React.FC<FormalAuditBadgeProps> = ({ auditData, i
                 </div>
                 <div className="p-3 rounded-xl bg-black/50 border border-white/5 font-mono text-xs space-y-1.5">
                   <div className="text-[11px] text-zinc-500">Root Digest:</div>
-                  <div className="break-all text-blue-300 font-mono select-all bg-white/[0.02] p-2 rounded border border-white/5">
+                  <div className="break-all text-blue-300 font-mono select-all bg-zinc-900/60 p-2 rounded border border-white/5">
                     {merkleRoot}
                   </div>
                   <div className="flex justify-between text-[11px] text-zinc-400 pt-1">

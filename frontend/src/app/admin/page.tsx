@@ -81,14 +81,14 @@ export default function AdminPage() {
       </div>
 
       <Tabs.Root className="w-full" value={activeTab} onValueChange={(v) => setActiveTab(v as 'users' | 'logs')}>
-        <Tabs.List className="flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] w-fit mb-6">
+        <Tabs.List className="flex gap-1 p-1 rounded-xl bg-zinc-900/50 border border-white/[0.06] w-fit mb-6">
           <Tabs.Trigger
             value="users"
             className={clsx(
               'flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer',
               activeTab === 'users'
                 ? 'bg-primary/10 text-primary border border-primary/25'
-                : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.03]'
+                : 'text-muted-foreground hover:text-foreground hover:bg-zinc-900/50'
             )}
           >
             <Users className="h-3.5 w-3.5" />
@@ -100,7 +100,7 @@ export default function AdminPage() {
               'flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer',
               activeTab === 'logs'
                 ? 'bg-primary/10 text-primary border border-primary/25'
-                : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.03]'
+                : 'text-muted-foreground hover:text-foreground hover:bg-zinc-900/50'
             )}
           >
             <ScrollText className="h-3.5 w-3.5" />
@@ -117,7 +117,7 @@ export default function AdminPage() {
             <div className="glass-card overflow-hidden">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+                  <tr className="border-b border-white/[0.06] bg-zinc-900/60">
                     <th className="text-left px-4 py-3 text-muted-foreground font-semibold uppercase tracking-wider text-[10px]">User ID</th>
                     <th className="text-left px-4 py-3 text-muted-foreground font-semibold uppercase tracking-wider text-[10px]">Email</th>
                     <th className="text-left px-4 py-3 text-muted-foreground font-semibold uppercase tracking-wider text-[10px]">Role</th>
@@ -133,7 +133,7 @@ export default function AdminPage() {
                     </tr>
                   ) : (
                     users.map((u) => (
-                      <tr key={u.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                      <tr key={u.id} className="border-b border-white/[0.04] hover:bg-zinc-900/60 transition-colors">
                         <td className="px-4 py-3 text-muted-foreground font-mono text-[10px] break-all max-w-[200px]">{u.id}</td>
                         <td className="px-4 py-3 text-foreground font-medium">{u.email}</td>
                         <td className="px-4 py-3">

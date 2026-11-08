@@ -195,7 +195,7 @@ export const Header: React.FC = () => {
                           className={clsx(
                             "p-2.5 rounded-2xl border transition-all cursor-pointer text-xs",
                             n.is_read
-                              ? "bg-white/[0.02] border-white/5 text-zinc-400"
+                              ? "bg-zinc-900/60 border-white/5 text-zinc-400"
                               : "bg-blue-500/10 border-blue-500/30 text-zinc-200"
                           )}
                         >

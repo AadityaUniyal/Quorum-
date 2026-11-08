@@ -395,7 +395,7 @@ export default function PricingPage() {
                 </div>
               </div>
 
-              <div className="my-5 p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-2 font-mono text-xs">
+              <div className="my-5 p-4 rounded-2xl bg-zinc-900/50 border border-white/5 space-y-2 font-mono text-xs">
                 <div className="flex justify-between text-zinc-400">
                   <span>Selected Tier</span>
                   <span className="text-white font-semibold">{selectedPlan.name}</span>

@@ -150,7 +150,7 @@ export default function CrawlConsolePage() {
       </div>
 
       {/* Control Panel */}
-      <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6">
+      <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans flex items-center gap-2">
@@ -252,7 +252,7 @@ export default function CrawlConsolePage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="flex flex-col gap-3 border-t border-white/4 pt-4"
+              className="flex flex-col gap-3 border-t border-white/10 pt-4"
             >
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground font-mono">
@@ -299,7 +299,7 @@ export default function CrawlConsolePage() {
 
       {/* Statistics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-3">
+        <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <Globe className="h-5 w-5 text-primary" />
             <TrendingUp className="h-4 w-4 text-emerald-400" />
@@ -310,7 +310,7 @@ export default function CrawlConsolePage() {
           </div>
         </div>
 
-        <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-3">
+        <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <BarChart3 className="h-5 w-5 text-purple-400" />
             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
@@ -321,7 +321,7 @@ export default function CrawlConsolePage() {
           </div>
         </div>
 
-        <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-3">
+        <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <AlertCircle className="h-5 w-5 text-amber-400" />
             <span className="text-[10px] font-mono font-bold text-muted-foreground">N/A</span>
@@ -337,13 +337,13 @@ export default function CrawlConsolePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* PageRank Distribution */}
-        <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6 min-h-[320px]">
+        <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6 min-h-[320px]">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">PageRank Distribution</h3>
               <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">Authority score histogram across indexed pages.</p>
             </div>
-            <button className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer transition-colors">
+            <button className="p-1.5 border border-white/10 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer transition-colors">
               <Download className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -376,7 +376,7 @@ export default function CrawlConsolePage() {
         </div>
 
         {/* Top Pages by PageRank */}
-        <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6 min-h-[320px]">
+        <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6 min-h-[320px]">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Top Authoritative Pages</h3>
@@ -398,7 +398,7 @@ export default function CrawlConsolePage() {
               topPages.map((page, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between p-3 bg-[#111]/50 border border-white/4 rounded-xl hover:bg-[#111] transition-colors"
+                  className="flex items-center justify-between p-3 bg-[#111]/50 border border-white/10 rounded-xl hover:bg-[#111] transition-colors"
                 >
                   <div className="flex-1 flex flex-col gap-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -429,7 +429,7 @@ export default function CrawlConsolePage() {
       </div>
 
       {/* Full Pages Table */}
-      <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6">
+      <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Crawled Pages Index</h3>
@@ -443,7 +443,7 @@ export default function CrawlConsolePage() {
           </button>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/4 bg-[#0c0c0c]/70">
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0c0c]/70">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-white/3 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">

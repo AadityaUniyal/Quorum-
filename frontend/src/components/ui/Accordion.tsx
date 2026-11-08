@@ -123,7 +123,7 @@ export const AccordionTrigger = React.forwardRef<HTMLButtonElement, AccordionTri
         onClick={() => accordionContext.toggleValue(value)}
         aria-expanded={isOpen}
         className={clsx(
-          'w-full flex items-center justify-between py-3.5 px-2 text-left font-sans text-sm font-medium text-[#f5f5f7] transition-all cursor-pointer rounded-xl hover:bg-white/[0.03] select-none',
+          'w-full flex items-center justify-between py-3.5 px-2 text-left font-sans text-sm font-medium text-[#f5f5f7] transition-all cursor-pointer rounded-xl hover:bg-zinc-900/50 select-none',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3] focus-visible:ring-offset-1 focus-visible:ring-offset-black',
           className
         )}

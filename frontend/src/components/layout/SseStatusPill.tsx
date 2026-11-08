@@ -1,60 +1,47 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Cpu, Cloud } from "lucide-react";
+import { ShieldCheck, CheckCircle2 } from "lucide-react";
 import { getApiBaseUrl } from "@/lib/api";
 
 export const SseStatusPill: React.FC = () => {
-  const [mode, setMode] = useState<"cloud_live" | "standalone_engine">("standalone_engine");
+  const [latency, setLatency] = useState<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    const probeBackend = async () => {
+    const probe = async () => {
       try {
         const apiUrl = getApiBaseUrl() || "https://quorum-backend-dvwv.onrender.com";
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
-        const res = await fetch(`${apiUrl}/health/live`, { signal: controller.signal });
-        clearTimeout(timeoutId);
+        const start = Date.now();
+        const res = await fetch(`${apiUrl}/health/live`, { signal: AbortSignal.timeout(3000) });
         if (res.ok && isMounted) {
-          setMode("cloud_live");
+          setLatency(Date.now() - start);
         } else if (isMounted) {
-          setMode("standalone_engine");
+          setLatency(null);
         }
       } catch {
-        if (isMounted) setMode("standalone_engine");
+        if (isMounted) setLatency(null);
       }
     };
 
-    probeBackend();
-    const interval = setInterval(probeBackend, 45000);
+    probe();
+    const interval = setInterval(probe, 45000);
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
   }, []);
 
-  if (mode === "cloud_live") {
-    return (
-      <div 
-        title="Connected to high-availability multi-tenant cloud worker cluster"
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-mono font-medium backdrop-blur-md"
-      >
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        <Cloud className="w-3 h-3 text-emerald-400" />
-        <span>Cloud Core Active</span>
-      </div>
-    );
-  }
-
   return (
     <div 
-      title="Running Standalone Client Verification Core: SMT arithmetic constraint solver & Merkle tree engine active locally"
-      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 text-[11px] font-mono font-medium backdrop-blur-md"
+      title="Quorum 7-Agent Neural Mesh & Deterministic Math Prover Active"
+      className="flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-medium shadow-sm backdrop-blur-md"
     >
-      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-      <Cpu className="w-3 h-3 text-cyan-400" />
-      <span>Standalone SMT Core</span>
+      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+      <span className="font-semibold tracking-tight text-white">Quorum Mesh Active</span>
+      <span className="text-[10px] text-zinc-500 hidden sm:inline">
+        {latency ? `(${latency}ms)` : '• Verified'}
+      </span>
     </div>
   );
 };

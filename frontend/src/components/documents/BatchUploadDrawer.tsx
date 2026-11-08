@@ -60,7 +60,7 @@ export const BatchUploadDrawer: React.FC<BatchUploadDrawerProps> = ({
         className="fixed bottom-6 right-6 z-50 w-96 max-w-[calc(100vw-2rem)] bg-[#0c121e]/95 border border-primary/25 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col font-sans"
       >
         {/* Drawer Header */}
-        <div className="p-3.5 px-4 bg-white/[0.02] border-b border-white/[0.06] flex items-center justify-between select-none">
+        <div className="p-3.5 px-4 bg-zinc-900/60 border-b border-white/[0.06] flex items-center justify-between select-none">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 rounded-lg bg-primary/15 text-primary border border-primary/20">
               {inProgressCount > 0 ? (
@@ -184,7 +184,7 @@ export const BatchUploadDrawer: React.FC<BatchUploadDrawerProps> = ({
 
         {/* Footer Actions */}
         {!isMinimized && onClearCompleted && completedCount > 0 && (
-          <div className="p-2.5 px-4 bg-white/[0.01] border-t border-white/[0.04] flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+          <div className="p-2.5 px-4 bg-zinc-900/75 border-t border-white/[0.04] flex items-center justify-between text-[10px] text-muted-foreground font-mono">
             <span>{completedCount} completed</span>
             <button
               onClick={onClearCompleted}

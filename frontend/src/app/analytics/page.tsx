@@ -246,7 +246,7 @@ export default function AnalyticsPage() {
       {/* Quorum Financial Analytics: Vendor Spend & Anomaly Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Vendor Spend Breakdown */}
-        <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-4 lg:col-span-2">
+        <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-4 lg:col-span-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-primary" />
@@ -273,7 +273,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Real-time Neon Anomaly Alerts */}
-        <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-4">
+        <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShieldAlert className="h-4 w-4 text-amber-400" />
@@ -324,7 +324,7 @@ export default function AnalyticsPage() {
       <Tabs.Root defaultValue="documents" className="w-full flex flex-col gap-6 select-none">
         
         {/* Tab triggers list */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/4 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
           <Tabs.List className="flex items-center gap-1.5 bg-[#0c0c0c]/85 border border-white/8 p-1 rounded-2xl">
             {[
               { value: 'documents', label: 'Documents Ingestion' },
@@ -355,7 +355,7 @@ export default function AnalyticsPage() {
         {/* --- DOCUMENTS TAB --- */}
         <Tabs.Content value="documents" className="grid grid-cols-1 lg:grid-cols-3 gap-6 outline-none">
           {/* Weekly Ingestion volume trend */}
-          <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6 lg:col-span-2 min-h-[320px] relative">
+          <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6 lg:col-span-2 min-h-[320px] relative">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Ingestion Volume Trend</h3>
@@ -363,7 +363,7 @@ export default function AnalyticsPage() {
               </div>
               <button 
                 onClick={() => handleExportChart('Ingestion_Volume')} 
-                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                className="p-1.5 border border-white/10 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
                 aria-label="Export ingestion volume chart"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
@@ -400,7 +400,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Status Distribution */}
-          <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6 min-h-[320px] relative">
+          <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6 min-h-[320px] relative">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Pipeline Status Distribution</h3>
@@ -408,7 +408,7 @@ export default function AnalyticsPage() {
               </div>
               <button 
                 onClick={() => handleExportChart('Pipeline_Status')} 
-                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                className="p-1.5 border border-white/10 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
                 aria-label="Export pipeline status chart"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
@@ -444,7 +444,7 @@ export default function AnalyticsPage() {
         {/* --- AI AGENTS TAB --- */}
         <Tabs.Content value="agents" className="grid grid-cols-1 lg:grid-cols-3 gap-6 outline-none animate-fade-in">
           {/* Scatter correlation plot */}
-          <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6 lg:col-span-2 min-h-[320px]">
+          <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6 lg:col-span-2 min-h-[320px]">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Critic vs Auditor Consensus Correlation</h3>
@@ -452,7 +452,7 @@ export default function AnalyticsPage() {
               </div>
               <button 
                 onClick={() => handleExportChart('Consensus_Correlation')} 
-                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                className="p-1.5 border border-white/10 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
                 aria-label="Export consensus correlation chart"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
@@ -477,7 +477,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Latency distribution bar chart */}
-          <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6 min-h-[320px]">
+          <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6 min-h-[320px]">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Agent Processing Latency</h3>
@@ -485,7 +485,7 @@ export default function AnalyticsPage() {
               </div>
               <button 
                 onClick={() => handleExportChart('Agent_Latency')} 
-                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                className="p-1.5 border border-white/10 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
                 aria-label="Export agent latency chart"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
@@ -512,18 +512,18 @@ export default function AnalyticsPage() {
         {/* --- SEARCH TAB --- */}
         <Tabs.Content value="search" className="grid grid-cols-1 lg:grid-cols-3 gap-6 outline-none animate-fade-in">
           {/* Word cloud top queries */}
-          <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6 lg:col-span-2 min-h-[320px]">
+          <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6 lg:col-span-2 min-h-[320px]">
             <div>
               <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Search Queries Frequency Tag Cloud</h3>
               <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">Most active search parameter phrases.</p>
             </div>
 
-            <div className="grow flex flex-wrap gap-4 items-center justify-center p-8 bg-[#0c0c0c]/50 rounded-2xl border border-white/2">
+            <div className="grow flex flex-wrap gap-4 items-center justify-center p-8 bg-[#0c0c0c]/50 rounded-2xl border border-white/10">
               {topQueries.slice(0, 7).map((q, idx) => {
                 const sizeClass = idx === 0 ? 'text-2xl text-primary font-bold' : idx === 1 ? 'text-xl text-purple-400 font-semibold' : idx === 2 ? 'text-lg text-emerald-400 font-medium' : idx < 4 ? 'text-base text-amber-400 font-medium' : 'text-sm text-neutral-400';
                 return (
                   <span key={idx}
-                    className={clsx("px-3 py-1.5 rounded-xl border border-white/4 bg-white/1 hover:scale-[1.05] transition-all cursor-pointer font-sans shadow-sm", sizeClass)}
+                    className={clsx("px-3 py-1.5 rounded-xl border border-white/10 bg-white/1 hover:scale-[1.05] transition-all cursor-pointer font-sans shadow-sm", sizeClass)}
                     title={`Queried ${q.count} times`}>
                     {q.text} <span className="text-[9px] font-mono opacity-50 font-normal">({q.count})</span>
                   </span>
@@ -533,7 +533,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Zero results list */}
-          <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-5 min-h-[320px]">
+          <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-5 min-h-[320px]">
             <div>
               <h3 className="text-sm font-semibold tracking-wide text-rose-400 font-sans flex items-center gap-1.5">
                 <Flame className="h-4 w-4 text-rose-450" /> Zero-Result Keywords
@@ -558,7 +558,7 @@ export default function AnalyticsPage() {
         {/* --- CRAWL TAB --- */}
         <Tabs.Content value="crawl" className="grid grid-cols-1 lg:grid-cols-3 gap-6 outline-none animate-fade-in">
           {/* PageRanks list */}
-          <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6 lg:col-span-2 min-h-[320px]">
+          <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6 lg:col-span-2 min-h-[320px]">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">PageRank Distribution Graph</h3>
@@ -566,7 +566,7 @@ export default function AnalyticsPage() {
               </div>
               <button 
                 onClick={() => handleExportChart('PageRank')} 
-                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                className="p-1.5 border border-white/10 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
                 aria-label="Export PageRank chart"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
@@ -590,7 +590,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Crawl duration logs */}
-          <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6 min-h-[320px]">
+          <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6 min-h-[320px]">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Domain Crawl Latency</h3>
@@ -598,7 +598,7 @@ export default function AnalyticsPage() {
               </div>
               <button 
                 onClick={() => handleExportChart('Crawl_Duration')} 
-                className="p-1.5 border border-white/4 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
+                className="p-1.5 border border-white/10 hover:bg-white/4 rounded-lg text-muted-foreground hover:text-white cursor-pointer"
                 aria-label="Export crawl duration chart"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
@@ -617,7 +617,7 @@ export default function AnalyticsPage() {
       </Tabs.Root>
 
       {/* Bottom Section: Audit Trail Feed */}
-      <div className="glass-card p-6 border border-white/4 bg-[#0c0c0c]/85 flex flex-col gap-6 w-full select-none">
+      <div className="glass-card p-6 border border-white/10 bg-[#0c0c0c]/85 flex flex-col gap-6 w-full select-none">
         <div>
           <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">System Audit Trail</h3>
           <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">
@@ -652,7 +652,7 @@ export default function AnalyticsPage() {
               return (
                 <div 
                   key={log.id}
-                  className="flex flex-col border border-white/4 bg-[#0f0f0f]/30 hover:bg-[#0f0f0f]/50 rounded-xl overflow-hidden transition-all duration-200"
+                  className="flex flex-col border border-white/10 bg-[#0f0f0f]/30 hover:bg-[#0f0f0f]/50 rounded-xl overflow-hidden transition-all duration-200"
                 >
                   <div 
                     onClick={() => handleToggleExpandLog(log.id)}
@@ -693,7 +693,7 @@ export default function AnalyticsPage() {
                         animate={{ height: 'auto' }}
                         exit={{ height: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="border-t border-white/2 bg-black/40 overflow-hidden"
+                        className="border-t border-white/10 bg-black/40 overflow-hidden"
                       >
                         <div className="p-4 font-mono text-[10px] text-neutral-400 select-text leading-relaxed max-h-[200px] overflow-y-auto scrollbar">
                           <pre className="whitespace-pre-wrap">{JSON.stringify(log.details, null, 2)}</pre>

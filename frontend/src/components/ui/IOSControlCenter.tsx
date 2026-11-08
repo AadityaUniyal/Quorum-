@@ -208,7 +208,7 @@ export const IOSControlCenter: React.FC = () => {
                   'flex items-center justify-between p-2.5 rounded-2xl border transition-all cursor-pointer text-left',
                   fontFamily === f.id
                     ? 'bg-white/15 border-white/25 text-white font-medium shadow-sm'
-                    : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
+                    : 'bg-zinc-900/60 border-white/5 text-zinc-400 hover:text-white hover:bg-white/[0.05]'
                 )}
               >
                 <div className="flex flex-col">

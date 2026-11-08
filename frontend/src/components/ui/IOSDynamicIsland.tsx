@@ -226,7 +226,7 @@ export const IOSDynamicIsland: React.FC = () => {
                   <Palette className="w-3 h-3 text-purple-400" />
                   iOS Accent Tint
                 </span>
-                <div className="flex items-center justify-between gap-1 bg-white/[0.03] p-1.5 rounded-2xl border border-white/5">
+                <div className="flex items-center justify-between gap-1 bg-zinc-900/50 p-1.5 rounded-2xl border border-white/5">
                   {accents.map((item) => (
                     <button
                       key={item.id}
@@ -265,7 +265,7 @@ export const IOSDynamicIsland: React.FC = () => {
                         'py-1.5 px-2 rounded-xl text-[10px] font-medium text-center border transition-all cursor-pointer truncate',
                         fontFamily === f.id
                           ? 'bg-white/20 text-white border-white/30 font-semibold'
-                          : 'bg-white/[0.02] text-zinc-400 border-white/5 hover:text-white'
+                          : 'bg-zinc-900/60 text-zinc-400 border-white/5 hover:text-white'
                       )}
                     >
                       {f.label.split(' ')[0]}

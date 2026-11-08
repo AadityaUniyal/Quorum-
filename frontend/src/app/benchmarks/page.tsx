@@ -368,7 +368,7 @@ export default function BenchmarksPage() {
         <div className="overflow-x-auto rounded-2xl border border-white/[0.08]">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-white/[0.02] border-b border-white/[0.08] text-zinc-300 font-mono">
+              <tr className="bg-zinc-900/60 border-b border-white/[0.08] text-zinc-300 font-mono">
                 <th className="p-3.5 font-semibold">Evaluation Capability</th>
                 <th className="p-3.5 font-semibold text-blue-400 bg-blue-500/5 border-x border-blue-500/20">
                   <div className="flex items-center gap-1.5">
@@ -384,7 +384,7 @@ export default function BenchmarksPage() {
             </thead>
             <tbody className="divide-y divide-white/[0.04] font-sans">
               {filteredMatrix.map((row, idx) => (
-                <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                <tr key={idx} className="hover:bg-zinc-900/60 transition-colors">
                   <td className="p-3.5 font-medium text-zinc-200">
                     {row.feature}
                   </td>

@@ -476,7 +476,7 @@ export default function ReviewPage() {
       
       {/* Left panel: Queue List */}
       <div className="w-80 border border-white/[0.04] bg-[#0c0c0c]/80 rounded-2xl flex flex-col overflow-hidden shrink-0">
-        <div className="p-4 border-b border-white/[0.04] bg-white/[0.01]">
+        <div className="p-4 border-b border-white/[0.04] bg-zinc-900/75">
           <h3 className="text-sm font-semibold tracking-wide text-foreground font-sans">Review Queue</h3>
           <p className="text-[10px] text-muted-foreground mt-0.5 font-sans">Select document to check extracted values.</p>
         </div>
@@ -521,7 +521,7 @@ export default function ReviewPage() {
                     isLocked ? 'opacity-60 cursor-not-allowed bg-neutral-900/20 border-white/[0.02]' : 'cursor-pointer hover:scale-[1.01]',
                     selectedDocId === item.id
                       ? 'bg-primary/10 border-primary/20 text-primary'
-                      : !isLocked ? 'bg-[#0f0f0f]/40 border-white/[0.04] hover:bg-white/[0.01] hover:border-white/[0.06] text-neutral-300' : ''
+                      : !isLocked ? 'bg-[#0f0f0f]/40 border-white/[0.04] hover:bg-zinc-900/75 hover:border-white/[0.06] text-neutral-300' : ''
                   )}
                 >
                   <div className="flex items-center justify-between w-full">
@@ -574,7 +574,7 @@ export default function ReviewPage() {
           <div className="flex-1 flex flex-col overflow-hidden">
             
             {/* Header info / lock status */}
-            <div className="p-4 border-b border-white/[0.04] bg-white/[0.01] flex flex-wrap items-center justify-between gap-3">
+            <div className="p-4 border-b border-white/[0.04] bg-zinc-900/75 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <FileText className="h-4.5 w-4.5 text-muted-foreground" aria-hidden="true" />
                 <span className="text-sm font-semibold text-foreground truncate max-w-[250px]">{doc.filename}</span>
@@ -629,7 +629,7 @@ export default function ReviewPage() {
                             toast.error(err.message || "Failed to extend lock");
                           });
                       }}
-                      className="px-2 py-0.5 border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/[0.12] rounded text-[9px] font-mono text-neutral-300 hover:text-white cursor-pointer transition-all duration-200"
+                      className="px-2 py-0.5 border border-white/[0.06] bg-zinc-900/60 hover:bg-white/[0.06] hover:border-white/[0.12] rounded text-[9px] font-mono text-neutral-300 hover:text-white cursor-pointer transition-all duration-200"
                       aria-label="Extend editing lock"
                     >
                       Extend
@@ -747,7 +747,7 @@ export default function ReviewPage() {
                             navigator.clipboard.writeText(doc.ocr_text || '');
                             toast.success('OCR text copied to clipboard!');
                           }}
-                          className="px-2.5 py-1 border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.05] rounded-lg text-[9px] font-mono text-neutral-450 hover:text-white transition-all cursor-pointer"
+                          className="px-2.5 py-1 border border-white/[0.04] bg-zinc-900/75 hover:bg-white/[0.05] rounded-lg text-[9px] font-mono text-neutral-450 hover:text-white transition-all cursor-pointer"
                           aria-label="Copy Raw OCR text to clipboard"
                         >
                           Copy
@@ -806,7 +806,7 @@ export default function ReviewPage() {
                       <div className="border border-white/5 bg-[#090909] rounded-xl overflow-hidden overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead>
-                            <tr className="border-b border-white/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-white/[0.02]">
+                            <tr className="border-b border-white/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-zinc-900/60">
                               <th className="py-2.5 px-4">Description</th>
                               <th className="py-2.5 px-3 text-center w-20">Qty</th>
                               <th className="py-2.5 px-3 text-right w-28">Unit Price</th>
@@ -1293,7 +1293,7 @@ export default function ReviewPage() {
                                   type="button"
                                   onClick={() => handleStartEdit(field.field_key, currentValue)}
                                   aria-label={`Edit value for ${field.field_key}`}
-                                  className="p-2 rounded-lg border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.06] text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-200"
+                                  className="p-2 rounded-lg border border-white/[0.04] bg-zinc-900/75 hover:bg-white/[0.06] text-muted-foreground hover:text-foreground cursor-pointer transition-colors duration-200"
                                   title="Override value"
                                 >
                                   <Edit2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1302,7 +1302,7 @@ export default function ReviewPage() {
                                   type="button"
                                   onClick={() => handleDeleteField(field.field_key)}
                                   aria-label={`Delete field ${field.field_key} from review payload`}
-                                  className="p-2 rounded-lg border border-white/[0.04] bg-white/[0.01] hover:bg-rose-500/10 hover:border-rose-500/20 text-muted-foreground hover:text-rose-400 cursor-pointer transition-colors duration-200"
+                                  className="p-2 rounded-lg border border-white/[0.04] bg-zinc-900/75 hover:bg-rose-500/10 hover:border-rose-500/20 text-muted-foreground hover:text-rose-400 cursor-pointer transition-colors duration-200"
                                   title="Delete field from review payload"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1312,7 +1312,7 @@ export default function ReviewPage() {
                           )}
                         </div>
 
-                        <div className="h-px bg-white/[0.02]" />
+                        <div className="h-px bg-zinc-900/60" />
 
                         {/* Scores waterfall */}
                         <div className="flex flex-col gap-2">
@@ -1490,12 +1490,12 @@ export default function ReviewPage() {
             </div>
 
             {/* Bottom action bar */}
-            <div className="p-4 border-t border-white/[0.04] bg-white/[0.01] flex items-center justify-between select-none">
+            <div className="p-4 border-t border-white/[0.04] bg-zinc-900/75 flex items-center justify-between select-none">
               <button
                 type="button"
                 onClick={() => selectDocument('')}
                 aria-label="Cancel review and return to document queue"
-                className="px-4 py-2 rounded-xl text-xs font-semibold border border-white/[0.04] hover:bg-white/[0.02] text-muted-foreground hover:text-foreground cursor-pointer transition-all duration-300"
+                className="px-4 py-2 rounded-xl text-xs font-semibold border border-white/[0.04] hover:bg-zinc-900/60 text-muted-foreground hover:text-foreground cursor-pointer transition-all duration-300"
               >
                 Cancel
               </button>
@@ -1506,7 +1506,7 @@ export default function ReviewPage() {
                   type="button"
                   onClick={() => setShowDiffModal(true)}
                   aria-label="View visual diff (Alt+D)"
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.08] text-slate-300 transition cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-zinc-900/50 border border-white/[0.08] hover:bg-white/[0.08] text-slate-300 transition cursor-pointer"
                   title="View AI vs Human diff (Alt+D)"
                 >
                   <Eye className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1575,7 +1575,7 @@ export default function ReviewPage() {
                         selectDocument('');
                       }}
                       aria-label="Return to document queue"
-                      className="flex-1 px-4 py-2 bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.06] text-muted-foreground hover:text-foreground rounded-xl text-xs font-semibold cursor-pointer transition-all"
+                      className="flex-1 px-4 py-2 bg-zinc-900/60 border border-white/[0.06] hover:bg-white/[0.06] text-muted-foreground hover:text-foreground rounded-xl text-xs font-semibold cursor-pointer transition-all"
                     >
                       Return to Queue
                     </button>

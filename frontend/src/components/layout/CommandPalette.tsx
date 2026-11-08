@@ -110,7 +110,7 @@ export const CommandPalette: React.FC = () => {
             className="relative w-full max-w-xl rounded-3xl bg-[#0A0A0C]/95 border border-white/[0.12] shadow-[0_32px_80px_rgba(0,0,0,0.9)] backdrop-blur-3xl overflow-hidden z-10 text-white font-sans select-none"
           >
             {/* Search Input Bar */}
-            <div className="p-4 border-b border-white/[0.08] flex items-center gap-3 bg-white/[0.02]">
+            <div className="p-4 border-b border-white/[0.08] flex items-center gap-3 bg-zinc-900/60">
               <Search className="w-4 h-4 text-[#0071e3] shrink-0" />
               <input
                 type="text"
@@ -166,7 +166,7 @@ export const CommandPalette: React.FC = () => {
             </div>
 
             {/* Command Palette Footer */}
-            <div className="px-4 py-2.5 border-t border-white/[0.06] bg-white/[0.01] flex items-center justify-between text-[10px] text-[#86868b] font-mono">
+            <div className="px-4 py-2.5 border-t border-white/[0.06] bg-zinc-900/75 flex items-center justify-between text-[10px] text-[#86868b] font-mono">
               <span className="flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3 text-[#0071e3]" /> Quorum OS Global Dispatch
               </span>

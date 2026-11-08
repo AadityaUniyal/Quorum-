@@ -129,7 +129,7 @@ export const IOSActivityRings: React.FC<IOSActivityRingsProps> = ({
               return (
                 <div
                   key={ring.name}
-                  className="flex items-center justify-between p-2 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors"
+                  className="flex items-center justify-between p-2 rounded-xl bg-zinc-900/60 border border-white/5 hover:bg-white/[0.05] transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
                     <div

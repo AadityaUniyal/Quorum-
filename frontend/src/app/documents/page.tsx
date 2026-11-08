@@ -424,7 +424,7 @@ export default function DocumentsPage() {
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/10 bg-white/[0.02] text-[10px] font-semibold tracking-wider text-zinc-400 uppercase font-mono">
+                <tr className="border-b border-white/10 bg-zinc-900/60 text-[10px] font-semibold tracking-wider text-zinc-400 uppercase font-mono">
                   <th className="py-3.5 px-4 w-10">
                     <input
                       type="checkbox"
@@ -473,7 +473,7 @@ export default function DocumentsPage() {
                         setSelectedDocId(doc.id);
                       }}
                       className={clsx(
-                        "hover:bg-white/[0.03] transition-colors duration-150 text-xs text-zinc-300 cursor-pointer select-none",
+                        "hover:bg-zinc-900/50 transition-colors duration-150 text-xs text-zinc-300 cursor-pointer select-none",
                         selectedDocId === doc.id && "bg-white/[0.05]"
                       )}
                     >
@@ -767,7 +767,7 @@ export default function DocumentsPage() {
                   )}
 
                   {/* File Metadata Info */}
-                  <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col gap-3 font-sans select-none">
+                  <div className="p-4 rounded-2xl border border-white/10 bg-zinc-900/60 flex flex-col gap-3 font-sans select-none">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-zinc-400">Filename:</span>
                       <span className="font-semibold text-white truncate max-w-[220px]">{fullDoc.filename}</span>
@@ -857,7 +857,7 @@ export default function DocumentsPage() {
                         {fullDoc.fields.map((field) => (
                           <div 
                             key={field.id}
-                            className="p-3 rounded-2xl border border-white/5 bg-white/[0.02] flex flex-col gap-1.5"
+                            className="p-3 rounded-2xl border border-white/5 bg-zinc-900/60 flex flex-col gap-1.5"
                           >
                             <div className="flex items-center justify-between text-xs">
                               <span className="font-mono text-xs font-semibold text-white">{field.field_key}</span>

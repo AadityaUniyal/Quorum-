@@ -42,7 +42,7 @@ export default function Error({
         </div>
 
         {error?.digest && (
-          <div className="text-[11px] font-mono text-neutral-500 bg-white/[0.03] px-3 py-1 rounded-md border border-white/5">
+          <div className="text-[11px] font-mono text-neutral-500 bg-zinc-900/50 px-3 py-1 rounded-md border border-white/5">
             Event Digest: {error.digest}
           </div>
         )}

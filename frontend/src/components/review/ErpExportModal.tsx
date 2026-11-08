@@ -157,7 +157,7 @@ export const ErpExportModal: React.FC<ErpExportModalProps> = ({
         <Dialog.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-[#0c121e] border border-white/[0.08] rounded-2xl w-[calc(100%-2rem)] max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans select-none animate-fadeIn">
           
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-white/[0.01]">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-zinc-900/75">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10 border border-primary/20 text-primary">
                 <Building2 className="h-5 w-5" aria-hidden="true" />

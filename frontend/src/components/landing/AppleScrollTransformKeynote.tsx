@@ -172,7 +172,7 @@ export const AppleScrollTransformKeynote: React.FC = () => {
           <div className="rounded-3xl bg-[#0b0b0e]/95 backdrop-blur-3xl border border-white/10 overflow-hidden">
             
             {/* macOS Window Chrome */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/[0.02]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-zinc-900/60">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]/80 border border-[#e0443e]" />
                 <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]/80 border border-[#dea123]" />
@@ -243,7 +243,7 @@ export const AppleScrollTransformKeynote: React.FC = () => {
                     "p-3 rounded-2xl border transition-all duration-300",
                     current.highlightSection === 'math'
                       ? "bg-amber-500/10 border-amber-500/40 shadow-sm"
-                      : "bg-white/[0.02] border-white/5"
+                      : "bg-zinc-900/60 border-white/5"
                   )}>
                     <div className="text-xs font-semibold text-zinc-200 mb-1 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
@@ -261,7 +261,7 @@ export const AppleScrollTransformKeynote: React.FC = () => {
                     "p-3 rounded-2xl border transition-all duration-300",
                     current.highlightSection === 'provenance'
                       ? "bg-emerald-500/10 border-emerald-500/40 shadow-sm"
-                      : "bg-white/[0.02] border-white/5"
+                      : "bg-zinc-900/60 border-white/5"
                   )}>
                     <div className="text-xs font-semibold text-zinc-200 mb-1 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
@@ -279,7 +279,7 @@ export const AppleScrollTransformKeynote: React.FC = () => {
                     "p-3 rounded-2xl border transition-all duration-300",
                     current.highlightSection === 'erp'
                       ? "bg-purple-500/10 border-purple-500/40 shadow-sm"
-                      : "bg-white/[0.02] border-white/5"
+                      : "bg-zinc-900/60 border-white/5"
                   )}>
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-1.5 text-zinc-200 font-medium">
@@ -294,7 +294,7 @@ export const AppleScrollTransformKeynote: React.FC = () => {
                 {/* Stage Metrics Row */}
                 <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5 text-center">
                   {current.metrics.map((m, idx) => (
-                    <div key={idx} className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
+                    <div key={idx} className="p-2 rounded-xl bg-zinc-900/50 border border-white/5">
                       <div className="text-[10px] text-zinc-400">{m.label}</div>
                       <div className="text-xs font-bold text-white font-mono mt-0.5">{m.value}</div>
                     </div>

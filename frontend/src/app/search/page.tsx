@@ -454,7 +454,7 @@ export default function SearchPage() {
                             type="button"
                             onClick={() => handleSelectSuggestion(sug)}
                             aria-label={`Select search suggestion: ${sug}`}
-                            className="w-full text-left px-5 py-3 text-xs text-neutral-300 hover:bg-primary/10 hover:text-primary transition-colors border-b border-white/2 last:border-b-0 cursor-pointer flex items-center gap-2 font-sans"
+                            className="w-full text-left px-5 py-3 text-xs text-neutral-300 hover:bg-primary/10 hover:text-primary transition-colors border-b border-white/10 last:border-b-0 cursor-pointer flex items-center gap-2 font-sans"
                           >
                             <SearchIcon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                             {sug}
@@ -468,7 +468,7 @@ export default function SearchPage() {
                 {/* Mode Pills + Category Filter Chips + Expansion & Bookmarks */}
                 <div className="flex flex-col gap-4 px-2">
                   <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-1.5 bg-[#111] p-1 rounded-xl border border-white/4">
+                    <div className="flex items-center gap-1.5 bg-[#111] p-1 rounded-xl border border-white/10">
                       {[
                         { label: 'Semantic (AI)', value: 'semantic' },
                         { label: 'Keyword Search', value: 'keyword' },
@@ -501,7 +501,7 @@ export default function SearchPage() {
                         aria-pressed={expandActive}
                         className={clsx(
                           "px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer touch-press",
-                          expandActive ? "bg-primary/20 border-primary/40 text-primary" : "bg-[#111] border-white/4 text-neutral-400 hover:text-white"
+                          expandActive ? "bg-primary/20 border-primary/40 text-primary" : "bg-[#111] border-white/10 text-neutral-400 hover:text-white"
                         )}
                         title="Smart Query Expansion"
                       >
@@ -512,7 +512,7 @@ export default function SearchPage() {
                         type="button"
                         onClick={() => setIsBookmarksOpen(true)}
                         aria-label={`View saved search bookmarks (${bookmarks.length} saved)`}
-                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#111] border border-white/4 text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer"
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#111] border border-white/10 text-neutral-300 hover:text-white flex items-center gap-1.5 cursor-pointer"
                       >
                         <BookmarkCheck className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> Bookmarks ({bookmarks.length})
                       </button>
@@ -551,7 +551,7 @@ export default function SearchPage() {
                           "px-3 py-1.5 rounded-xl text-xs transition-all duration-200 border cursor-pointer",
                           category === cat.value
                             ? "bg-primary/10 border-primary/30 text-primary font-semibold shadow-md"
-                            : "bg-[#111]/80 border-white/4 text-neutral-400 hover:text-neutral-200"
+                            : "bg-[#111]/80 border-white/10 text-neutral-400 hover:text-neutral-200"
                         )}
                       >
                         {cat.label}
@@ -570,7 +570,7 @@ export default function SearchPage() {
               className="flex-1 flex flex-col gap-6 overflow-hidden animate-fade-in"
             >
               {/* Compact Header search bar */}
-              <div className="flex flex-col gap-3.5 bg-[#0c0c0c]/85 border border-white/4 p-4 rounded-2xl shadow-md">
+              <div className="flex flex-col gap-3.5 bg-[#0c0c0c]/85 border border-white/10 p-4 rounded-2xl shadow-md">
                 <form onSubmit={handleSearchSubmit} className="flex items-center gap-3">
                   <SearchIcon className="h-4.5 w-4.5 text-muted-foreground shrink-0" aria-hidden="true" />
                   <input
@@ -583,7 +583,7 @@ export default function SearchPage() {
                   />
                   
                   {/* Mode switcher inside search bar wrapper */}
-                  <div className="flex items-center gap-1 bg-[#111] p-0.5 rounded-lg border border-white/4 shrink-0">
+                  <div className="flex items-center gap-1 bg-[#111] p-0.5 rounded-lg border border-white/10 shrink-0">
                     {[
                       { label: 'Semantic', value: 'semantic' },
                       { label: 'Full-Text', value: 'keyword' },
@@ -623,7 +623,7 @@ export default function SearchPage() {
                     }}
                     className={clsx(
                       "px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 border transition-all cursor-pointer shrink-0",
-                      expandActive ? "bg-primary/20 border-primary/40 text-primary" : "bg-[#111] border-white/4 text-neutral-400 hover:text-white"
+                      expandActive ? "bg-primary/20 border-primary/40 text-primary" : "bg-[#111] border-white/10 text-neutral-400 hover:text-white"
                     )}
                     title="Toggle Query Expansion (AI)"
                     aria-label="Toggle AI query expansion"
@@ -635,7 +635,7 @@ export default function SearchPage() {
                   <button
                     type="button"
                     onClick={() => setIsSaveBookmarkModalOpen(true)}
-                    className="p-1.5 rounded-lg border border-white/4 bg-[#111] text-neutral-300 hover:text-primary cursor-pointer transition-colors shrink-0"
+                    className="p-1.5 rounded-lg border border-white/10 bg-[#111] text-neutral-300 hover:text-primary cursor-pointer transition-colors shrink-0"
                     title="Save Search Bookmark"
                     aria-label="Save current search as bookmark"
                   >
@@ -645,7 +645,7 @@ export default function SearchPage() {
                   <button
                     type="button"
                     onClick={() => setIsBookmarksOpen(true)}
-                    className="px-2.5 py-1.5 rounded-lg border border-white/4 bg-[#111] text-neutral-300 hover:text-white text-xs flex items-center gap-1 cursor-pointer shrink-0"
+                    className="px-2.5 py-1.5 rounded-lg border border-white/10 bg-[#111] text-neutral-300 hover:text-white text-xs flex items-center gap-1 cursor-pointer shrink-0"
                     title="Saved Bookmarks"
                     aria-label={`View saved bookmarks (${bookmarks.length} saved)`}
                   >
@@ -679,7 +679,7 @@ export default function SearchPage() {
                   <button
                     type="button"
                     onClick={clearSearch}
-                    className="p-1.5 rounded-lg border border-white/4 hover:bg-white/5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors shrink-0"
+                    className="p-1.5 rounded-lg border border-white/10 hover:bg-white/5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors shrink-0"
                     title="Clear search"
                     aria-label="Clear search query and results"
                   >
@@ -689,7 +689,7 @@ export default function SearchPage() {
 
                 {/* Paraphrase Chips in Header */}
                 {expandActive && expandedQueries.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 border-t border-white/2 pt-2 text-xs">
+                  <div className="flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-2 text-xs">
                     <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 animate-pulse" aria-hidden="true" />
                     <span className="font-mono text-[10px] uppercase font-bold text-neutral-400">Expanded Query Variants:</span>
                     {expandedQueries.map((eq, idx) => (
@@ -701,7 +701,7 @@ export default function SearchPage() {
                 )}
 
                 {/* Quick Category Filter Chips */}
-                <div className="flex flex-wrap gap-2 border-t border-white/2 pt-2">
+                <div className="flex flex-wrap gap-2 border-t border-white/10 pt-2">
                   {[
                     { label: 'All Chunks', value: '' },
                     { label: 'Invoices', value: 'INVOICE' },
@@ -722,7 +722,7 @@ export default function SearchPage() {
                         "px-3 py-1 rounded-lg text-xs transition-all duration-200 border cursor-pointer",
                         category === cat.value
                           ? "bg-primary/10 border-primary/30 text-primary font-semibold"
-                          : "bg-[#111]/80 border-white/4 text-neutral-400 hover:text-neutral-200"
+                          : "bg-[#111]/80 border-white/10 text-neutral-400 hover:text-neutral-200"
                       )}
                     >
                       {cat.label}
@@ -735,8 +735,8 @@ export default function SearchPage() {
               <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden">
                 
                 {/* Left Side: Filter Sidebar Panel */}
-                <div className="w-56 border border-white/4 bg-[#0c0c0c]/80 rounded-2xl p-4 flex flex-col gap-6 shrink-0 select-none">
-                  <div className="flex items-center gap-2 pb-2 border-b border-white/4">
+                <div className="w-56 border border-white/10 bg-[#0c0c0c]/80 rounded-2xl p-4 flex flex-col gap-6 shrink-0 select-none">
+                  <div className="flex items-center gap-2 pb-2 border-b border-white/10">
                     <Filter className="h-4 w-4 text-primary" aria-hidden="true" />
                     <span className="text-xs font-bold text-foreground">Filter Results</span>
                   </div>
@@ -823,7 +823,7 @@ export default function SearchPage() {
                           key={`${item.id}-${index}`}
                           className={clsx(
                             "group glass-card p-5 border bg-[#0c0c0c]/85 hover:bg-[#0c0c0c] transition-all duration-300 flex gap-4 items-start relative overflow-hidden",
-                            isSelected ? "border-primary/45" : "border-white/4 hover:border-white/8"
+                            isSelected ? "border-primary/45" : "border-white/10 hover:border-white/8"
                           )}
                         >
                           {/* Select check button for RAG */}
@@ -890,7 +890,7 @@ export default function SearchPage() {
                             {/* Excerpt text display with highlights */}
                             {(item.snippet || item.excerpt) && (
                               <div 
-                                className="mt-1 bg-black/35 border border-white/2 p-3 rounded-lg text-xs font-mono text-neutral-400 select-text leading-relaxed whitespace-pre-wrap [&>mark]:bg-primary/20 [&>mark]:text-primary [&>mark]:px-1 [&>mark]:rounded"
+                                className="mt-1 bg-black/35 border border-white/10 p-3 rounded-lg text-xs font-mono text-neutral-400 select-text leading-relaxed whitespace-pre-wrap [&>mark]:bg-primary/20 [&>mark]:text-primary [&>mark]:px-1 [&>mark]:rounded"
                                 dangerouslySetInnerHTML={{ 
                                   __html: typeof window !== 'undefined'
                                     ? DOMPurify.sanitize(item.snippet || item.excerpt || '', { ALLOWED_TAGS: ['mark'] })
@@ -920,10 +920,10 @@ export default function SearchPage() {
             animate={{ width: 380, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="border-l border-white/4 bg-[#0c0c0c]/90 flex flex-col shrink-0 overflow-hidden h-full z-10"
+            className="border-l border-white/10 bg-[#0c0c0c]/90 flex flex-col shrink-0 overflow-hidden h-full z-10"
           >
             {/* Chat header */}
-            <div className="p-4 border-b border-white/4 bg-white/1 flex items-center justify-between select-none">
+            <div className="p-4 border-b border-white/10 bg-white/1 flex items-center justify-between select-none">
               <div className="flex items-center gap-2.5 text-primary">
                 <MessageSquare className="h-4.5 w-4.5" aria-hidden="true" />
                 <span className="text-xs font-bold tracking-wider uppercase font-sans">RAG Copilot Chat</span>
@@ -937,7 +937,7 @@ export default function SearchPage() {
                 >
                   Export PDF
                 </button>
-                <span className="text-[10px] font-mono font-bold text-muted-foreground bg-white/3 px-2 py-0.5 rounded-full border border-white/4">
+                <span className="text-[10px] font-mono font-bold text-muted-foreground bg-white/3 px-2 py-0.5 rounded-full border border-white/10">
                   {selectedDocIds.length} doc{selectedDocIds.length > 1 ? 's' : ''}
                 </span>
                 <button
@@ -1006,7 +1006,7 @@ export default function SearchPage() {
             </div>
 
             {/* Chat Input */}
-            <form onSubmit={handleSendChatMessage} className="p-3 border-t border-white/4 bg-black/40 flex items-center gap-2">
+            <form onSubmit={handleSendChatMessage} className="p-3 border-t border-white/10 bg-black/40 flex items-center gap-2">
               <input
                 type="text"
                 value={chatInput}
@@ -1067,7 +1067,7 @@ export default function SearchPage() {
                 bookmarks.map((bm) => (
                   <div
                     key={bm.id}
-                    className="p-3 bg-[#111] border border-white/4 hover:border-primary/40 rounded-xl flex items-center justify-between gap-3 group transition-all"
+                    className="p-3 bg-[#111] border border-white/10 hover:border-primary/40 rounded-xl flex items-center justify-between gap-3 group transition-all"
                   >
                     <button
                       type="button"

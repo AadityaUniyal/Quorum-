@@ -447,7 +447,7 @@ export default function DashboardPage() {
             auditLogs.map((log: any, index: number) => (
               <div
                 key={log.id || index}
-                className="py-3 flex items-center justify-between gap-4 text-xs hover:bg-white/[0.02] px-2 rounded-xl transition-colors"
+                className="py-3 flex items-center justify-between gap-4 text-xs hover:bg-zinc-900/60 px-2 rounded-xl transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
