@@ -68,7 +68,7 @@ RUN mkdir -p /app/uploads && chown -R appuser:appuser /app
 
 USER appuser
 
-EXPOSE 8000 10000
+EXPOSE 10000
 
 # Run the FastAPI application with dynamic PORT binding (compatible with Render, Railway, Docker)
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000} --workers 1"]

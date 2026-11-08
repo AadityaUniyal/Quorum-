@@ -66,71 +66,72 @@ def _resolve_db_url(url: str) -> tuple[str, dict]:
     parsed = urlparse(clean_url)
     host = parsed.hostname
     if host and host not in ("localhost", "127.0.0.1", ""):
-        needs_fallback = False
-        try:
-            socket.gethostbyname(host)
-        except Exception:
-            needs_fallback = True
-
-        if needs_fallback:
-            # Query public DNS (8.8.8.8) directly via UDP to bypass local ISP DNS failure
-            resolved_ip = None
+        # Internal hostnames (e.g. Render private network) don't have dots
+        if "." in host:
+            needs_fallback = False
             try:
-                qid = 4242
-                header = struct.pack('>HHHHHH', qid, 0x0100, 1, 0, 0, 0)
-                qname = b''.join(bytes([len(p)]) + p.encode() for p in host.split('.')) + b'\x00'
-                query = header + qname + struct.pack('>HH', 1, 1)
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                sock.settimeout(3.0)
-                sock.sendto(query, ("8.8.8.8", 53))
-                data, _ = sock.recvfrom(1024)
-                ancount = struct.unpack('>H', data[6:8])[0]
-                idx = 12
-                while data[idx] != 0:
-                    idx += data[idx] + 1
-                idx += 5
-                for _ in range(ancount):
-                    if idx >= len(data):
-                        break
-                    if data[idx] & 0xC0 == 0xC0:
-                        idx += 2
-                    else:
-                        while data[idx] != 0:
-                            idx += data[idx] + 1
-                        idx += 1
-                    atype, aclass, ttl, rdlen = struct.unpack('>HHIH', data[idx:idx+10])
-                    idx += 10
-                    if atype == 1 and rdlen == 4:
-                        resolved_ip = socket.inet_ntoa(data[idx:idx+4])
-                        break
-                    idx += rdlen
+                socket.gethostbyname(host)
             except Exception:
-                pass
+                needs_fallback = True
 
-            if resolved_ip:
-                query_params = dict(parse_qsl(parsed.query))
-                query_params.pop('channel_binding', None)
-                if 'neon.tech' in host:
-                    endpoint_id = host.split('.')[0]
-                    query_params['options'] = f'endpoint={endpoint_id}'
+            if needs_fallback:
+                resolved_ip = None
+                try:
+                    qid = 4242
+                    header = struct.pack('>HHHHHH', qid, 0x0100, 1, 0, 0, 0)
+                    qname = b''.join(bytes([len(p)]) + p.encode() for p in host.split('.')) + b'\x00'
+                    query = header + qname + struct.pack('>HH', 1, 1)
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    sock.settimeout(3.0)
+                    sock.sendto(query, ("8.8.8.8", 53))
+                    data, _ = sock.recvfrom(1024)
+                    ancount = struct.unpack('>H', data[6:8])[0]
+                    idx = 12
+                    while data[idx] != 0:
+                        idx += data[idx] + 1
+                    idx += 5
+                    for _ in range(ancount):
+                        if idx >= len(data):
+                            break
+                        if data[idx] & 0xC0 == 0xC0:
+                            idx += 2
+                        else:
+                            while data[idx] != 0:
+                                idx += data[idx] + 1
+                            idx += 1
+                        atype, aclass, ttl, rdlen = struct.unpack('>HHIH', data[idx:idx+10])
+                        idx += 10
+                        if atype == 1 and rdlen == 4:
+                            resolved_ip = socket.inet_ntoa(data[idx:idx+4])
+                            break
+                        idx += rdlen
+                except Exception:
+                    pass
 
-                auth = ""
-                if parsed.username:
-                    auth += parsed.username
-                    if parsed.password:
-                        auth += f":{parsed.password}"
-                    auth += "@"
+                if resolved_ip:
+                    query_params = dict(parse_qsl(parsed.query))
+                    query_params.pop('channel_binding', None)
+                    if 'neon.tech' in host:
+                        endpoint_id = host.split('.')[0]
+                        query_params['options'] = f'endpoint={endpoint_id}'
 
-                port_str = f":{parsed.port}" if parsed.port else ""
-                netloc = f"{auth}{resolved_ip}{port_str}"
-                clean_url = urlunparse((
-                    parsed.scheme,
-                    netloc,
-                    parsed.path,
-                    parsed.params,
-                    urlencode(query_params),
-                    parsed.fragment
-                ))
+                    auth = ""
+                    if parsed.username:
+                        auth += parsed.username
+                        if parsed.password:
+                            auth += f":{parsed.password}"
+                        auth += "@"
+
+                    port_str = f":{parsed.port}" if parsed.port else ""
+                    netloc = f"{auth}{resolved_ip}{port_str}"
+                    clean_url = urlunparse((
+                        parsed.scheme,
+                        netloc,
+                        parsed.path,
+                        parsed.params,
+                        urlencode(query_params),
+                        parsed.fragment
+                    ))
 
     # SSL Mode handling
     if "sslmode" in clean_url.lower():
@@ -138,8 +139,11 @@ def _resolve_db_url(url: str) -> tuple[str, dict]:
         if m:
             connect_args["sslmode"] = m.group(1)
     else:
-        connect_args["sslmode"] = "require"
-
+        # Internal hostnames without dots (e.g. Render private cluster) do not support SSL
+        if host and "." not in host:
+            connect_args["sslmode"] = "disable"
+        else:
+            connect_args["sslmode"] = "require"
     return clean_url, connect_args
 
 
